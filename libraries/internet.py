@@ -10,7 +10,7 @@ import pickle
 import requests
 from types import MethodType
 from HTMLParser import HTMLParser
-
+import re
 
 from utils import log
 from utils import settings
@@ -124,13 +124,25 @@ def get_watchlist(stored_show_ids, stored_movie_ids, excluded_ids):
 
 
 def getepisodes(showid, showtitle):
+    episodes = {}
     showpage = reqs.get("http://tv.nrk.no/serie/%s/" % showid).soup()
+    date_for_episodenr = "/episode-" not in showpage.find(attrs={"name": "latestepisodeurls"})["content"]
     seasons = showpage.find_all(class_="season-menu-item")
-    for season in seasons:
-        seasonid = season.a["data-season"]
-        seasonnr = season.a.text.replace("Sesong ", "")
-        episodepage = reqs.get("https://tv.nrk.no/program/Episodes/%s/%s" % (showid, seasonid)).soup()
-        episodes = episodepage.find_all(class_="episode-item")
+    for seasonnr, seasondata in enumerate(reversed(seasons), start=1):
+        seasonid = seasondata.a["data-season"]
+        headers = {'X-Requested-With': 'XMLHttpRequest'}
+        episodepage = reqs.get("https://tv.nrk.no/program/Episodes/%s/%s" % (showid, seasonid), headers=headers).soup()
+        episodedata = episodepage.find_all(class_="episode-item")
+        for episodenr, episode in enumerate(episodedata, start=1):
+            if "no-rights" in episode["class"]:
+                continue
+            episodeid = episode.find(class_="clearfix")["href"]
+            if not date_for_episodenr:
+                log.info(episodeid)
+                seasonnr, episodenr = re.findall(r"sesong-(\d)/episode-(\d)", episodeid)[0]
+                log.info((seasonnr, episodenr))
+            episodes["S%02dE%02d" % (int(seasonnr), int(episodenr))] = episodeid
+    return episodes
 
 
 def getepisodesinfo(episodeids):
