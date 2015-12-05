@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="script.service.koalanrk" name="Koala NRK" version="0.1" provider-name="eirki">
+  <requires>
+    <import addon="xbmc.python" version="2.1.0"/>
+    <import addon="script.module.requests" version="1.1.0"/>
+    <import addon="script.module.beautifulsoup4" version="4.3.2"/>
+    <import addon="script.module.arrow" version="0.5.4"/>
+    <import addon="script.module.simplejson" version="2.0.10" optional="true"/>
+  </requires>
+  <extension
+    point="xbmc.python.script"
+    library="default.py">
+    <provides></provides>
+  </extension>
+  <extension
+    point="xbmc.service"
+    library="default.py"
+    start="login">
+  </extension>
+  <extension
+    point="xbmc.service"
+    library="player.py"
+    start="login">
+    <provides></provides>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en">Adds your NRK watchlist to the Kodi library</summary>
+    <description lang="en">Koala NRK is an add-on for Kodi, which adds your NRK watchlist ("My list") into your Kodi library, and updates it regularly. This is done by adding an .htm file for each episode and movie in the watchlist, and configuring Kodi to play these files by opening them in a browser. Koala stands for Kodi Add to Library Addon.&#xD;&#xA;&#xD;&#xA;Koala NRK is not affiliated with NRK or Kodi. Original artwork for logo created by Mete Eraydın, licensed under CC.</description>
+    <disclaimer lang="en"></disclaimer>
+    <language></language>
+    <platform>all</platform>
+    <license></license>
+    <forum></forum>
+    <website></website>
+    <email></email>
+    <source>https://github.com/eirki/script.service.koalanrk</source>
+  </extension>
+</addon>
