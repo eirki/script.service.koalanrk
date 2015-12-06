@@ -156,9 +156,9 @@ def add_episodes_to_kodi(added_episodes, showtitle, skip_nonadded=False):
             nonadded_episodes[episodecode] = episodeid
             seasonnr = re.sub(r"S(\d\d)E\d\d.*", r"\1", episodecode)
             location = mkpath(const.libpath, "NRK shows", stringtofile(showtitle), "Season %s" % int(seasonnr))
-            filename = "%s %s.htm" % (stringtofile(showtitle), episodecode)
+            episodefile = "%s %s.htm" % (stringtofile(showtitle), episodecode)
             if not skip_nonadded:
-                os.remove(mkpath(location, filename))
+                os.remove(mkpath(location, episodefile))
         if exists(episodefile.replace(".htm", ".nfo")):
             os.remove(episodefile.replace(".htm", ".nfo"))
 
