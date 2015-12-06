@@ -67,9 +67,7 @@ def login(loginpage):
         "password": passw,
         }
     loginpage2 = reqs.post(loginpage.url, data=payload, allow_redirects=True)
-    url = loginpage2.soup().find("form")["action"]
-    payload = {t['name']: t.get('value') for t in loginpage2.soup().find_all('input', attrs={'type': 'hidden'})}
-    loginpage3 = reqs.post(url, data=payload)
+    return loginpage2
     # if loginpage3.find(id="page-LOGIN"):
         # log.debug(loginpage.text)
         # raise Exception("Login attempt failed")
@@ -80,10 +78,13 @@ def setup():
     if reqs.issetup:
         return
     print "checking login status"
-    loginpage = reqs.get("https://tv.nrk.no/logginn")
-    if loginpage.soup().find('title').text != "Submit this form":
-        login(loginpage)
-
+    loginpage = reqs.get("https://tv.nrk.no/logginn", verify=False)
+    print loginpage.soup().find('title').text
+    if loginpage.soup().find('title').text == "Innlogging":
+        loginpage = login(loginpage)
+    url = loginpage.soup().find("form")["action"]
+    payload = {t['name']: t.get('value') for t in loginpage.soup().find_all('input', attrs={'type': 'hidden'})}
+    reqs.post(url, data=payload)
     reqs.save_cookies()
     reqs.issetup = True
 
@@ -91,7 +92,7 @@ def get_watchlist(stored_show_ids, stored_movie_ids, excluded_ids):
     if not reqs.issetup:
         setup()
     watchlistpage = reqs.get("https://tv.nrk.no/mycontent").soup()
-    mediaitems = json.loads(watchlistpage.find("p").text)
+    mediaitems = json.loads(watchlistpage.text.replace("\r\n", ""))
     present_ids = set()
     added_shows = []
     added_movies = []
@@ -102,7 +103,9 @@ def get_watchlist(stored_show_ids, stored_movie_ids, excluded_ids):
         mediatype = "show" if media["program"]["category"]["id"] != "film" else "movie"
         print mediatype
         if mediatype == "movie":
-            mediaid = media["program"]["programUrlMetadata"]
+            mediaid = "/program/%s/%s" % (media["program"]["myContentId"], media["program"]["programUrlMetadata"])
+            # mediaid = media["program"]["programUrlMetadata"]
+            # mediaid = media["program"]["myContentId"]
             if mediaid not in (stored_movie_ids | excluded_ids):
                 mediatitle = media["program"]["mainTitle"]
                 added_movies.append((mediaid, mediatitle))
@@ -121,9 +124,7 @@ def get_watchlist(stored_show_ids, stored_movie_ids, excluded_ids):
     return added_shows, unavailable_shows, added_movies, unavailable_movies
 
 
-
-
-def getepisodes(showid, showtitle):
+def getepisodes(showtitle, showid):
     episodes = {}
     showpage = reqs.get("http://tv.nrk.no/serie/%s/" % showid).soup()
     date_for_episodenr = "/episode-" not in showpage.find(attrs={"name": "latestepisodeurls"})["content"]
@@ -138,15 +139,14 @@ def getepisodes(showid, showtitle):
                 continue
             episodeid = episode.find(class_="clearfix")["href"]
             if not date_for_episodenr:
-                log.info(episodeid)
-                seasonnr, episodenr = re.findall(r"sesong-(\d)/episode-(\d)", episodeid)[0]
-                log.info((seasonnr, episodenr))
+                seasonnr, episodenr = re.findall(r"sesong-(\d+)/episode-(\d+)", episodeid)[0]
             episodes["S%02dE%02d" % (int(seasonnr), int(episodenr))] = episodeid
     return episodes
 
 
-def getepisodesinfo(episodeids):
-    if not reqs.issetup:
-        setup()
+def getepisodeinfo(episodeid):
+    episodesubid = re.findall(r'/serie/.*?/(.*?)/.*', episodeid)[0]
+    epinfodict = reqs.get("http://v8.psapi.nrk.no/mediaelement/%s" % episodesubid).json()
+    return epinfodict
 
 reqs = RequestSession()

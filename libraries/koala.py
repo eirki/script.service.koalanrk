@@ -30,7 +30,7 @@ def create_media_file(location, filename, title, mediaid, episodecode=""):
         os.makedirs(location)
     with open(mkpath(location, filename), "w") as txt:
         txt.write('<meta http-equiv="REFRESH" content="0;'
-                  'url=http://www.nrk.com/watch/%s"> <body bgcolor="#ffffff">' % mediaid)
+                  'url=http://tv.nrk.no%s"> <body bgcolor="#ffffff">' % mediaid)
     log.debug("File created: %s %s" % (title, episodecode))
 
 
@@ -151,35 +151,36 @@ def add_episodes_to_kodi(added_episodes, showtitle, skip_nonadded=False):
             episodefile = eps_in_kodi[episodecode]['file']
             load_playcount("episode", episodefile, episodeid)
             log.info("Episoded added: %s %s" % (showtitle, episodecode))
-            if exists(episodefile.replace(".htm", ".nfo")):
-                os.remove(episodefile.replace(".htm", ".nfo"))
         else:
             log.info("Episoded added, but not scraped: %s %s" % (showtitle, episodecode))
             nonadded_episodes[episodecode] = episodeid
             seasonnr = re.sub(r"S(\d\d)E\d\d.*", r"\1", episodecode)
             location = mkpath(const.libpath, "NRK shows", stringtofile(showtitle), "Season %s" % int(seasonnr))
             filename = "%s %s.htm" % (stringtofile(showtitle), episodecode)
-            os.remove(mkpath(location, filename))
+            if not skip_nonadded:
+                os.remove(mkpath(location, filename))
+        if exists(episodefile.replace(".htm", ".nfo")):
+            os.remove(episodefile.replace(".htm", ".nfo"))
 
     if nonadded_episodes and not skip_nonadded:
         genepisodenfos(showtitle, nonadded_episodes)
 
 
 def genepisodenfos(showtitle, nonadded_episodes):
-    epinfodicts = internet.getepisodesinfo(nonadded_episodes.values())
     nonadded_episodes = sorted(nonadded_episodes.items())
     for episodecode, episodeid in nonadded_episodes:
-        epinfodict = epinfodicts[str(episodeid)]
+        seasonnr, episodenr = re.findall(r"S(\d\d)E(\d\d)", episodecode)[0]
+        epinfodict = internet.getepisodeinfo(episodeid)
         root = ET.Element("episodedetails")
-        ET.SubElement(root, "title").text = epinfodict["title"]
+        ET.SubElement(root, "title").text = epinfodict["fullTitle"]
         ET.SubElement(root, "showtitle").text = showtitle
-        ET.SubElement(root, "season").text = str(epinfodict["summary"]["season"])
-        ET.SubElement(root, "episode").text = str(epinfodict["summary"]["episode"])
-        ET.SubElement(root, "plot").text = epinfodict["synopsis"]
-        ET.SubElement(root, "thumb").text = epinfodict["BGImages"]['470']['jpg'][1]["url"]
-        ET.SubElement(root, "runtime").text = str(epinfodict["runtime"]/60)
+        ET.SubElement(root, "season").text = seasonnr
+        ET.SubElement(root, "episode").text = episodenr
+        ET.SubElement(root, "plot").text = epinfodict["description"]
+        ET.SubElement(root, "thumb").text = epinfodict['images']["webImages"][2]["imageUrl"]
+        ET.SubElement(root, "runtime").text = re.sub(r"PT(\d+)M.*", r"\1", epinfodict["duration"])
         tree = ET.ElementTree(root)
-        location = mkpath(const.libpath, "NRK shows", stringtofile(showtitle), "Season %s" % epinfodict["summary"]["season"])
+        location = mkpath(const.libpath, "NRK shows", stringtofile(showtitle), "Season %s" % int(seasonnr))
         filename = "%s %s.nfo" % (stringtofile(showtitle), episodecode)
         tree.write(mkpath(location, filename), xml_declaration=True, encoding='utf-8', method="xml")
 
