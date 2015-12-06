@@ -14,7 +14,6 @@ import re
 import shutil
 import sqlite3
 import subprocess
-import sys
 import xbmc
 from datetime import timedelta
 
@@ -24,9 +23,7 @@ from libraries.utils import mkpath
 from libraries.utils import kodiRPC
 from libraries.utils import const
 
-
-
-BROWSER = settings["browser"].lower()
+settings["browser"] = settings["browser"]
 MARK_AUTO = settings["mark auto-played"]
 REMOTE = settings["remote"]
 
@@ -58,8 +55,8 @@ def gen_epdict(playingfile):
             playcount = episode['playcount']
             runtime = episode['runtime']
             with open(episode['file'], 'r') as txt:
-                ntflxid = re.sub(r".*www.nrk.com/watch/(\d*).*", r"\1", txt.read())
-            epdict[ntflxid] = [epcode, kodiid, playcount, runtime]
+                nrkid = re.sub(r'.*http://tv.nrk.no/(.*)".*', r"\1", txt.read())
+            epdict[nrkid] = [epcode, kodiid, playcount, runtime]
     return epdict
 
 
@@ -108,21 +105,21 @@ def get_ie_urls(historyfile):
 
 
 def get_nrk_watched(visited_urls):
-    watched_netlix = []
+    watched_nrk = []
     for i, (start, url) in enumerate(visited_urls):
-        ntflxid, found = re.subn(r".*www.nrk.com/watch/(\d+).*", r"\1", url)
+        nrkid, found = re.subn(r'.*http://tv.nrk.no/(.*)".*', r"\1", url)
         if found:
-            end = visited_urls[i-1][0] if watched_netlix else arrow.utcnow()
+            end = visited_urls[i-1][0] if watched_nrk else arrow.utcnow()
             duration = end - start
-            watched_netlix.append([duration, ntflxid])
-    watched_netlix.reverse()
-    return watched_netlix
+            watched_nrk.append([duration, nrkid])
+    watched_nrk.reverse()
+    return watched_nrk
 
 
 def mark_watched(epdict, watched):
-    for watchedduration, ntflxid in watched:
-        if ntflxid in epdict:
-            epcode, kodiid, playcount, runtime = epdict[ntflxid]
+    for watchedduration, nrkid in watched:
+        if nrkid in epdict:
+            epcode, kodiid, playcount, runtime = epdict[nrkid]
             runtime = timedelta(seconds=runtime)
             if watchedduration.seconds / runtime.seconds >= 0.9:
                 addplaycount(kodiid, playcount)
@@ -145,7 +142,7 @@ def getremotemapping():
     except IOError:
         remotemapping = defaultdict(str)
     controls = [remotemapping["Play"], remotemapping["Pause"], remotemapping["Stop"],
-                remotemapping["Forward"], remotemapping["Rewind"], remotemapping["Continue Playing at prompt"]]
+                remotemapping["Forward"], remotemapping["Rewind"]]
     return controls
 
 
@@ -154,12 +151,15 @@ class ViewingSession():
         self.playingfile = playingfile
         self.starttime = arrow.now()
         self.remoteprocess = None
-        if REMOTE:
+        if settings["starter"]:
+            log.info("Launching starter utility")
+            subprocess.Popen([const.ahkexe, mkpath(const.ahkfolder, "starter.ahk"), settings["browser"]])
+        if settings["remote"]:
             mapping = getremotemapping()
             log.info("Launching remote utility")
-            self.remoteprocess = subprocess.Popen([const.ahkexe, mkpath(const.ahkfolder, "remote.ahk")]+mapping)
-        if MARK_AUTO:
-            if BROWSER == "internet explorer":
+            self.remoteprocess = subprocess.Popen([const.ahkexe, mkpath(const.ahkfolder, "remote.ahk"), settings["browser"]]+mapping)
+        if settings["mark auto-played"]:
+            if settings["browser"] == "Internet Explorer":
                 self.historyfile = mkpath(const.userdatafolder, "iehistory %s" % self.starttime.timestamp)
                 log.info("Launching IE historyfile utility")
                 self.ieprocess = subprocess.Popen(
@@ -170,14 +170,14 @@ class ViewingSession():
     def ended(self):
         if self.remoteprocess:
             self.remoteprocess.terminate()
-        if MARK_AUTO:
-            if BROWSER == "internet explorer":
+        if settings["mark auto-played"]:
+            if settings["browser"] == "Internet Explorer":
                 log.info("Closing IE historyfile utility")
                 self.ieprocess.terminate()
                 self.watched = get_ie_urls(self.historyfile)
                 if exists(self.historyfile):
                     os.remove(self.historyfile)
-            elif BROWSER == "chrome":
+            elif settings["browser"] == "Chrome":
                 self.watched = get_chrome_urls(self.starttime)
             mark_watched(self.epdict, self.watched)
 
@@ -202,6 +202,6 @@ class MyPlayer(xbmc.Player):
         log.info("playbackend finished")
 
 
-if const.os == "windows" and (MARK_AUTO or REMOTE):
+if const.os == "windows" and (settings["mark auto-played"] or settings["remote"]):
     player = MyPlayer()
     xbmc.Monitor().waitForAbort()

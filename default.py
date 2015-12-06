@@ -206,7 +206,7 @@ def configure_remote():
             remotemapping = json.load(j)
     except IOError:
         remotemapping = {}
-    buttonlist = ["Play", "Pause", "Stop", "Forward", "Rewind", "Continue Playing at prompt"]
+    buttonlist = ["Play", "Pause", "Stop", "Forward", "Rewind"]
     returnkeyscript = mkpath(const.ahkfolder, "return key.ahk")
     while True:
         optionlist = ["%s: %s" % (button, remotemapping.get(button)) for button in buttonlist]

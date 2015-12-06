@@ -5,23 +5,22 @@ CoordMode, Mouse, Screen
 SysGet, Mon, Monitor
 if (MonRight = 1920 and MonBottom = 1080)
 {
-	pausex := 225
-	pausey := 976
+	pausex := 1920
+	pausey := 870
 }
 else if (MonRight = 1280 and MonBottom = 720)
 {
-	pausex := 148
-	pausey := 646
+	pausex := 1920
+	pausey := 870
 }
+browser  = %1%
+r_play = %2%
+r_pause = %3%
+r_stop = %4%
+r_fforw = %5%
+r_rewnd = %6%
 
-r_play = %1%
-r_pause = %2%
-r_stop = %3%
-r_fforw = %4%
-r_rewnd = %5%
-r_contwtch = %6%
-
-Hotkey, IfWinActive, NRK
+Hotkey, IfWinActive, %browser%
 if r_play
 	Hotkey, %r_play%  , pauselabel
 if r_pause
@@ -32,8 +31,6 @@ if r_fforw
 	Hotkey, %r_fforw%  , fforwlabel
 if r_rewnd
 	Hotkey, %r_rewnd%  , rewlabel
-if r_contwtch
-	Hotkey, %r_contwtch%  , contwtchlabel
 
 Return
 
@@ -44,25 +41,17 @@ pauselabel:
 	sleep, 100
 	MouseClick
 	sleep, 30
-	MouseMove, 1920, 1080, 0
+	MouseMove, MonRight, MonBottom, 0
 Return
 stoplabel:
 	; MsgBox You pressed stop %A_ThisHotkey%.
 	Send !{f4}
 Return
 fforwlabel:
-	Send, +{Right}
+	send {Right}
 	; MsgBox You pressed fastforward %A_ThisHotkey%.
 Return
 rewlabel:
-	Send, +{Left}
-	; MsgBox You pressed rewind %A_ThisHotkey%.
-Return
-contwtchlabel:
-	MouseMove, 947 ,476
-	sleep, 100
-	MouseClick
-	sleep, 30
-	MouseMove, 1920, 1080, 0
+	send {Left}
 	; MsgBox You pressed rewind %A_ThisHotkey%.
 Return
