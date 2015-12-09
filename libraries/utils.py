@@ -256,10 +256,10 @@ def stringtofile(string):
 
 class Log():
     def info(self, input):
-        xbmc.log(byteify("[Koala] %s" % input), xbmc.LOGNOTICE)
+        xbmc.log(byteify("[Koala NRK] %s" % input), xbmc.LOGNOTICE)
 
     def debug(self, input):
-        xbmc.log(byteify("[Koala] %s" % input), xbmc.LOGDEBUG)
+        xbmc.log(byteify("[Koala NRK] %s" % input), xbmc.LOGDEBUG)
 
 
 const = Constants()
