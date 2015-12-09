@@ -1,3 +1,5 @@
+; #ErrorStdOut
+; ComObjError(false)
 SetTitleMatchMode, 2
 historyfile = %1%
 WinWait % "Internet Explorer"
