@@ -1,10 +1,12 @@
 #NoEnv
-#ErrorStdOut
+; #ErrorStdOut
 #SingleInstance Force
+DetectHiddenText, off
 SendMode Input ; Forces Send and SendRaw to use SendInput buffering for speed.
 SetTitleMatchMode, 2 ; A window's title must exactly match WinTitle to be a match.
+SysGet, Mon, Monitor
 
-ComObjError(false)
+; ComObjError(false)
 
 WinWait, NRK TV, , 60
 WinActivate
@@ -32,7 +34,10 @@ left := play.left
 top := play.top
 wb.document.getElementsByClassName("play-icon")[0].Click()
 
-while WinExist("NRK TV") and not WinActive("Adobe Flash Player"){
-    MouseClick, left, %left%, %top%, 2, 100
-    Sleep, 2000
+; MsgBox, 123
+while WinExist("NRK TV") and !InStr(wb.document.head.innerhtml, "progresstracker"){
+    Sleep, 100
 }
+MouseClick, left, %left%, %top%, 2, 0
+MouseMove, X, Y [, Speed, R]
+MouseMove, MonRight, MonBottom, 0

@@ -23,7 +23,6 @@ from libraries.utils import mkpath
 from libraries.utils import kodiRPC
 from libraries.utils import const
 
-settings["browser"] = settings["browser"]
 MARK_AUTO = settings["mark auto-played"]
 REMOTE = settings["remote"]
 
