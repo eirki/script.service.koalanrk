@@ -196,8 +196,10 @@ def prioritize_shows(shows_stored, shows_prioritized):
             showtitles[call] = showtitle.replace("[Prioritized] ", "")
             shows_prioritized.remove(showid)
     xbmc.executebuiltin('Addon.OpenSettings(script.service.koalanrk)')
-    xbmc.executebuiltin('SetFocus(200)')
-    # xbmc.executebuiltin('SetFocus(200)')
+    id1 = 2
+    xbmc.executebuiltin('SetFocus(%i)' % (id1 + 100))
+    id2 = 4
+    xbmc.executebuiltin('SetFocus(%i)' % (id2 + 200))
 
 
 def configure_remote():
@@ -222,8 +224,10 @@ def configure_remote():
     with open(mkpath(const.userdatafolder, "remotemapping.json"), "w") as j:
         json.dump(remotemapping, j)
     xbmc.executebuiltin('Addon.OpenSettings(script.service.koalanrk)')
-    xbmc.executebuiltin('SetFocus(101)')
-    xbmc.executebuiltin('SetFocus(201)')
+    id1 = 1
+    xbmc.executebuiltin('SetFocus(%i)' % (id1 + 100))
+    id2 = 1
+    xbmc.executebuiltin('SetFocus(%i)' % (id2 + 200))
 
 
 def deletecookies():
