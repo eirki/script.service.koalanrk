@@ -23,9 +23,6 @@ from libraries.utils import mkpath
 from libraries.utils import kodiRPC
 from libraries.utils import const
 
-MARK_AUTO = settings["mark auto-played"]
-REMOTE = settings["remote"]
-
 
 def getplayingvideofile():
     if xbmc.Player().isPlayingAudio():
@@ -49,12 +46,12 @@ def gen_epdict(playingfile):
     epdict = {}
     for episode in tvshow_dict['episodes']:
         epcode = 'S%02dE%02d' % (episode['season'], episode['episode'])
-        if epcode > playingepcode:
+        if epcode >= playingepcode:
             kodiid = episode['episodeid']
             playcount = episode['playcount']
             runtime = episode['runtime']
             with open(episode['file'], 'r') as txt:
-                nrkid = re.sub(r'.*http://tv.nrk.no/(.*)".*', r"\1", txt.read())
+                nrkid = re.sub(r'.*http://tv.nrk.no/(.*?)".*', r"\1", txt.read())
             epdict[nrkid] = [epcode, kodiid, playcount, runtime]
     return epdict
 
@@ -80,7 +77,8 @@ def win32_to_timestamp(win32):
 
 def get_chrome_urls(starttime):
     usr = os.path.expanduser("~")
-    shutil.copy(mkpath(usr, "AppData/Local/Google/Chrome/User Data/Default/History"), mkpath(const.userdatafolder, "chromehistory"))
+    shutil.copy(mkpath(usr, "AppData/Local/Google/Chrome/User Data/Default/History"),
+                mkpath(const.userdatafolder, "chromehistory"))
     starttimewin32 = timestamp_to_win32(starttime)
     with sqlite3.connect(mkpath(const.userdatafolder, "chromehistory")) as con:
         cursor = con.cursor()
@@ -106,11 +104,14 @@ def get_ie_urls(historyfile):
 def get_nrk_watched(visited_urls):
     watched_nrk = []
     for i, (start, url) in enumerate(visited_urls):
-        nrkid, found = re.subn(r'.*http://tv.nrk.no/(.*)".*', r"\1", url)
+        log.info("Watched url: %s" % url)
+        nrkid, found = re.subn(r'.*//tv.nrk.no/(.*).*', r"\1", url)
         if found:
+            log.info("Extracted nrkid: %s" % nrkid)
             end = visited_urls[i-1][0] if watched_nrk else arrow.utcnow()
             duration = end - start
             watched_nrk.append([duration, nrkid])
+            log.info("Duration: %s" % duration.seconds)
     watched_nrk.reverse()
     return watched_nrk
 
@@ -120,6 +121,7 @@ def mark_watched(epdict, watched):
         if nrkid in epdict:
             epcode, kodiid, playcount, runtime = epdict[nrkid]
             runtime = timedelta(seconds=runtime)
+            log.info("%s runtime: %s" % (epcode, runtime.seconds))
             if watchedduration.seconds / runtime.seconds >= 0.9:
                 addplaycount(kodiid, playcount)
                 log.info("%s: Marked as watched" % epcode)
@@ -147,6 +149,7 @@ def getremotemapping():
 
 class ViewingSession():
     def __init__(self, playingfile):
+        log.info("playbackstart starting")
         self.playingfile = playingfile
         self.starttime = arrow.now()
         self.remoteprocess = None
@@ -157,16 +160,18 @@ class ViewingSession():
             mapping = getremotemapping()
             log.info("Launching remote utility")
             self.remoteprocess = subprocess.Popen([const.ahkexe, mkpath(const.ahkfolder, "remote.ahk"), settings["browser"]]+mapping)
-        if settings["mark auto-played"]:
+        if settings["mark auto-played"] and playingfile["file"].startswith(mkpath(const.libpath, "NRK shows")):
             if settings["browser"] == "Internet Explorer":
                 self.historyfile = mkpath(const.userdatafolder, "iehistory %s" % self.starttime.timestamp)
                 log.info("Launching IE historyfile utility")
                 self.ieprocess = subprocess.Popen(
                     [mkpath(const.ahkfolder, "AutoHotkey.exe"), mkpath(const.ahkfolder, "save iehistory.ahk"), self.historyfile])
             self.epdict = gen_epdict(self.playingfile)
-            log.debug(self.epdict)
+            log.info(self.epdict)
+        log.info("playbackstart finished")
 
     def ended(self):
+        log.info("playbackend starting")
         if self.remoteprocess:
             self.remoteprocess.terminate()
         if settings["mark auto-played"]:
@@ -179,6 +184,7 @@ class ViewingSession():
             elif settings["browser"] == "Chrome":
                 self.watched = get_chrome_urls(self.starttime)
             mark_watched(self.epdict, self.watched)
+        log.info("playbackend finished")
 
 
 class MyPlayer(xbmc.Player):
@@ -187,18 +193,14 @@ class MyPlayer(xbmc.Player):
         self.session = None
 
     def onPlayBackStarted(self):
-        log.info("playbackstart starting")
         playingfile = getplayingvideofile()
-        if playingfile["file"].startswith(const.libpath):
+        if playingfile["file"].startswith(mkpath(const.libpath, "NRK")):
             self.session = ViewingSession(playingfile)
-        log.info("playbackstart finished")
 
     def onPlayBackEnded(self):
-        log.info("playbackend starting")
         if self.session:
             self.session.ended()
             self.session = None
-        log.info("playbackend finished")
 
 
 if const.os == "windows" and (settings["mark auto-played"] or settings["remote"]):
