@@ -1,3 +1,4 @@
+; NRK return key
 ; Wait for the user to press any key.  Keys that produce no visible character -- such as
 ; the modifier keys, function keys, and arrow keys -- are listed as end keys so that they
 ; will be detected too.

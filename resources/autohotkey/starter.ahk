@@ -1,12 +1,13 @@
+; NRK starter
 #NoEnv
-; #ErrorStdOut
+#ErrorStdOut
 #SingleInstance Force
+ComObjError(false)
+SetTitleMatchMode, 2
 DetectHiddenText, off
 SendMode Input ; Forces Send and SendRaw to use SendInput buffering for speed.
-SetTitleMatchMode, 2 ; A window's title must exactly match WinTitle to be a match.
 SysGet, Mon, Monitor
 
-; ComObjError(false)
 
 WinWait, NRK TV, , 60
 WinActivate

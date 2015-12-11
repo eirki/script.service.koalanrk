@@ -1,4 +1,9 @@
+; NRK remote
 #Persistent
+#NoEnv
+#ErrorStdOut
+#SingleInstance Force
+ComObjError(false)
 SetTitleMatchMode, 2
 CoordMode, Mouse, Screen
 

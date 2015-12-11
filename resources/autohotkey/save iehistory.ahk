@@ -1,9 +1,12 @@
-; #ErrorStdOut
-; ComObjError(false)
+; NRK save ie history
+#NoEnv
+#ErrorStdOut
+#SingleInstance Force
+ComObjError(false)
 SetTitleMatchMode, 2
 historyfile = %1%
 WinWait % "Internet Explorer"
-WinWait % "NRK"
+WinWait % "NRK TV"
 
 for win in ComObjCreate("Shell.Application").Windows
 	If InStr(win.FullName, "iexplore.exe")
