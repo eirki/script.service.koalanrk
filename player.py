@@ -2,12 +2,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
+
 import arrow
 from collections import defaultdict
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
 import os
 from os.path import exists
 import re
@@ -17,11 +16,7 @@ import subprocess
 import xbmc
 from datetime import timedelta
 
-from libraries.utils import settings
-from libraries.utils import log
-from libraries.utils import mkpath
-from libraries.utils import kodiRPC
-from libraries.utils import const
+from lib.utils import (settings, log, mkpath, kodiRPC, const)
 
 
 def getplayingvideofile():

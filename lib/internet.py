@@ -1,22 +1,16 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-try:
-    import simplejson as json
-except ImportError:
-    import json
+from __future__ import absolute_import
 from bs4 import BeautifulSoup
+import json
 import pickle
 import requests
 from types import MethodType
 from HTMLParser import HTMLParser
 import re
 
-from utils import log
-from utils import settings
-from utils import progress
-from utils import mkpath
-from utils import const
+from lib.utils import (log, settings, mkpath, const)
 
 
 class RequestSession():
@@ -73,8 +67,6 @@ def login(loginpage):
 
 
 def setup():
-    if reqs.issetup:
-        return
     print "checking login status"
     loginpage = reqs.get("https://tv.nrk.no/logginn", verify=False)
     print loginpage.soup().find('title').text
@@ -84,7 +76,6 @@ def setup():
     payload = {t['name']: t.get('value') for t in loginpage.soup().find_all('input', attrs={'type': 'hidden'})}
     reqs.post(url, data=payload)
     reqs.save_cookies()
-    reqs.issetup = True
 
 
 def get_watchlist(stored_show_ids, stored_movie_ids, excluded_ids):

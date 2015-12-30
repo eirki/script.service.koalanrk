@@ -2,10 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
 import subprocess
 import sys
 import os
@@ -13,21 +10,22 @@ from operator import itemgetter
 import pickle
 import xbmc
 import xbmcgui
+from collections import OrderedDict
+
+from lib.utils import (settings, log, progress, dialogs, mkpath, monitor, const, wrap_unicode)
+
+from lib import library
+from lib import internet as nrk
 
 
-from libraries.ordereddict import LastUpdatedOrderedDict
+class LastUpdatedOrderedDict(OrderedDict):
+    '''Store items in the order the keys were last added
+    from https://docs.python.org/2/library/collections.html#collections.OrderedDict'''
 
-from libraries.utils import settings
-from libraries.utils import log
-from libraries.utils import progress
-from libraries.utils import dialogs
-from libraries.utils import mkpath
-from libraries.utils import monitor
-from libraries.utils import const
-from libraries.utils import wrap_unicode
-
-import libraries.koala as koala
-import libraries.internet as internet
+    def __setitem__(self, key, value):
+        if key in self:
+            del self[key]
+        OrderedDict.__setitem__(self, key, value)
 
 
 class MediaLists(object):
@@ -72,7 +70,7 @@ def check_watchlist(shows_stored, movies_stored, shows_excluded, movies_excluded
     stored_show_ids = set(shows_stored)
     stored_movie_ids = set(movies_stored)
     excluded_ids = set(shows_excluded) | set(movies_excluded)
-    results = internet.get_watchlist(stored_show_ids, stored_movie_ids, excluded_ids)
+    results = nrk.get_watchlist(stored_show_ids, stored_movie_ids, excluded_ids)
     added_shows, unav_shows, added_movies, unav_movies = results
 
     progress.addsteps(2 * len(added_shows))
@@ -82,22 +80,22 @@ def check_watchlist(shows_stored, movies_stored, shows_excluded, movies_excluded
 
     for movieid in unav_movies:
         movietitle = movies_stored[movieid]
-        koala.delete_movie(movieid, movietitle)
+        library.delete_movie(movieid, movietitle)
         del movies_stored[movieid]
 
-    koala.create_movies(added_movies)
+    library.create_movies(added_movies)
     monitor.update_video_library()
     for movieid, movietitle in added_movies:
-        koala.add_movie_to_kodi(movieid, movietitle)
+        library.add_movie_to_kodi(movieid, movietitle)
         movies_stored.update({movieid: movietitle})
 
     for showid in unav_shows:
         showtitle = shows_stored[showid]
-        koala.delete_show(showid, showtitle)
+        library.delete_show(showid, showtitle)
         del shows_stored[showid]
 
     for showid, showtitle in added_shows:
-        koala.update_show(showid, showtitle)
+        library.update_show(showid, showtitle)
         shows_stored.update({showid: showtitle})
 
 
@@ -115,23 +113,23 @@ def update_mult_shows(shows_stored, shows_prioritized, all=False):
     progress.addsteps(2 * len(pri_and_stored + n_shows))
     for showid in pri_and_stored + n_shows:
         showtitle = shows_stored[showid]
-        koala.update_show(showid, showtitle)
+        library.update_show(showid, showtitle)
         shows_stored.update({showid: showtitle})
 
 
 def modify_single_medialement(Mediaobj, mediaid, mediatitle, mediatype, action):
     if mediatype == "show" and action == "update":
         progress.addsteps(1)
-        koala.update_show(mediaid, mediatitle)
+        library.update_show(mediaid, mediatitle)
     elif mediatype == "show" and action == "exclude":
-        koala.delete_show(mediaid, mediatitle)
+        library.delete_show(mediaid, mediatitle)
     elif mediatype == "movie" and action == "exclude":
-        koala.delete_movie(mediaid, mediatitle)
+        library.delete_movie(mediaid, mediatitle)
     elif mediatype == "show" and action == "readd":
         progress.addsteps(1)
-        koala.update_show(mediaid, mediatitle)
+        library.update_show(mediaid, mediatitle)
     elif mediatype == "movie" and action == "readd":
-        koala.create_movies([(mediaid, mediatitle)], add=True)
+        library.create_movies([(mediaid, mediatitle)], add=True)
 
     if action == "readd":
         del Mediaobj.excluded[mediaid]
@@ -150,21 +148,21 @@ def remove_readd_all(shows_stored, movies_stored):
     shows_stored_copy = shows_stored.items()
 
     for movieid, movietitle in movies_stored.items():
-        koala.delete_movie(movieid, movietitle)
+        library.delete_movie(movieid, movietitle)
         del movies_stored[movieid]
 
-    koala.create_movies(movies_stored_copy)
+    library.create_movies(movies_stored_copy)
     monitor.update_video_library()
     for movieid, movietitle in movies_stored_copy:
-        koala.add_movie_to_kodi(movieid, movietitle)
+        library.add_movie_to_kodi(movieid, movietitle)
         movies_stored.update({movieid: movietitle})
 
     for showid, showtitle in shows_stored.items():
-        koala.delete_show(showid, showtitle)
+        library.delete_show(showid, showtitle)
         del shows_stored[showid]
 
     for showid, showtitle in shows_stored_copy:
-        koala.update_show(showid, showtitle)
+        library.update_show(showid, showtitle)
         shows_stored.update({showid: showtitle})
 
 

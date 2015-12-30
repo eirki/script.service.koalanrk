@@ -1,24 +1,15 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from __future__ import absolute_import
 import os
 from os.path import exists
 import re
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
 import xml.etree.ElementTree as ET
 
-from utils import mkpath
-from utils import stringtofile
-from utils import kodiRPC
-from utils import log
-from utils import monitor
-from utils import progress
-from utils import const
-
-import internet
+from lib.utils import (mkpath, stringtofile, kodiRPC, log, monitor, progress, const)
+from lib import internet as nrk
 
 
 if not exists(const.userdatafolder):
@@ -97,7 +88,7 @@ def delete_movie(movieid, movietitle):
 def update_show(showid, showtitle):
     progress.increment("Updating TV show: %s" % showtitle)
     log.info("Updating TV show: %s" % showtitle)
-    available_episodes = internet.getepisodes(showtitle, showid)
+    available_episodes = nrk.getepisodes(showtitle, showid)
     log.debug("available_episodes:\n %s" % available_episodes)
 
     stored_episodes = kodiRPC("VideoLibrary.GetEpisodes",
@@ -170,7 +161,7 @@ def genepisodenfos(showtitle, nonadded_episodes):
     nonadded_episodes = sorted(nonadded_episodes.items())
     for episodecode, episodeid in nonadded_episodes:
         seasonnr, episodenr = re.findall(r"S(\d\d)E(\d\d)", episodecode)[0]
-        epinfodict = internet.getepisodeinfo(episodeid)
+        epinfodict = nrk.getepisodeinfo(episodeid)
         root = ET.Element("episodedetails")
         ET.SubElement(root, "title").text = epinfodict["fullTitle"]
         ET.SubElement(root, "showtitle").text = showtitle

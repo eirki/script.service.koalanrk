@@ -2,11 +2,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from __future__ import division
+from __future__ import absolute_import
 from functools import wraps
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
 import os
 import xbmc
 import xbmcaddon
