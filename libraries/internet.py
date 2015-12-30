@@ -21,8 +21,6 @@ from utils import const
 
 class RequestSession():
     def __init__(self):
-        self.issetup = False
-        self.api = None
         self.session = requests.Session()
         try:
             with open(mkpath(const.userdatafolder, "cookies"), 'rb') as f:
@@ -88,20 +86,20 @@ def setup():
     reqs.save_cookies()
     reqs.issetup = True
 
+
 def get_watchlist(stored_show_ids, stored_movie_ids, excluded_ids):
-    if not reqs.issetup:
-        setup()
+    setup()
     watchlistpage = reqs.get("https://tv.nrk.no/mycontent").soup()
     mediaitems = json.loads(watchlistpage.text.replace("\r\n", ""))
     present_ids = set()
     added_shows = []
     added_movies = []
     for media in mediaitems['favorites']:
-        if not media["program"]["usageRights"]["hasRightsNow"]:
+        if not media["isAvailable"]:
             continue
-            # media["isAvailable"] inkluderer serier som går på tv men ikke har noen episoder tilgkengelig
-        mediatype = "show" if media["program"]["category"]["id"] != "film" else "movie"
-        print mediatype
+            # media["isAvailable"] True for shows currently airing with no available episodes
+            # media["program"]["usageRights"]["hasRightsNow"] false for some airing with no available episodes (bug?)
+        mediatype = "show" if media["program"]["seriesId"] else "movie"
         if mediatype == "movie":
             mediaid = "/program/%s/%s" % (media["program"]["myContentId"], media["program"]["programUrlMetadata"])
             # mediaid = media["program"]["programUrlMetadata"]
