@@ -12,7 +12,7 @@ from operator import itemgetter
 import xbmc
 import xbmcgui
 
-from lib.utils import (settings, log, progress, dialogs, mkpath, monitor, const, wrap_unicode)
+from lib.utils import (settings, rpc, log, progress, dialogs, mkpath, monitor, const, wrap_unicode)
 from lib import library
 from lib import internet as nrk
 
@@ -177,6 +177,23 @@ def remove_readd_all(shows_stored, movies_stored):
 
 
 # Settings actions
+def is_libpath_added():
+    sources = rpc("Files.GetSources", media="video")
+    for source in sources.get('sources', []):
+        if source['file'].startswith(const.libpath):
+            return True
+    return False
+
+
+def koalasetup():
+    if not os.path.exists(const.userdatafolder):
+        os.mkdir(const.userdatafolder)
+    if not os.path.exists(mkpath(const.libpath, "Netflix shows")):
+        os.mkdir(mkpath(const.libpath, "Netflix shows"))
+    if not os.path.exists(mkpath(const.libpath, "Netflix movies")):
+        os.mkdir(mkpath(const.libpath, "Netflix movies"))
+
+
 def refresh_settings():
     xbmc.executebuiltin('Dialog.Close(dialog)')
     xbmc.executebuiltin('ReloadSkin')
@@ -281,6 +298,15 @@ def execution(argv):
                             line2="Running multiple instances cause instablity.",
                             line3="Continue?")
     if not run:
+        return
+
+    koalasetup()
+
+    if not is_libpath_added():
+        dialogs.ok(heading="Koala path not in video sources",
+                   line1="Koala library paths have not been added to Kodi video sources:",
+                   line2=mkpath(const.libpath, "Netflix shows"),
+                   line3=mkpath(const.libpath, "Netflix movies"))
         return
 
     if  argv == [''] or argv == ["default.py"]:
