@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+import arrow
 import json
 import subprocess
 import sys
 import os
 from operator import itemgetter
-import pickle
 import xbmc
 import xbmcgui
 from collections import OrderedDict
@@ -28,25 +28,51 @@ class LastUpdatedOrderedDict(OrderedDict):
         OrderedDict.__setitem__(self, key, value)
 
 
-class MediaLists(object):
+class MediaDatabase(object):
     instances = []
 
     def __init__(self, mediatype):
         self.mediatype = mediatype
         try:
-            with open(mkpath(const.userdatafolder, "%slist" % self.mediatype), 'rb') as p:
-                self.__dict__.update(pickle.load(p))
+            with open(mkpath(const.userdatafolder, "%s database.json" % self.mediatype), 'r') as j:
+                database = json.load(j)
+            self.stored = LastUpdatedOrderedDict(database["stored"])
+            self.excluded = database["excluded"]
+            self.prioritized = set(database["prioritized"])
         except IOError:
             self.stored = LastUpdatedOrderedDict({})
             self.excluded = {}
             self.prioritized = set()
-        MediaLists.instances.append(self)
+        MediaDatabase.instances.append(self)
+
+    def update(self, mediaitems):
+        for mediaid, mediatitle in mediaitems:
+            self.stored.update({mediaid: mediatitle})
+
+    def remove(self, mediaitems):
+        for mediaid, mediatitle in mediaitems:
+            del self.stored[mediaid]
+
+    def exclude(self, mediaitems):
+        for mediaid, mediatitle in mediaitems:
+            del self.stored[mediaid]
+            self.excluded.update({mediaid: mediatitle})
+
+    def readd(self, mediaitems):
+        for mediaid, mediatitle in mediaitems:
+            del self.excluded[mediaid]
+            self.stored.update({mediaid: mediatitle})
 
     @classmethod
     def savetofile(cls):
         for inst in cls.instances:
-            with open(mkpath(const.userdatafolder, "%slist" % inst.mediatype), 'wb') as p:
-                pickle.dump(inst.__dict__, p)
+            database = {
+                "stored": inst.stored.items(),
+                "excluded": inst.excluded,
+                "prioritized": list(inst.prioritized)
+            }
+            with open(mkpath(const.userdatafolder, "%s database.json" % inst.mediatype), 'w') as p:
+                json.dump(database, p, indent=2)
 
 
 class KoalaGlobals():
@@ -313,12 +339,12 @@ def execution(argv):
 
     # initialize mediaobjects
     if mediatype == "show":
-        Media = MediaLists("shows")
+        Media = MediaDatabase("shows")
     elif mediatype == "movie":
-        Media = MediaLists("movies")
+        Media = MediaDatabase("movies")
     elif mediatype == "both":
-        Media = {"Shows": MediaLists("shows"),
-                 "Movies": MediaLists("movies")}
+        Media = {"Shows": MediaDatabase("shows"),
+                 "Movies": MediaDatabase("movies")}
 
     # cancel if no media
     if action == "removereaddall" and not Media["Shows"].stored and not Media["Movies"].stored:
@@ -362,9 +388,10 @@ def execution(argv):
 
 if __name__ == '__main__':
     try:
+        starttime = arrow.now()
         execution(sys.argv)
     finally:
         if progress.active:
             stop()
-        MediaLists.savetofile()
-        log.info("Koala NRK finished")
+        MediaDatabase.savetofile()
+        log.info("Koala NRK finished (in %s)" % str(arrow.now() - starttime))
