@@ -3,6 +3,7 @@
 from __future__ import unicode_literals
 
 import arrow
+from collections import OrderedDict
 import json
 import subprocess
 import sys
@@ -10,14 +11,13 @@ import os
 from operator import itemgetter
 import xbmc
 import xbmcgui
-from collections import OrderedDict
 
 from lib.utils import (settings, log, progress, dialogs, mkpath, monitor, const, wrap_unicode)
-
 from lib import library
 from lib import internet as nrk
 
 
+# from https://docs.python.org/2/library/collections.html#collections.OrderedDict
 class LastUpdatedOrderedDict(OrderedDict):
     '''Store items in the order the keys were last added
     from https://docs.python.org/2/library/collections.html#collections.OrderedDict'''
@@ -73,22 +73,6 @@ class MediaDatabase(object):
             }
             with open(mkpath(const.userdatafolder, "%s database.json" % inst.mediatype), 'w') as p:
                 json.dump(database, p, indent=2)
-
-
-class KoalaGlobals():
-    @wrap_unicode
-    def setglobal(self, id, value):
-        if isinstance(value, (bool, int)):
-            value = str(value).lower()
-        xbmcgui.Window(10000).setProperty(id, value)
-
-    @wrap_unicode
-    def getglobal(self, id):
-        value = xbmcgui.Window(10000).getProperty(id)
-        if value in ["true", "false"]:
-            value = value == "true"
-        return value
-koalaglobals = KoalaGlobals()
 
 
 # Update actions
@@ -277,25 +261,25 @@ def select_mediaitem(mediatype, mediadict):
 
 # Execution
 def start(action):
-    koalaglobals.setglobal("Koala NRK running", True)
+    xbmcgui.Window(10000).setProperty("Koala NRK running", "true")
     force = False if action == "startup" else True
     progress.create(heading="Updating NRK", force=force)
 
 
 def stop():
     progress.close()
-    koalaglobals.setglobal("Koala NRK running", False)
+    xbmcgui.Window(10000).setProperty("Koala NRK running", "false")
 
 
 def execution(argv):
     log.info("Starting Koala NRK")
     log.info(argv)
     run = True
-    if koalaglobals.getglobal("Koala NRK running"):
+    if xbmcgui.Window(10000).getProperty("Koala NRK running") == "true":
         run = dialogs.yesno(heading="Running",
-                           line1="Koala is running. ",
-                           line2="Running multiple instances cause instablity.",
-                           line3="Continue?")
+                            line1="Koala is running. ",
+                            line2="Running multiple instances cause instablity.",
+                            line3="Continue?")
     if not run:
         return
 
