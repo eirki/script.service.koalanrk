@@ -16,16 +16,16 @@ import subprocess
 import xbmc
 from datetime import timedelta
 
-from lib.utils import (settings, log, mkpath, kodiRPC, const)
+from lib.utils import (settings, log, mkpath, rpc, const)
 
 
 def getplayingvideofile():
     if xbmc.Player().isPlayingAudio():
         log.info("Audio file playing")
-        playingfile = kodiRPC("Player.GetItem", properties=["season", "episode", "tvshowid", "file"], playerid=0)
+        playingfile = rpc("Player.GetItem", properties=["season", "episode", "tvshowid", "file"], playerid=0)
     if xbmc.Player().isPlayingVideo():
         log.info("Video file playing")
-        playingfile = kodiRPC("Player.GetItem", properties=["season", "episode", "tvshowid", "file"], playerid=1)
+        playingfile = rpc("Player.GetItem", properties=["season", "episode", "tvshowid", "file"], playerid=1)
     log.info("Playing: %s" % playingfile["item"])
     if "item" in playingfile:
         playingfile = playingfile["item"]
@@ -36,8 +36,8 @@ def gen_epdict(playingfile):
     playingepcode = 'S%02dE%02d' % (playingfile['season'], playingfile['episode'])
     log.debug(playingepcode)
     tvshowid = playingfile["tvshowid"]
-    tvshow_dict = kodiRPC("VideoLibrary.GetEpisodes", tvshowid=tvshowid, properties=[
-                          "playcount", "season", "episode", "file", "runtime"])
+    tvshow_dict = rpc("VideoLibrary.GetEpisodes", tvshowid=tvshowid, properties=[
+                      "playcount", "season", "episode", "file", "runtime"])
     epdict = {}
     for episode in tvshow_dict['episodes']:
         epcode = 'S%02dE%02d' % (episode['season'], episode['episode'])
@@ -128,7 +128,7 @@ def mark_watched(epdict, watched):
 def addplaycount(kodiid, playcount):
     playcount += 1
     now = arrow.now().format("%d-%m-%Y %H:%M:%S")
-    kodiRPC("VideoLibrary.SetEpisodeDetails", episodeid=kodiid, playcount=playcount, lastplayed=now)
+    rpc("VideoLibrary.SetEpisodeDetails", episodeid=kodiid, playcount=playcount, lastplayed=now)
 
 
 def getremotemapping():

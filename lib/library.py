@@ -8,7 +8,7 @@ import re
 import json
 import xml.etree.ElementTree as ET
 
-from lib.utils import (mkpath, stringtofile, kodiRPC, log, monitor, progress, const)
+from lib.utils import (mkpath, stringtofile, rpc, log, monitor, progress, const)
 from lib import internet as nrk
 
 
@@ -30,7 +30,7 @@ def load_playcount(mediatype, mediafile, mediaid):
     if exists(jsonfile):
         with open(jsonfile, "r") as f:
             playcount = json.load(f)
-        kodiRPC("VideoLibrary.Set%sDetails" % mediatype.capitalize(), **{mediatype+"id": mediaid, "playcount": playcount})
+        rpc("VideoLibrary.Set%sDetails" % mediatype.capitalize(), **{mediatype+"id": mediaid, "playcount": playcount})
         os.remove(jsonfile)
 
 
@@ -54,11 +54,11 @@ def create_movies(movies, add=False):
 
 
 def add_movie_to_kodi(movieid, movietitle):
-    moviedict = kodiRPC("VideoLibrary.GetMovies",
-                        properties=["file"],
-                        multifilter={"and": [
-                              ("filename", "is", "%s.htm" % stringtofile(movietitle)),
-                              ("path", "startswith", os.path.join(const.libpath, "NRK movies"))]})
+    moviedict = rpc("VideoLibrary.GetMovies",
+                    properties=["file"],
+                    multifilter={"and": [
+                          ("filename", "is", "%s.htm" % stringtofile(movietitle)),
+                          ("path", "startswith", os.path.join(const.libpath, "NRK movies"))]})
     if 'movies' in moviedict:
         moviefile = moviedict['movies'][0]['file']
         movieid = moviedict['movies'][0]['movieid']
@@ -70,15 +70,15 @@ def add_movie_to_kodi(movieid, movietitle):
 
 def delete_movie(movieid, movietitle):
     progress.increment("Removing movie: %s" % movietitle)
-    moviedict = kodiRPC("VideoLibrary.GetMovies",
-                        properties=["file", 'playcount'],
-                        multifilter={"and": [
-                              ("filename", "is", "%s.htm" % stringtofile(movietitle)),
-                              ("path", "startswith", os.path.join(const.libpath, "NRK movies"))]})
+    moviedict = rpc("VideoLibrary.GetMovies",
+                    properties=["file", 'playcount'],
+                    multifilter={"and": [
+                          ("filename", "is", "%s.htm" % stringtofile(movietitle)),
+                          ("path", "startswith", os.path.join(const.libpath, "NRK movies"))]})
     if 'movies' in moviedict:
         movie = moviedict['movies'][0]
         save_playcount(movie["file"], movie['playcount'])
-        kodiRPC("VideoLibrary.RemoveMovie", movieid=movie["movieid"])
+        rpc("VideoLibrary.RemoveMovie", movieid=movie["movieid"])
         os.remove(movie["file"])
         log.info("Removed: %s" % (movietitle))
     else:
@@ -91,9 +91,9 @@ def update_show(showid, showtitle):
     available_episodes = nrk.getepisodes(showtitle, showid)
     log.debug("available_episodes:\n %s" % available_episodes)
 
-    stored_episodes = kodiRPC("VideoLibrary.GetEpisodes",
-                              properties=["season", "episode", "file", "playcount"],
-                              filter={"field": "filename", "operator": "startswith", "value": "%s S" % stringtofile(showtitle)})
+    stored_episodes = rpc("VideoLibrary.GetEpisodes",
+                          properties=["season", "episode", "file", "playcount"],
+                          filter={"field": "filename", "operator": "startswith", "value": "%s S" % stringtofile(showtitle)})
     koala_stored_episodes = dict()
     other_stored_episodes = set()
     if 'episodes' in stored_episodes:
@@ -129,11 +129,11 @@ def create_episode_files(added_episodes, showtitle):
 
 def add_episodes_to_kodi(added_episodes, showtitle, skip_nonadded=False):
     monitor.update_video_library()
-    eps_in_kodi = kodiRPC("VideoLibrary.GetEpisodes",
-                          properties=["season", "episode", "file"],
-                          multifilter={"and": [
-                           ("filename", "startswith", "%s S" % stringtofile(showtitle)),
-                           ("path", "startswith", os.path.join(const.libpath, "NRK shows"))]})
+    eps_in_kodi = rpc("VideoLibrary.GetEpisodes",
+                      properties=["season", "episode", "file"],
+                      multifilter={"and": [
+                       ("filename", "startswith", "%s S" % stringtofile(showtitle)),
+                       ("path", "startswith", os.path.join(const.libpath, "NRK shows"))]})
     eps_in_kodi = dict(("S%02dE%02d" % (int(ep['season']), int(ep['episode'])), ep) for ep in eps_in_kodi.get('episodes', []))
 
     nonadded_episodes = {}
@@ -180,11 +180,11 @@ def genepisodenfos(showtitle, nonadded_episodes):
 
 
 def delete_show(showid, showtitle):
-    eps_in_kodi = kodiRPC("VideoLibrary.GetEpisodes",
-                          properties=["season", "episode", "file", "playcount"],
-                          multifilter={"and": [
-                            ("filename", "startswith", "%s S" % stringtofile(showtitle)),
-                            ("path", "startswith", os.path.join(const.libpath, "NRK shows"))]})
+    eps_in_kodi = rpc("VideoLibrary.GetEpisodes",
+                      properties=["season", "episode", "file", "playcount"],
+                      multifilter={"and": [
+                        ("filename", "startswith", "%s S" % stringtofile(showtitle)),
+                        ("path", "startswith", os.path.join(const.libpath, "NRK shows"))]})
     eps_in_kodi = [("S%02dE%02d" % (int(ep['season']), int(ep['episode'])), ep) for ep in eps_in_kodi.get('episodes', [])]
     eps_in_kodi.sort()
     if eps_in_kodi:
@@ -195,6 +195,6 @@ def delete_episodes(removed_episodes, showtitle):
     progress.increment("Removing episodes: %s" % showtitle)
     for episodecode, episodedict in removed_episodes:
         save_playcount(episodedict['file'], episodedict['playcount'])
-        kodiRPC("VideoLibrary.RemoveEpisode", episodeid=episodedict['episodeid'])
+        rpc("VideoLibrary.RemoveEpisode", episodeid=episodedict['episodeid'])
         os.remove(episodedict['file'])
         log.info("Removed: %s %s" % (showtitle, episodecode))

@@ -217,7 +217,7 @@ class ScanMonitor(xbmc.Monitor):
         log.debug("Library update complete")
 
 
-def kodiRPC(method, multifilter=False, **kwargs):
+def rpc(method, multifilter=False, **kwargs):
     if multifilter:
         conditional = multifilter.keys()[0]
         rules = multifilter.values()[0]
