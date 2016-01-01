@@ -78,21 +78,20 @@ class Movie(object):
             log.info("Movie added: %s" % self.title)
             self.nonadded = False
         else:
-            if not exists(self.nfofilepath):
-                os.remove(self.filepath)
             self.nonadded = True
             log.info("Movie added, but not scraped: %s" % self.title)
 
     def gen_nfo(self):
         self.delete_file()
         self.create_file()
-        movinfodict = nrk.getinfodict(self.nrkid)
+        movsubid = re.findall(r'/program/(.*?)/.*', self.nrkid)[0]
+        movinfodict = nrk.getinfodict(movsubid)
         root = ET.Element("movie")
         ET.SubElement(root, "title").text = movinfodict["fullTitle"]
         ET.SubElement(root, "plot").text = movinfodict["description"]
-        ET.SubElement(root, "thumb", aspect="poster").text = movinfodict["BGImages"]['1080']['jpg'][0]["url"]
+        ET.SubElement(root, "thumb", aspect="poster").text = movinfodict['images']["webImages"][-1]["imageUrl"]
         fanart = ET.SubElement(root, "fanart")
-        ET.SubElement(fanart, "thumb").text = movinfodict["BGImages"]['1080']['jpg'][0]["url"]
+        ET.SubElement(fanart, "thumb").text = movinfodict['images']["webImages"][-1]["imageUrl"]
         ET.SubElement(root, "runtime").text = re.sub(r"PT(\d+)M.*", r"\1", movinfodict["duration"])
         tree = ET.ElementTree(root)
         tree.write(self.nfofilepath, xml_declaration=True, encoding='utf-8', method="xml")
@@ -126,7 +125,8 @@ class Show(object):
         self.new_episodes = []
         for episodecode, epdict in sorted(available_episodes.items()):
             if episodecode not in all_stored_episodes:
-                episode = Episode(self.title, epdict['seasonnr'], epdict['episodenr'], nrkid=epdict['nrkid'])
+                episode = Episode(self.title, epdict['seasonnr'], epdict['episodenr'],
+                                  nrkid=epdict['nrkid'], in_superuniverse=epdict['in_superuniverse'])
                 self.new_episodes.append(episode)
 
         self.unav_episodes = []
@@ -184,11 +184,12 @@ class Show(object):
 
 
 class Episode(object):
-    def __init__(self, showtitle, seasonnr, episodenr, nrkid=None, kodiid=None, playcount=0):
+    def __init__(self, showtitle, seasonnr, episodenr, in_superuniverse=None, nrkid=None, kodiid=None, playcount=0):
         self.showtitle = showtitle
         self.seasonnr = int(seasonnr)
         self.episodenr = int(episodenr)
         self.code = "S%02dE%02d" % (seasonnr, episodenr)
+        self.in_superuniverse = in_superuniverse
         self.nrkid = nrkid
         self.kodiid = kodiid
         self.playcount = int(playcount)
@@ -214,7 +215,8 @@ class Episode(object):
             os.makedirs(self.folderpath)
         with open(self.filepath, "w") as txt:
             txt.write('<meta http-equiv="REFRESH" content="0;'
-                      'url=http://tv.nrk.no%s"> <body bgcolor="#ffffff">' % self.nrkid)
+                      'url=http://tv.nrk%s.no%s">'
+                      '<body bgcolor="#ffffff">' % ("super" if self.in_superuniverse else "", self.nrkid))
         log.debug("File created: %s %s" % (self.showtitle, self.code))
 
     def add_to_lib(self, koala_stored_episodes):
@@ -237,7 +239,7 @@ class Episode(object):
         ET.SubElement(root, "season").text = str(self.seasonnr)
         ET.SubElement(root, "episode").text = str(self.episodenr)
         ET.SubElement(root, "plot").text = epinfodict["description"]
-        ET.SubElement(root, "thumb").text = epinfodict['images']["webImages"][2]["imageUrl"]
+        ET.SubElement(root, "thumb").text = epinfodict['images']["webImages"][-1]["imageUrl"]
         ET.SubElement(root, "runtime").text = re.sub(r"PT(\d+)M.*", r"\1", epinfodict["duration"])
         tree = ET.ElementTree(root)
         tree.write(self.nfofilepath, xml_declaration=True, encoding='utf-8', method="xml")
