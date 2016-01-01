@@ -41,6 +41,7 @@ class RequestSession():
     def save_cookies(self):
         with open(mkpath(const.userdatafolder, "cookies"), 'wb') as f:
             pickle.dump(self.session.cookies, f)
+reqs = RequestSession()
 
 
 def login(loginpage):
@@ -65,7 +66,6 @@ def login(loginpage):
         # raise Exception("Login attempt failed")
 
 
-
 def setup():
     print "checking login status"
     loginpage = reqs.get("https://tv.nrk.no/logginn", verify=False)
@@ -78,9 +78,12 @@ def setup():
     reqs.save_cookies()
 
 
-def get_watchlist(stored_show_ids, stored_movie_ids, excluded_ids):
+def check_watchlist(movie_database, show_database):
     setup()
-    watchlistpage = reqs.get("https://tv.nrk.no/mycontent").soup()
+    stored_show_ids = set(show_database.stored)
+    stored_movie_ids = set(movie_database.stored)
+    excluded_ids = set(movie_database.excluded) | set(show_database.excluded)
+    watchlistpage = reqs.get("https://tv.nrk.no/mycontent")
     mediaitems = json.loads(watchlistpage.text.replace("\r\n", ""))
     present_ids = set()
     added_shows = []
@@ -104,16 +107,22 @@ def get_watchlist(stored_show_ids, stored_movie_ids, excluded_ids):
                 mediatitle = media["program"]["seriesTitle"]
                 added_shows.append((mediaid, mediatitle))
         present_ids.add(mediaid)
-    unavailable_shows = stored_show_ids - present_ids
-    unavailable_movies = stored_movie_ids - present_ids
+    unavailable_shows = []
+    for showid, showtitle in show_database.stored.items():
+        if showid not in present_ids:
+            unavailable_shows.append((showid, showtitle))
+    unavailable_movies = []
+    for movieid, movietitle in movie_database.stored.items():
+        if movieid not in present_ids:
+            unavailable_movies.append((movieid, movietitle))
     log.info("added_shows:\n %s" % added_shows)
     log.info("unavailable_shows:\n %s" % unavailable_shows)
     log.info("added_movies:\n %s" % added_movies)
     log.info("unavailable_movies:\n %s" % unavailable_movies)
-    return added_shows, unavailable_shows, added_movies, unavailable_movies
+    return unavailable_movies, unavailable_shows, added_movies, added_shows
 
 
-def getepisodes(showtitle, showid):
+def getepisodes(showid):
     episodes = {}
     showpage = reqs.get("http://tv.nrk.no/serie/%s/" % showid).soup()
     date_for_episodenr = "/episode-" not in showpage.find(attrs={"name": "latestepisodeurls"})["content"]
@@ -129,13 +138,19 @@ def getepisodes(showtitle, showid):
             episodeid = episode.find(class_="clearfix")["href"]
             if not date_for_episodenr:
                 seasonnr, episodenr = re.findall(r"sesong-(\d+)/episode-(\d+)", episodeid)[0]
-            episodes["S%02dE%02d" % (int(seasonnr), int(episodenr))] = episodeid
+            episodes["S%02dE%02d" % (int(seasonnr), int(episodenr))] = {'seasonnr': int(seasonnr), 'episodenr': int(episodenr), 'nrkid': str(episodeid)}
     return episodes
 
 
-def getepisodeinfo(episodeid):
-    episodesubid = re.findall(r'/serie/.*?/(.*?)/.*', episodeid)[0]
-    epinfodict = reqs.get("http://v8.psapi.nrk.no/mediaelement/%s" % episodesubid).json()
-    return epinfodict
+def getinfodict(mediaid):
+    infodict = reqs.get("http://v8.psapi.nrk.no/mediaelement/%s" % mediaid).json()
+    return infodict
 
-reqs = RequestSession()
+
+def getshowinfo(showid):
+    showpage = reqs.get("http://tv.nrk.no/serie/%s/" % showid).soup()
+    plot = showpage.find("h3", text="Seriebeskrivelse").next_sibling.next_sibling.text
+    year = showpage.find("dt", text="Produksjonsår:").next_sibling.next_sibling.text
+    image = showpage.find(id="playerelement")["data-posterimage"]
+    in_superuniverse = "isInSuperUniverse: true" in showpage.text
+    return plot, year, image, in_superuniverse

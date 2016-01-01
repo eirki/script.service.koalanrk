@@ -6,6 +6,7 @@ from __future__ import absolute_import
 from functools import wraps
 import json
 import os
+import sys
 import xbmc
 import xbmcaddon
 import xbmcgui
@@ -38,6 +39,7 @@ class Constants(object):
         if name in self.__dict__:
             raise Exception("Can't rebind constant")
         self.__dict__[name] = value
+const = Constants()
 
 
 def byteify(input):
@@ -151,48 +153,40 @@ class Dialogs(object):
 
 
 class PDialog(object):
-    def __init__(self):
-        self.active = False
+    if settings["startupnotification"] or sys.argv == ['']:
+        def __init__(self):
+            self.active = False
 
-    def create(self, heading, message=None, force=False):
-        self.active = True
-        self.force = force
-        self.perc = 1
-        self.totalsteps = 1
-        self.currentstep = 0
-        if settings["startupnotification"] or self.force:
+        def create(self, heading, message=None, force=False):
+            self.active = True
+            self.force = force
+            self.perc = 1
             self.pDialog = xbmcgui.DialogProgressBG()
             self.pDialog.create(heading, message)
 
-    def addsteps(self, steps):
-        self.totalsteps += steps
-        log.info("totalsteps: %s" % self.totalsteps)
-        # log.info("currentstep: %s" % self.currentstep)
+        def update(self, percent=None, heading=None, message=None, increment=False):
+            self.perc = percent
+            self.pDialog.update(percent, message=message)
 
-    def increment(self, message=None):
-        self.currentstep += 1
-        addperc = 100 / self.totalsteps
-        self.perc += addperc
-        if settings["startupnotification"] or self.force:
-            self.pDialog.update(int(self.perc), message=message)
-        # log.info("totalsteps: %s" % self.totalsteps)
-        log.info("currentstep: %s" % self.currentstep)
-        log.info("perc: %s" % self.perc)
-
-    def update(self, percent=None, heading=None, message=None, increment=False):
-        if settings["startupnotification"] or self.force:
-            self.pDialog.update(int(self.perc), message=message)
-
-    def close(self):
-        if settings["startupnotification"] or self.force:
-            self.perc = int(self.perc)
+        def close(self):
             while self.perc < 100:
                 self.perc += 2
                 self.pDialog.update(self.perc)
                 xbmc.sleep(10)
             self.pDialog.close()
 
+    else:
+        def __init__(self):
+            pass
 
+        def create(self, heading, message=None, force=False):
+            pass
+
+        def update(self, percent=None, heading=None, message=None, increment=False):
+            pass
+
+        def close(self):
+            pass
 
 
 class ScanMonitor(xbmc.Monitor):
@@ -260,7 +254,6 @@ class Log(object):
         xbmc.log(byteify("[Koala NRK] %s" % input), xbmc.LOGDEBUG)
 
 
-const = Constants()
 monitor = ScanMonitor()
 progress = PDialog()
 dialogs = Dialogs()

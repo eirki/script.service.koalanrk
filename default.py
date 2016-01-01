@@ -12,7 +12,7 @@ from operator import itemgetter
 import xbmc
 import xbmcgui
 
-from lib.utils import (settings, rpc, log, progress, dialogs, mkpath, monitor, const, wrap_unicode)
+from lib.utils import (settings, rpc, log, progress, dialogs, mkpath, const)
 from lib import library
 from lib import internet as nrk
 
@@ -75,108 +75,21 @@ class MediaDatabase(object):
                 json.dump(database, p, indent=2)
 
 
-# Update actions
-def check_watchlist(shows_stored, movies_stored, shows_excluded, movies_excluded):
-    stored_show_ids = set(shows_stored)
-    stored_movie_ids = set(movies_stored)
-    excluded_ids = set(shows_excluded) | set(movies_excluded)
-    results = nrk.get_watchlist(stored_show_ids, stored_movie_ids, excluded_ids)
-    added_shows, unav_shows, added_movies, unav_movies = results
-
-    progress.addsteps(2 * len(added_shows))
-    progress.addsteps(2 * len(unav_shows))
-    progress.addsteps(len(added_movies))
-    progress.addsteps(len(unav_movies))
-
-    for movieid in unav_movies:
-        movietitle = movies_stored[movieid]
-        library.delete_movie(movieid, movietitle)
-        del movies_stored[movieid]
-
-    library.create_movies(added_movies)
-    monitor.update_video_library()
-    for movieid, movietitle in added_movies:
-        library.add_movie_to_kodi(movieid, movietitle)
-        movies_stored.update({movieid: movietitle})
-
-    for showid in unav_shows:
-        showtitle = shows_stored[showid]
-        library.delete_show(showid, showtitle)
-        del shows_stored[showid]
-
-    for showid, showtitle in added_shows:
-        library.update_show(showid, showtitle)
-        shows_stored.update({showid: showtitle})
-
-
-def update_mult_shows(shows_stored, shows_prioritized, all=False):
-    pri_and_stored = []
-    n_shows = list(shows_stored)
-    for showid in shows_stored:
-        if showid in shows_prioritized:
+def get_n_shows_to_update(show_database):
+    pri_shows = []
+    n_shows = list(show_database.stored)
+    for showid in show_database.stored:
+        if showid in show_database.prioritized:
             n_shows.remove(showid)
-            pri_and_stored.append(showid)
-    if not all and not settings["update_all_shows"]:
+            pri_shows.append(showid)
+    if not settings["all_shows_on_startup"]:
         n = settings["n_shows_to_update"]
         n_shows = n_shows[:n]
 
-    progress.addsteps(2 * len(pri_and_stored + n_shows))
-    for showid in pri_and_stored + n_shows:
-        showtitle = shows_stored[showid]
-        library.update_show(showid, showtitle)
-        shows_stored.update({showid: showtitle})
+    shows_to_update = [(showid, show_database.stored[showid]) for showid in pri_shows+n_shows]
+    return shows_to_update
 
 
-def modify_single_medialement(Mediaobj, mediaid, mediatitle, mediatype, action):
-    if mediatype == "show" and action == "update":
-        progress.addsteps(1)
-        library.update_show(mediaid, mediatitle)
-    elif mediatype == "show" and action == "exclude":
-        library.delete_show(mediaid, mediatitle)
-    elif mediatype == "movie" and action == "exclude":
-        library.delete_movie(mediaid, mediatitle)
-    elif mediatype == "show" and action == "readd":
-        progress.addsteps(1)
-        library.update_show(mediaid, mediatitle)
-    elif mediatype == "movie" and action == "readd":
-        library.create_movies([(mediaid, mediatitle)], add=True)
-
-    if action == "readd":
-        del Mediaobj.excluded[mediaid]
-    if action in ["update", "readd"]:
-        Mediaobj.stored.update({mediaid: mediatitle})
-    if action == "exclude":
-        del Mediaobj.stored[mediaid]
-        Mediaobj.excluded.update({mediaid: mediatitle})
-
-
-def remove_readd_all(shows_stored, movies_stored):
-    progress.addsteps(3 * (len(shows_stored)))
-    progress.addsteps(2 * (len(movies_stored)))
-
-    movies_stored_copy = movies_stored.items()
-    shows_stored_copy = shows_stored.items()
-
-    for movieid, movietitle in movies_stored.items():
-        library.delete_movie(movieid, movietitle)
-        del movies_stored[movieid]
-
-    library.create_movies(movies_stored_copy)
-    monitor.update_video_library()
-    for movieid, movietitle in movies_stored_copy:
-        library.add_movie_to_kodi(movieid, movietitle)
-        movies_stored.update({movieid: movietitle})
-
-    for showid, showtitle in shows_stored.items():
-        library.delete_show(showid, showtitle)
-        del shows_stored[showid]
-
-    for showid, showtitle in shows_stored_copy:
-        library.update_show(showid, showtitle)
-        shows_stored.update({showid: showtitle})
-
-
-# Settings actions
 def is_libpath_added():
     sources = rpc("Files.GetSources", media="video")
     for source in sources.get('sources', []):
@@ -188,10 +101,10 @@ def is_libpath_added():
 def koalasetup():
     if not os.path.exists(const.userdatafolder):
         os.mkdir(const.userdatafolder)
-    if not os.path.exists(mkpath(const.libpath, "Netflix shows")):
-        os.mkdir(mkpath(const.libpath, "Netflix shows"))
-    if not os.path.exists(mkpath(const.libpath, "Netflix movies")):
-        os.mkdir(mkpath(const.libpath, "Netflix movies"))
+    if not os.path.exists(mkpath(const.libpath, "NRK shows")):
+        os.mkdir(mkpath(const.libpath, "NRK shows"))
+    if not os.path.exists(mkpath(const.libpath, "NRK movies")):
+        os.mkdir(mkpath(const.libpath, "NRK movies"))
 
 
 def refresh_settings():
@@ -265,8 +178,8 @@ def test():
     pass
 
 
-def select_mediaitem(mediatype, mediadict):
-    sorted_media = sorted(mediadict.items(), key=itemgetter(1))
+def select_mediaitem(database, mediatype):
+    sorted_media = sorted(database.items(), key=itemgetter(1))
     mediaids, mediatitles = zip(*sorted_media)
     call = dialogs.select('Select %s' % mediatype, mediatitles)
     if call == -1:
@@ -288,9 +201,14 @@ def stop():
     xbmcgui.Window(10000).setProperty("Koala NRK running", "false")
 
 
-def execution(argv):
+def main():
     log.info("Starting Koala NRK")
-    log.info(argv)
+    action = sys.argv
+    log.info(action)
+    if action in ([''], ["default.py"]):
+        action = "startup"
+    else:
+        action = action[1]
     run = True
     if xbmcgui.Window(10000).getProperty("Koala NRK running") == "true":
         run = dialogs.yesno(heading="Running",
@@ -305,101 +223,122 @@ def execution(argv):
     if not is_libpath_added():
         dialogs.ok(heading="Koala path not in video sources",
                    line1="Koala library paths have not been added to Kodi video sources:",
-                   line2=mkpath(const.libpath, "Netflix shows"),
-                   line3=mkpath(const.libpath, "Netflix movies"))
+                   line2=mkpath(const.libpath, "NRK shows"),
+                   line3=mkpath(const.libpath, "NRK movies"))
         return
 
-    if  argv == [''] or argv == ["default.py"]:
-        action = "startup"
-        mediatype = "both"
-        number = "all"
-    else:
-        _script, action, mediatype, number = argv
-    # ["configureremote", "settingsaction", "none"]
-    # ["refreshsettings", "settingsaction", "none"]
-    # ["deletecookies", "settingsaction", "none"]
-    # ["test", "settingsaction", "none"]
-    # ["checknonaddedepisodes", "show", "all"]
-    # ["prioritize", "show", "single"]
-    # ["update", "show", "single"]
-    # ["exclude", "show", "single"]
-    # ["exclude", "movie", "single"]
-    # ["readd", "show", "single"]
-    # ["readd", "movie", "single"]
-    # ["update", "show", "all"]
-    # ["removereadd", "both", "all"]
-    # ["watchlist", "both", "all"]
-    # ["startup", "both", "all"]
-    # ["startup", "both", "all"]
+    if action == "startup" and not (settings["check watchlist on startup"] or settings["check shows on startup"]):
+        return
 
-    # settingsaction
-    if mediatype == "settingsaction":
-        if action == "configureremote":
-            configure_remote()
-
-        elif action == "refreshsettings":
-            refresh_settings()
-
-        elif action == "deletecookies":
-            deletecookies()
-
-        elif action == "test":
-            test()
+    settingsactions = {
+        "configureremote": configure_remote,
+        "refreshsettings": refresh_settings,
+        "deletecookies": deletecookies,
+        "test": test
+    }
+    if action in settingsactions:
+        settingsactions[action]()
         return
 
     # initialize mediaobjects
-    if mediatype == "show":
-        Media = MediaDatabase("shows")
-    elif mediatype == "movie":
-        Media = MediaDatabase("movies")
-    elif mediatype == "both":
-        Media = {"Shows": MediaDatabase("shows"),
-                 "Movies": MediaDatabase("movies")}
+    show_database = None
+    movie_database = None
+    if action in ["prioritize", "exclude_show", "readd_show", "updatesingle", "updateall", "removereadd", "watchlist", "startup"]:
+        show_database = MediaDatabase("show")
+    if action in ["exclude_movie", "readd_movie", "removereadd", "watchlist", "startup"]:
+        movie_database = MediaDatabase("movie")
+
 
     # cancel if no media
-    if action == "removereaddall" and not Media["Shows"].stored and not Media["Movies"].stored:
+    if action == "removereaddall" and not (show_database.stored or movie_database.stored):
         dialogs.ok(heading="No media", line1="No media seems to have been added")
         return
-    elif action in ["prioritize", "exclude", "readd", "update"] and not Media.stored:
-        dialogs.ok(heading="No %ss" % mediatype, line1="No %ss seem to have been added" % mediatype)
+    elif action in ["prioritize", "exclude_show", "readd_show", "updatesingle", "updateall"] and not show_database.stored:
+        dialogs.ok(heading="No shows", line1="No shows seem to have been added")
+        return
+    elif action in ["exclude_movie", "readd_movie"] and not movie_database.stored:
+        dialogs.ok(heading="No movies", line1="No movies seem to have been added")
         return
 
     # prioritize
     if action == "prioritize":
-        prioritize_shows(Media.stored, Media.prioritized)
+        prioritize_shows(show_database.stored, show_database.prioritized)
         return
 
-    # select mediaitem
-    if number == "single":
-        mediadict = Media.stored if action != "readd" else Media.excluded
-        mediaid, mediatitle = select_mediaitem(mediatype, mediadict)
-        if not any([mediaid, mediatitle]):
-            return
+    if action in ("updatesingle", "exclude_show"):
+        show = select_mediaitem(show_database.stored, "show")
+    elif action == "readd_show":
+        show = select_mediaitem(show_database.excluded, "show")
+    elif action == "exclude_movie":
+        movie = select_mediaitem(movie_database.stored, "movie")
+    elif action == "readd_movie":
+        movie = select_mediaitem(movie_database.excluded, "movie")
+
+    if action in ("updatesingle", "exclude_show", "readd_show") and not any(show):
+        return
+    if action in ("exclude_movie", "readd_movie") and not any(movie):
+        return
 
     start(action)
 
-    if number == "single" and action in ["exclude", "readd", "update"]:
-        modify_single_medialement(Media, mediaid, mediatitle, mediatype, action)
+    if action == "exclude_show":
+        library.remove(shows=[show])
+        show_database.exclude([show])
+        return
+    elif action == "exclude_movie":
+        library.remove(movies=[movie])
+        movie_database.exclude([movie])
+        return
 
-    elif action == "update" and mediatype == "show" and number == "all":
-        update_mult_shows(Media.stored, Media.prioritized, all=True)
+    progress.update(10)
+
+    if action == "updatesingle":
+        library.update_add_create(shows=[show])
+        show_database.update([show])
+    elif action == "readd_show":
+        library.update_add_create(shows=[show])
+        show_database.readd([show])
+    elif action == "readd_movie":
+        library.update_add_create(movies=[movie])
+        movie_database.readd([movie])
+
+    elif action == "updateall":
+        progress.update(25)
+        library.update_add_create(shows=show_database.stored.items())
 
     elif action == "removereadd":
-        remove_readd_all(Media["Shows"].stored, Media["Movies"].stored)
+        progress.update(25)
+        library.remove(movies=movie_database.stored.items(), shows=show_database.stored.items())
+        progress.update(50)
+        library.update_add_create(movies=movie_database.stored.items(), shows=show_database.stored.items())
 
-    elif action == "watchlist":
-        check_watchlist(Media["Shows"].stored, Media["Movies"].stored, Media["Shows"].excluded, Media["Movies"].excluded)
-
-    elif action == "startup":
-        if settings["check watchlist on startup"]:
-            check_watchlist(Media["Shows"].stored, Media["Movies"].stored, Media["Shows"].excluded, Media["Movies"].excluded)
-            if settings["check shows on startup"]:
-                update_mult_shows(Media["Shows"].stored, Media["Shows"].prioritized)
+    elif action in ["watchlist", "startup"]:
+        if action == "startup" and not settings["check watchlist on startup"]:
+            return
+        progress.update(25)
+        results = nrk.check_watchlist(movie_database, show_database)
+        unav_movies, unav_shows, added_movies, added_shows = results
+        if unav_movies or unav_shows:
+            progress.update(50)
+            library.remove(movies=unav_movies, shows=unav_shows)
+            movie_database.remove(unav_movies)
+            show_database.remove(unav_shows)
+        if added_movies or added_shows:
+            progress.update(75)
+            library.update_add_create(movies=added_movies, shows=added_shows)
+            movie_database.update(added_movies)
+            show_database.update(added_shows)
+        if action == "watchlist" or (action == "startup" and not settings["check shows on startup"]):
+            return
+        progress.update(90)
+        shows_to_update = get_n_shows_to_update(show_database)
+        library.update_add_create(shows=shows_to_update)
+        show_database.update(shows_to_update)
 
 if __name__ == '__main__':
     try:
         starttime = arrow.now()
-        execution(sys.argv)
+        main()
     finally:
         if progress.active:
             stop()
