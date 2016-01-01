@@ -16,7 +16,7 @@ import subprocess
 import xbmc
 from datetime import timedelta
 
-from lib.utils import (settings, log, mkpath, rpc, const)
+from lib.utils import (settings, log, os_join, uni_join, rpc, const)
 
 
 def getplayingvideofile():
@@ -72,10 +72,10 @@ def win32_to_timestamp(win32):
 
 def get_chrome_urls(starttime):
     usr = os.path.expanduser("~")
-    shutil.copy(mkpath(usr, "AppData/Local/Google/Chrome/User Data/Default/History"),
-                mkpath(const.userdatafolder, "chromehistory"))
+    shutil.copy(os_join(usr, "AppData/Local/Google/Chrome/User Data/Default/History"),
+                os_join(const.userdatafolder, "chromehistory"))
     starttimewin32 = timestamp_to_win32(starttime)
-    with sqlite3.connect(mkpath(const.userdatafolder, "chromehistory")) as con:
+    with sqlite3.connect(os_join(const.userdatafolder, "chromehistory")) as con:
         cursor = con.cursor()
         cursor.execute("SELECT last_visit_time, url FROM urls WHERE last_visit_time>'%s'" % starttimewin32)
         visited_urls = [[win32_to_timestamp(time), url] for time, url in cursor.fetchall()]
@@ -133,7 +133,7 @@ def addplaycount(kodiid, playcount):
 
 def getremotemapping():
     try:
-        with open(mkpath(const.userdatafolder, "remotemapping.json")) as j:
+        with open(os_join(const.userdatafolder, "remotemapping.json")) as j:
             remotemapping = defaultdict(str, json.load(j))
     except IOError:
         remotemapping = defaultdict(str)
@@ -150,17 +150,17 @@ class ViewingSession():
         self.remoteprocess = None
         if settings["starter"]:
             log.info("Launching starter utility")
-            subprocess.Popen([const.ahkexe, mkpath(const.ahkfolder, "starter.ahk"), settings["browser"]])
+            subprocess.Popen([const.ahkexe, os_join(const.ahkfolder, "starter.ahk"), settings["browser"]])
         if settings["remote"]:
             mapping = getremotemapping()
             log.info("Launching remote utility")
-            self.remoteprocess = subprocess.Popen([const.ahkexe, mkpath(const.ahkfolder, "remote.ahk"), settings["browser"]]+mapping)
-        if settings["mark auto-played"] and playingfile["file"].startswith(mkpath(const.libpath, "NRK shows")):
+            self.remoteprocess = subprocess.Popen([const.ahkexe, os_join(const.ahkfolder, "remote.ahk"), settings["browser"]]+mapping)
+        if settings["mark auto-played"] and playingfile["file"].startswith(os_join(const.libpath, "NRK shows")):
             if settings["browser"] == "Internet Explorer":
-                self.historyfile = mkpath(const.userdatafolder, "iehistory %s" % self.starttime.timestamp)
+                self.historyfile = os_join(const.userdatafolder, "iehistory %s" % self.starttime.timestamp)
                 log.info("Launching IE historyfile utility")
                 self.ieprocess = subprocess.Popen(
-                    [mkpath(const.ahkfolder, "AutoHotkey.exe"), mkpath(const.ahkfolder, "save iehistory.ahk"), self.historyfile])
+                    [os_join(const.ahkfolder, "AutoHotkey.exe"), os_join(const.ahkfolder, "save iehistory.ahk"), self.historyfile])
             self.epdict = gen_epdict(self.playingfile)
             log.info(self.epdict)
         log.info("playbackstart finished")
@@ -189,7 +189,7 @@ class MyPlayer(xbmc.Player):
 
     def onPlayBackStarted(self):
         playingfile = getplayingvideofile()
-        if playingfile["file"].startswith(mkpath(const.libpath, "NRK")):
+        if playingfile["file"].startswith(uni_join(const.libpath, "NRK")):
             self.session = ViewingSession(playingfile)
 
     def onPlayBackEnded(self):

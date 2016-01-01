@@ -12,7 +12,7 @@ from operator import itemgetter
 import xbmc
 import xbmcgui
 
-from lib.utils import (settings, rpc, log, progress, dialogs, mkpath, const)
+from lib.utils import (settings, rpc, log, progress, dialogs, os_join, uni_join, const)
 from lib import library
 from lib import internet as nrk
 
@@ -34,7 +34,7 @@ class MediaDatabase(object):
     def __init__(self, mediatype):
         self.mediatype = mediatype
         try:
-            with open(mkpath(const.userdatafolder, "%s database.json" % self.mediatype), 'r') as j:
+            with open(os_join(const.userdatafolder, "%s database.json" % self.mediatype), 'r') as j:
                 database = json.load(j)
             self.stored = LastUpdatedOrderedDict(database["stored"])
             self.excluded = database["excluded"]
@@ -71,7 +71,7 @@ class MediaDatabase(object):
                 "excluded": inst.excluded,
                 "prioritized": list(inst.prioritized)
             }
-            with open(mkpath(const.userdatafolder, "%s database.json" % inst.mediatype), 'w') as p:
+            with open(os_join(const.userdatafolder, "%s database.json" % inst.mediatype), 'w') as p:
                 json.dump(database, p, indent=2)
 
 
@@ -142,12 +142,12 @@ def prioritize_shows(shows_stored, shows_prioritized):
 
 def configure_remote():
     try:
-        with open(mkpath(const.userdatafolder, "remotemapping.json"), "r") as j:
+        with open(os_join(const.userdatafolder, "remotemapping.json"), "r") as j:
             remotemapping = json.load(j)
     except IOError:
         remotemapping = {}
     buttonlist = ["Play", "Pause", "Stop", "Forward", "Rewind"]
-    returnkeyscript = mkpath(const.ahkfolder, "return key.ahk")
+    returnkeyscript = os_join(const.ahkfolder, "return key.ahk")
     while True:
         optionlist = ["%s: %s" % (button, remotemapping.get(button)) for button in buttonlist]
         call = dialogs.select('Select function to edit', optionlist)
@@ -159,7 +159,7 @@ def configure_remote():
         p.stdout.close()
         pressed = key.split("EndKey:")[-1] if "EndKey" in key else key.split(",")[0]
         remotemapping[buttonlist[call]] = pressed
-    with open(mkpath(const.userdatafolder, "remotemapping.json"), "w") as j:
+    with open(os_join(const.userdatafolder, "remotemapping.json"), "w") as j:
         json.dump(remotemapping, j)
     xbmc.executebuiltin('Addon.OpenSettings(script.service.koalanrk)')
     id1 = 1
@@ -169,7 +169,7 @@ def configure_remote():
 
 
 def deletecookies():
-    cookiefile = mkpath(const.userdatafolder, "cookies")
+    cookiefile = os_join(const.userdatafolder, "cookies")
     if os.path.isfile(cookiefile):
         os.remove(cookiefile)
 
@@ -223,8 +223,8 @@ def main():
     if not is_libpath_added():
         dialogs.ok(heading="Koala path not in video sources",
                    line1="Koala library paths have not been added to Kodi video sources:",
-                   line2=mkpath(const.libpath, "NRK shows"),
-                   line3=mkpath(const.libpath, "NRK movies"))
+                   line2=uni_join(const.libpath, "NRK shows"),
+                   line3=uni_join(const.libpath, "NRK movies"))
         return
 
     if action == "startup" and not (settings["check watchlist on startup"] or settings["check shows on startup"]):

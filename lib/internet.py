@@ -10,14 +10,14 @@ from types import MethodType
 from HTMLParser import HTMLParser
 import re
 
-from lib.utils import (log, settings, mkpath, const)
+from lib.utils import (log, settings, os_join, const)
 
 
 class RequestSession():
     def __init__(self):
         self.session = requests.Session()
         try:
-            with open(mkpath(const.userdatafolder, "cookies"), 'rb') as f:
+            with open(os_join(const.userdatafolder, "cookies"), 'rb') as f:
                 self.session.cookies = pickle.load(f)
         except IOError:
             pass
@@ -39,7 +39,7 @@ class RequestSession():
         return req
 
     def save_cookies(self):
-        with open(mkpath(const.userdatafolder, "cookies"), 'wb') as f:
+        with open(os_join(const.userdatafolder, "cookies"), 'wb') as f:
             pickle.dump(self.session.cookies, f)
 reqs = RequestSession()
 

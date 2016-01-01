@@ -79,12 +79,14 @@ def wrap_unicode(func):
     return wrapper
 
 
-def mkpath(*args):
+def os_join(*args):
     path = os.path.join(*args)
     if const.os == "windows":
         return path
     else:
         return path.encode("utf-8")
+
+uni_join = os.path.join
 
 
 class SettingsDict(dict):

@@ -10,7 +10,7 @@ import traceback
 import json
 import xml.etree.ElementTree as ET
 
-from lib.utils import (mkpath, stringtofile, rpc, log, monitor, const)
+from lib.utils import (os_join, uni_join, stringtofile, rpc, log, monitor, const)
 import lib.internet as nrk
 
 
@@ -33,23 +33,23 @@ class Movie(object):
         self.nrkid = movieid
         self.title = movietitle
         self.kodiid = None
-        self.folderpath = os.path.join(const.libpath, "NRK movies")
+        self.path = uni_join(const.libpath, "NRK movies")
         self.filename = "%s.htm" % stringtofile(self.title)
-        self.filepath = mkpath(self.folderpath, self.filename)
-        self.nfofilepath = self.filepath.replace(".htm", ".nfo")
-        self.jsonfilepath = self.filepath.replace(".htm", ".json")
+        self.nfofilename = "%s.nfo" % stringtofile(self.title)
+        self.jsonfilename = "%s.json" % stringtofile(self.title)
 
     def remove(self):
         moviedict = rpc("VideoLibrary.GetMovies",
                         properties=["file", 'playcount'],
                         multifilter={"and": [
                               ("filename", "is", self.filename),
-                              ("path", "startswith", self.folderpath)]})
+                              ("path", "startswith", self.path)]})
         if 'movies' in moviedict:
             self.kodiid = moviedict['movies'][0]['movieid']
             playcount = moviedict['movies'][0]['playcount']
             if playcount > 0:
-                save_playcount(self.jsonfilepath, playcount)
+                jsonfilepath = os_join(self.path, self.jsonfilename)
+                save_playcount(jsonfilepath, playcount)
             rpc("VideoLibrary.RemoveMovie", movieid=self.kodiid)
             self.delete_file()
             log.info("Removed: %s" % (self.title))
@@ -57,10 +57,10 @@ class Movie(object):
             log.info("Couldn't find file: %s" % (self.title))
 
     def delete_file(self):
-        os.remove(self.filepath)
+        os.remove(os_join(self.path, self.filename))
 
     def create_file(self):
-        with open(self.filepath, "w") as txt:
+        with open(os_join(self.path, self.filename), "w") as txt:
             txt.write('<meta http-equiv="REFRESH" content="0;'
                   'url=http://tv.nrk.no%s"> <body bgcolor="#ffffff">' % self.nrkid)
         log.debug("File created: %s " % self.title)
@@ -70,13 +70,14 @@ class Movie(object):
                         properties=["file"],
                         multifilter={"and": [
                               ("filename", "is", self.filename),
-                              ("path", "startswith", self.folderpath)]})
+                              ("path", "startswith", self.path)]})
         if 'movies' in moviedict:
             self.kodiid = moviedict['movies'][0]['movieid']
-            if exists(self.jsonfilepath):
-                load_playcount("movie", self.jsonfilepath, self.kodiid)
-            log.info("Movie added: %s" % self.title)
+            jsonfilepath = os_join(self.path, self.jsonfilename)
+            if exists(jsonfilepath):
+                load_playcount("movie", jsonfilepath, self.kodiid)
             self.nonadded = False
+            log.info("Movie added: %s" % self.title)
         else:
             self.nonadded = True
             log.info("Movie added, but not scraped: %s" % self.title)
@@ -101,8 +102,7 @@ class Show(object):
     def __init__(self, showid, showtitle):
         self.nrkid = showid
         self.title = showtitle
-        self.folderpath = mkpath(const.libpath, "NRK shows", stringtofile(self.title))
-        self.nfofilepath = mkpath(self.folderpath, "tvshow.nfo")
+        self.path = uni_join(const.libpath, "NRK shows", stringtofile(self.title))
 
     def _get_stored_episodes(self):
         stored_episodes = rpc("VideoLibrary.GetEpisodes",
@@ -113,7 +113,7 @@ class Show(object):
         for epdict in stored_episodes.get('episodes', []):
             episodecode = "S%02dE%02d" % (int(epdict['season']), int(epdict['episode']))
             self.all_stored_episodes.add(episodecode)
-            if epdict["file"].startswith(self.folderpath):
+            if epdict["file"].startswith(self.path):
                 episode = Episode(self.title, epdict["season"], epdict["episode"], kodiid=epdict["episodeid"], playcount=epdict["playcount"])
                 self.koala_stored_episodes[episodecode] = episode
         return self.koala_stored_episodes, self.all_stored_episodes
@@ -172,7 +172,7 @@ class Show(object):
         if in_superuniverse:
             ET.SubElement(root, "genre").text = "Children"
         tree = ET.ElementTree(root)
-        tree.write(self.nfofilepath, xml_declaration=True, encoding='utf-8', method="xml")
+        tree.write(os_join(self.path, "tvshow.nfo"), xml_declaration=True, encoding='utf-8', method="xml")
 
     def gen_nfos(self):
         if (self.nonadded_episodes == self.new_episodes) and not self.all_stored_episodes:
@@ -193,37 +193,36 @@ class Episode(object):
         self.nrkid = nrkid
         self.kodiid = kodiid
         self.playcount = int(playcount)
-        self.folderpath = mkpath(const.libpath, "NRK shows", stringtofile(self.showtitle), "Season %s" % self.seasonnr)
+        self.path = uni_join(const.libpath, "NRK shows", stringtofile(self.showtitle), "Season %s" % self.seasonnr)
         self.filename = "%s %s.htm" % (stringtofile(self.showtitle), self.code)
-        self.filepath = mkpath(self.folderpath, self.filename)
-        self.nfofilepath = self.filepath.replace(".htm", ".nfo")
-        self.jsonfilepath = self.filepath.replace(".htm", ".json")
-        self.nonadded = False
+        self.nfofilename = "%s %s.nfo" % (stringtofile(self.showtitle), self.code)
+        self.jsonfilename = "%s %s.json" % (stringtofile(self.showtitle), self.code)
 
     def remove(self):
         if self.playcount > 0:
-            save_playcount(self.jsonfilepath, self.playcount)
+            jsonfilepath = os_join(self.path, self.jsonfilename)
+            save_playcount(jsonfilepath, self.playcount)
         rpc("VideoLibrary.RemoveEpisode", episodeid=self.kodiid)
         self.delete_file()
         log.info("Removed: %s %s" % (self.showtitle, self.code))
 
     def delete_file(self):
-        os.remove(self.filepath)
+        os.remove(os_join(self.path, self.filename))
 
     def create_file(self):
-        if not exists(self.folderpath):
-            os.makedirs(self.folderpath)
-        with open(self.filepath, "w") as txt:
+        if not exists(os_join(self.path)):
+            os.makedirs(os_join(self.path))
+        with open(os_join(self.path, self.filename), "w") as txt:
             txt.write('<meta http-equiv="REFRESH" content="0;'
                       'url=http://tv.nrk%s.no%s">'
                       '<body bgcolor="#ffffff">' % ("super" if self.in_superuniverse else "", self.nrkid))
-        log.debug("File created: %s %s" % (self.showtitle, self.code))
 
     def add_to_lib(self, koala_stored_episodes):
         if self.code in koala_stored_episodes:
             self.kodiid = koala_stored_episodes[self.code].kodiid
-            if exists(self.jsonfilepath):
-                load_playcount("episode", self.jsonfilepath, self.kodiid)
+            jsonfilepath = os_join(self.path, self.jsonfilename)
+            if exists(jsonfilepath):
+                load_playcount("episode", jsonfilepath, self.kodiid)
             self.nonadded = False
             log.info("Episoded added: %s %s" % (self.showtitle, self.code))
         else:
@@ -242,7 +241,7 @@ class Episode(object):
         ET.SubElement(root, "thumb").text = epinfodict['images']["webImages"][-1]["imageUrl"]
         ET.SubElement(root, "runtime").text = re.sub(r"PT(\d+)M.*", r"\1", epinfodict["duration"])
         tree = ET.ElementTree(root)
-        tree.write(self.nfofilepath, xml_declaration=True, encoding='utf-8', method="xml")
+        tree.write(os_join(self.path, self.nfofilename), xml_declaration=True, encoding='utf-8', method="xml")
 
 
 ###################
