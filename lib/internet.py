@@ -45,7 +45,7 @@ reqs = RequestSession()
 
 
 def login(loginpage):
-    print "logging in"
+    log.info("logging in")
     username = settings["username"]
     passw = settings["password"]
     if not username or not passw:

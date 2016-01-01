@@ -142,7 +142,7 @@ def getremotemapping():
     return controls
 
 
-class ViewingSession():
+class ViewingSession(object):
     def __init__(self, playingfile):
         log.info("playbackstart starting")
         self.playingfile = playingfile

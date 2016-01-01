@@ -90,21 +90,21 @@ def get_n_shows_to_update(show_database):
     return shows_to_update
 
 
+def koalasetup():
+    if not os.path.exists(const.userdatafolder):
+        os.mkdir(const.userdatafolder)
+    if not os.path.exists(os_join(const.libpath, "NRK shows")):
+        os.mkdir(os_join(const.libpath, "NRK shows"))
+    if not os.path.exists(os_join(const.libpath, "NRK movies")):
+        os.mkdir(os_join(const.libpath, "NRK movies"))
+
+
 def is_libpath_added():
     sources = rpc("Files.GetSources", media="video")
     for source in sources.get('sources', []):
         if source['file'].startswith(const.libpath):
             return True
     return False
-
-
-def koalasetup():
-    if not os.path.exists(const.userdatafolder):
-        os.mkdir(const.userdatafolder)
-    if not os.path.exists(mkpath(const.libpath, "NRK shows")):
-        os.mkdir(mkpath(const.libpath, "NRK shows"))
-    if not os.path.exists(mkpath(const.libpath, "NRK movies")):
-        os.mkdir(mkpath(const.libpath, "NRK movies"))
 
 
 def refresh_settings():
