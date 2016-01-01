@@ -11,7 +11,7 @@ import xbmcaddon
 import xbmcgui
 
 
-class Constants():
+class Constants(object):
     def __init__(self):
         self.addon = xbmcaddon.Addon()
         self.addonpath = xbmc.translatePath(self.addon.getAddonInfo('path')).decode("utf-8")
@@ -115,7 +115,7 @@ class SettingsDict(dict):
 settings = SettingsDict()
 
 
-class Dialogs():
+class Dialogs(object):
     def __init__(self):
         self.dialog = xbmcgui.Dialog()
 
@@ -150,7 +150,7 @@ class Dialogs():
         return self.dialog.yesno(heading, line1, line2, line3)
 
 
-class PDialog():
+class PDialog(object):
     def __init__(self):
         self.active = False
 
@@ -252,7 +252,7 @@ def stringtofile(string):
         return string.encode("utf-8")
 
 
-class Log():
+class Log(object):
     def info(self, input):
         xbmc.log(byteify("[Koala NRK] %s" % input), xbmc.LOGNOTICE)
 
