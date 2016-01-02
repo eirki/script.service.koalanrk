@@ -243,17 +243,17 @@ def main():
     # initialize mediaobjects
     show_database = None
     movie_database = None
-    if action in ["prioritize", "exclude_show", "readd_show", "updatesingle", "updateall", "removereadd", "watchlist", "startup"]:
+    if action in ["prioritize", "exclude_show", "readd_show", "update_single", "update_all", "remove_all", "watchlist", "startup"]:
         show_database = MediaDatabase("show")
-    if action in ["exclude_movie", "readd_movie", "removereadd", "watchlist", "startup"]:
+    if action in ["exclude_movie", "readd_movie", "remove_all", "watchlist", "startup"]:
         movie_database = MediaDatabase("movie")
 
 
     # cancel if no media
-    if action == "removereaddall" and not (show_database.stored or movie_database.stored):
+    if action == "remove_all" and not (show_database.stored or movie_database.stored):
         dialogs.ok(heading="No media", line1="No media seems to have been added")
         return
-    elif action in ["prioritize", "exclude_show", "readd_show", "updatesingle", "updateall"] and not show_database.stored:
+    elif action in ["prioritize", "exclude_show", "readd_show", "update_single", "update_all"] and not show_database.stored:
         dialogs.ok(heading="No shows", line1="No shows seem to have been added")
         return
     elif action in ["exclude_movie", "readd_movie"] and not movie_database.stored:
@@ -265,7 +265,7 @@ def main():
         prioritize_shows(show_database.stored, show_database.prioritized)
         return
 
-    if action in ("updatesingle", "exclude_show"):
+    if action in ("update_single", "exclude_show"):
         show = select_mediaitem(show_database.stored, "show")
     elif action == "readd_show":
         show = select_mediaitem(show_database.excluded, "show")
@@ -274,7 +274,7 @@ def main():
     elif action == "readd_movie":
         movie = select_mediaitem(movie_database.excluded, "movie")
 
-    if action in ("updatesingle", "exclude_show", "readd_show") and not any(show):
+    if action in ("update_single", "exclude_show", "readd_show") and not any(show):
         return
     if action in ("exclude_movie", "readd_movie") and not any(movie):
         return
@@ -292,7 +292,7 @@ def main():
 
     progress.update(10)
 
-    if action == "updatesingle":
+    if action == "update_single":
         library.update_add_create(shows=[show])
         show_database.update([show])
     elif action == "readd_show":
@@ -302,15 +302,15 @@ def main():
         library.update_add_create(movies=[movie])
         movie_database.readd([movie])
 
-    elif action == "updateall":
+    elif action == "update_all":
         progress.update(25)
         library.update_add_create(shows=show_database.stored.items())
 
-    elif action == "removereadd":
-        progress.update(25)
-        library.remove(movies=movie_database.stored.items(), shows=show_database.stored.items())
+    elif action == "remove_all":
         progress.update(50)
-        library.update_add_create(movies=movie_database.stored.items(), shows=show_database.stored.items())
+        library.remove(movies=movie_database.stored.items(), shows=show_database.stored.items())
+        movie_database.remove(movie_database.stored.items())
+        show_database.remove(show_database.stored.items())
 
     elif action in ["watchlist", "startup"]:
         if action == "startup" and not settings["check watchlist on startup"]:
