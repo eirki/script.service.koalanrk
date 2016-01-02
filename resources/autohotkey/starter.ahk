@@ -5,11 +5,10 @@
 ComObjError(false)
 SetTitleMatchMode, 2
 DetectHiddenText, off
-SendMode Input ; Forces Send and SendRaw to use SendInput buffering for speed.
-SysGet, Mon, Monitor
+SendMode Input
 
 
-WinWait, NRK TV, , 60
+WinWait, NRK, , 60
 WinActivate
 GetExplorer() {
     for win in ComObjCreate("Shell.Application").Windows {
@@ -35,10 +34,7 @@ left := play.left
 top := play.top
 wb.document.getElementsByClassName("play-icon")[0].Click()
 
-; MsgBox, 123
-while WinExist("NRK TV") and !InStr(wb.document.head.innerhtml, "progresstracker"){
+while WinExist("NRK") and !InStr(wb.document.head.innerhtml, "progresstracker"){
     Sleep, 100
 }
 MouseClick, left, %left%, %top%, 2, 0
-MouseMove, X, Y [, Speed, R]
-MouseMove, MonRight, MonBottom, 0

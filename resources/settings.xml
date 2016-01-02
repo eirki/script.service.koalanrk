@@ -10,30 +10,30 @@
   </category>
   <category label="Remote control utility">
     <setting label="Enable remote control utility (Windows only)" id="remote" type="bool" default="false" />
-    <setting label="Configure keys" action="RunScript(script.service.koalanrk, configureremote, settingsaction, none)" type="action" enable="eq(-1,true)" option="close"/>
+    <setting label="Configure keys" action="RunScript(script.service.koalanrk, configureremote)" type="action" enable="eq(-1,true)" option="close"/>
   </category>
   <category label="Startup settings">
     <setting label="Check watchlist for added/removed media on startup" id="check watchlist on startup" type="bool" default="true"/>
     <setting label="Check stored TV shows for added/removed episodes on startup" id="check shows on startup" type="bool"  default="true" enable="eq(-1,true)"/>
-    <setting label="Check all stored TV shows" id="All shows on startup" type="bool" enable="eq(-1,true) + eq(-2,true)" default="false"/>
+    <setting label="Check all stored TV shows" id="all_shows_on_startup" type="bool" enable="eq(-1,true) + eq(-2,true)" default="false"/>
     <setting label="No. of TV shows to check" id="n_shows_to_update" default="10"  option="int" range="0,1,20" type="slider" enable="eq(-1,false) + eq(-2,true) + eq(-3,true)"/>
     <setting label="Prioritize shows (always checked in startup process)" action="RunScript(script.service.koalanrk, prioritize, show, single)" type="action" option="close" enable="eq(-2,false) + eq(-3,true) + eq(-4,true)"/>
     <setting label="Show progress notification" id="startupnotification" type="bool" default="true" />
   </category>
   <category label="Update actions ">
-    <setting label="Check My List for added/removed media" action="RunScript(script.service.koalanrk, watchlist, both, all)" type="action"  option="close"/>
-    <setting label="Update single show" action="RunScript(script.service.koalanrk, update, show, single)" type="action"  option="close"/>
-    <setting label="Update all shows" action="RunScript(script.service.koalanrk, update, show, all)" type="action"  option="close"/>
-    <setting label="Exclude show" action="RunScript(script.service.koalanrk, exclude, show, single)" type="action"  option="close"/>
-    <setting label="Readd show" action="RunScript(script.service.koalanrk, readd, show, single)" type="action"  option="close"/>
-    <setting label="Exclude movie" action="RunScript(script.service.koalanrk, exclude, movie, single)" type="action"  option="close"/>
-    <setting label="Readd movie" action="RunScript(script.service.koalanrk, readd, movie, single)" type="action"  option="close"/>
+    <setting label="Check My List for added/removed media" action="RunScript(script.service.koalanrk, watchlist)" type="action"  option="close"/>
+    <setting label="Update single show" action="RunScript(script.service.koalanrk, update_single)" type="action"  option="close"/>
+    <setting label="Update all shows" action="RunScript(script.service.koalanrk, update_all)" type="action"  option="close"/>
+    <setting label="Exclude show" action="RunScript(script.service.koalanrk, exclude_show)" type="action"  option="close"/>
+    <setting label="Readd show" action="RunScript(script.service.koalanrk, readd_show)" type="action"  option="close"/>
+    <setting label="Exclude movie" action="RunScript(script.service.koalanrk, exclude_movie)" type="action"  option="close"/>
+    <setting label="Readd movie" action="RunScript(script.service.koalanrk, readd_movie)" type="action"  option="close"/>
   </category>
   <category label="Debug">
-    <setting label="Remove and re-add all shows and movies" action="RunScript(script.service.koalanrk, removereadd, both, all)" type="action"  option="close"/>
-    <setting label="Delete cookies" action="RunScript(script.service.koalanrk, deletecookies, settingsaction, none)" type="action" />
-    <setting label="Refresh Settings" action="RunScript(script.service.koalanrk, refreshsettings, settingsaction, none)" type="action"  option="close" />
-    <setting label="Test action" action="RunScript(script.service.koalanrk, test, settingsaction, none)" type="action" option="close"/>
-     <setting label="Run startup process" action="RunScript(script.service.koalanrk, startup, both, all)" type="action"  option="close"/>
+    <setting label="Remove all shows and movies" action="RunScript(script.service.koalanrk, remove_all)" type="action"  option="close"/>
+    <setting label="Delete cookies" action="RunScript(script.service.koalanrk, deletecookies)" type="action" />
+    <setting label="Refresh Settings" action="RunScript(script.service.koalanrk, refreshsettings)" type="action"  option="close" />
+    <setting label="Test action" action="RunScript(script.service.koalanrk, test)" type="action" option="close"/>
+     <setting label="Run startup process" action="RunScript(script.service.koalanrk, startup)" type="action"  option="close"/>
  </category>
 </settings>
