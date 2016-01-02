@@ -46,7 +46,7 @@ def gen_epdict(playingfile):
             playcount = episode['playcount']
             runtime = episode['runtime']
             with open(episode['file'], 'r') as txt:
-                nrkid = re.sub(r'.*http://tv.nrk.no/(.*?)".*', r"\1", txt.read())
+                nrkid = re.sub(r'.*http://tv.nrk(?:super)?.no/(.*?)".*', r"\1", txt.read())
             epdict[nrkid] = [epcode, kodiid, playcount, runtime]
     return epdict
 
