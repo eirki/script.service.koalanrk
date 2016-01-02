@@ -152,7 +152,8 @@ def getinfodict(mediaid):
 
 def getshowinfo(showid):
     showpage = reqs.get("http://tv.nrk.no/serie/%s/" % showid).soup()
-    plot = showpage.find("h3", text="Seriebeskrivelse").next_sibling.next_sibling.text
+    plot_heading = showpage.find("h3", text="Seriebeskrivelse")
+    plot = plot_heading.next_sibling.next_sibling.text if plot_heading else ""
     year = showpage.find("dt", text="Produksjonsår:").next_sibling.next_sibling.text
     image = showpage.find(id="playerelement")["data-posterimage"]
     in_superuniverse = "isInSuperUniverse: true" in showpage.text

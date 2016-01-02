@@ -95,7 +95,7 @@ class Movie(object):
         ET.SubElement(fanart, "thumb").text = movinfodict['images']["webImages"][-1]["imageUrl"]
         ET.SubElement(root, "runtime").text = re.sub(r"PT(\d+)M.*", r"\1", movinfodict["duration"])
         tree = ET.ElementTree(root)
-        tree.write(self.nfofilepath, xml_declaration=True, encoding='utf-8', method="xml")
+        tree.write(os_join(self.path, self.nfofilename), xml_declaration=True, encoding='utf-8', method="xml")
 
 
 class Show(object):
