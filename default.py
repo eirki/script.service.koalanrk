@@ -16,7 +16,6 @@ from lib.utils import (settings, rpc, log, progress, dialogs, os_join, uni_join,
 from lib import library
 from lib import internet as nrk
 
-from lib import seleplayer
 # from https://docs.python.org/2/library/collections.html#collections.OrderedDict
 class LastUpdatedOrderedDict(OrderedDict):
     '''Store items in the order the keys were last added
@@ -207,10 +206,6 @@ def main():
     log.info(action)
     if action in ([''], ["default.py"]):
         action = "startup"
-    elif len(action) == 3:
-        play_id = action[2]
-        seleplayer.play(play_id)
-        return
     else:
         action = action[1]
 
