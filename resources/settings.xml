@@ -9,15 +9,15 @@
     <setting label="Browser used for playing files" id="browser" type="select" values="Internet Explorer|Chrome" />
   </category>
   <category label="Remote control utility">
-    <setting label="Enable remote control utility (Windows only)" id="remote" type="bool" default="false" />
+    <setting label="Enable remote control utility (Windows only). Restart required" id="remote" type="bool" default="false" />
     <setting label="Configure keys" action="RunScript(script.service.koalanrk, configureremote)" type="action" enable="eq(-1,true)" option="close"/>
   </category>
   <category label="Startup settings">
     <setting label="Check watchlist for added/removed media on startup" id="check watchlist on startup" type="bool" default="true"/>
-    <setting label="Check stored TV shows for added/removed episodes on startup" id="check shows on startup" type="bool"  default="true" enable="eq(-1,true)"/>
-    <setting label="Check all stored TV shows" id="all_shows_on_startup" type="bool" enable="eq(-1,true) + eq(-2,true)" default="false"/>
-    <setting label="No. of TV shows to check" id="n_shows_to_update" default="10"  option="int" range="0,1,20" type="slider" enable="eq(-1,false) + eq(-2,true) + eq(-3,true)"/>
-    <setting label="Prioritize shows (always checked in startup process)" action="RunScript(script.service.koalanrk, prioritize, show, single)" type="action" option="close" enable="eq(-2,false) + eq(-3,true) + eq(-4,true)"/>
+    <setting label="Check stored TV shows for added/removed episodes on startup" id="check shows on startup" type="bool"  default="true"/>
+    <setting label="Check all stored TV shows" id="all_shows_on_startup" type="bool" default="false" enable="eq(-1,true)"/>
+    <setting label="No. of TV shows to check" id="n_shows_to_update" default="10"  option="int" range="0,1,20" type="slider"  enable="eq(-1,false) + eq(-2,true)"/>
+    <setting label="Prioritize shows (always checked in startup process)" action="RunScript(script.service.koalanrk, prioritize, show, single)" type="action" option="close" enable="eq(-2,false) + eq(-3,true)"/>
     <setting label="Show progress notification" id="startupnotification" type="bool" default="true" />
   </category>
   <category label="Update actions ">
