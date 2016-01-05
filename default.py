@@ -16,7 +16,7 @@ from lib.utils import (settings, rpc, log, progress, dialogs, os_join, uni_join,
 from lib import library
 from lib import internet as nrk
 
-
+from lib import seleplayer
 # from https://docs.python.org/2/library/collections.html#collections.OrderedDict
 class LastUpdatedOrderedDict(OrderedDict):
     '''Store items in the order the keys were last added
@@ -207,8 +207,13 @@ def main():
     log.info(action)
     if action in ([''], ["default.py"]):
         action = "startup"
+    elif len(action) == 3:
+        play_id = action[2]
+        seleplayer.play(play_id)
+        return
     else:
         action = action[1]
+
     run = True
     if xbmcgui.Window(10000).getProperty("Koala NRK running") == "true":
         run = dialogs.yesno(heading="Running",
@@ -313,27 +318,25 @@ def main():
         show_database.remove(show_database.stored.items())
 
     elif action in ["watchlist", "startup"]:
-        if action == "startup" and not settings["check watchlist on startup"]:
-            return
-        progress.update(25)
-        results = nrk.check_watchlist(movie_database, show_database)
-        unav_movies, unav_shows, added_movies, added_shows = results
-        if unav_movies or unav_shows:
-            progress.update(50)
-            library.remove(movies=unav_movies, shows=unav_shows)
-            movie_database.remove(unav_movies)
-            show_database.remove(unav_shows)
-        if added_movies or added_shows:
-            progress.update(75)
-            library.update_add_create(movies=added_movies, shows=added_shows)
-            movie_database.update(added_movies)
-            show_database.update(added_shows)
-        if action == "watchlist" or (action == "startup" and not settings["check shows on startup"]):
-            return
-        progress.update(90)
-        shows_to_update = get_n_shows_to_update(show_database)
-        library.update_add_create(shows=shows_to_update)
-        show_database.update(shows_to_update)
+        if (action == "startup" and settings["check watchlist on startup"]) or (action == "watchlist"):
+            progress.update(25)
+            results = nrk.check_watchlist(movie_database, show_database)
+            unav_movies, unav_shows, added_movies, added_shows = results
+            if unav_movies or unav_shows:
+                progress.update(50)
+                library.remove(movies=unav_movies, shows=unav_shows)
+                movie_database.remove(unav_movies)
+                show_database.remove(unav_shows)
+            if added_movies or added_shows:
+                progress.update(75)
+                library.update_add_create(movies=added_movies, shows=added_shows)
+                movie_database.update(added_movies)
+                show_database.update(added_shows)
+        if action == "startup" and settings["check shows on startup"]:
+            progress.update(90)
+            shows_to_update = get_n_shows_to_update(show_database)
+            library.update_add_create(shows=shows_to_update)
+            show_database.update(shows_to_update)
 
 if __name__ == '__main__':
     try:
