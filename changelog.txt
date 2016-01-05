@@ -1,3 +1,7 @@
+0.2
+Enable multithreading
+Now stores some data in nfo for nonscraped shows and movies
+
 0.1.1
 Bugfixes
 
