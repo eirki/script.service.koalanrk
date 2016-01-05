@@ -10,7 +10,7 @@ import traceback
 import json
 import xml.etree.ElementTree as ET
 
-from lib.utils import (os_join, uni_join, stringtofile, rpc, log, monitor, const)
+from lib.utils import (os_join, uni_join, stringtofile, rpc, log, monitor, const, settings)
 import lib.internet as nrk
 
 
@@ -266,7 +266,7 @@ def remove(movies=(), shows=()):
 def update_add_create(movies=(), shows=()):
     movieobjs = [Movie(movieid, showtitle) for movieid, showtitle in movies]
     showobjs = [Show(showid, showtitle) for showid, showtitle in shows]
-    pool = threading.Pool(len(movieobjs+showobjs))
+    pool = threading.Pool(len(movieobjs+showobjs) if settings['multithreading'] else 1)
 
     pool.map(mapwrapper, [movie.create_file for movie in movieobjs])
     pool.map(mapwrapper, [show.update for show in showobjs])
