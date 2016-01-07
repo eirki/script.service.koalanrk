@@ -226,8 +226,10 @@ class PyKeyboardEvent(PyKeyboardEventMeta):
     The PyKeyboardEvent implementation for Windows Systems. This allows one
     to listen for keyboard input.
     """
-    def __init__(self, diagnostic=False):
+    def __init__(self, diagnostic=False, capture=False, capture_some=None):
         self.diagnostic = diagnostic
+        self.capture = capture
+        self.capture_some = set(capture_some) if capture_some else []
 
         import pyHook
 
@@ -261,22 +263,25 @@ class PyKeyboardEvent(PyKeyboardEventMeta):
         else:
             self._tap(event)
         #This is needed according to the pyHook tutorials 'http://sourceforge.net/apps/mediawiki/pyhook/index.php?title=PyHook_Tutorial'
-        return True
+        if (self.capture or self.keycode in self.capture_some) and self.press_bool:
+            return False
+        else:
+            return True
 
     def _tap(self, event):
-        keycode = event.KeyID
-        press_bool = (event.Message in [self.hc.WM_KEYDOWN, self.hc.WM_SYSKEYDOWN])
+        self.keycode = event.KeyID
+        self.press_bool = (event.Message in [self.hc.WM_KEYDOWN, self.hc.WM_SYSKEYDOWN])
 
         #Not using event.GeyKey() because we want to differentiate between
         #KeyID and Ascii attributes of the event
         if event.Ascii != 0:
             character = chr(event.Ascii)
         else:
-            character = self.hc.id_to_vk[keycode][3:]
+            character = self.hc.id_to_vk[self.keycode][3:]
 
         #TODO: Need to universalize keys between platforms. ie. 'Menu' -> 'Alt'
 
-        self.tap(keycode, character, press_bool)
+        self.tap(self.keycode, character, self.press_bool)
 
     def _diagnostic(self, event):
         """
