@@ -10,31 +10,36 @@ SendMode Input
 
 WinWait, NRK, , 60
 WinActivate
+sleep, 1000
+
 GetExplorer() {
     for win in ComObjCreate("Shell.Application").Windows {
+        Sleep, 2000
         If InStr(win.FullName, "iexplore.exe") {
-            ie = 1
             break
         }
     }
     return win
 }
-WaitandExitonQuit() {
-    Sleep, 100
-    if (A_LastError = -2147023174) {
-        ExitApp
-    }
-}
 
-wb := GetExplorer()
-while wb.Busy or wb.ReadyState != 4 or not wb.document.getElementsByClassName("play-icon").length
-    WaitandExitonQuit()
-play := wb.document.getElementsByClassName("play-icon")[0].getBoundingClientRect()
-left := play.left
-top := play.top
-wb.document.getElementsByClassName("play-icon")[0].Click()
 
-while WinExist("NRK") and !InStr(wb.document.head.innerhtml, "progresstracker"){
+ie := GetExplorer()
+
+while ie.Busy or ie.ReadyState != 4
+    Sleep, 100
+
+if ie.document.getElementsByClassName("play-icon123123").length {
+    play := ie.document.getElementsByClassName("play-icon")[0].getBoundingClientRect()
+    x := play.left
+    y := play.top
+    ie.document.getElementsByClassName("play-icon")[0].Click()
+}
+else {
+    x := (A_ScreenWidth // 2)
+    y := (A_ScreenHeight // 2)
+    mouseclick, left, %x%, %y%, 1, 0
+}
+while WinExist("NRK") and !InStr(ie.document.head.innerhtml, "progresstracker"){
     Sleep, 100
 }
-MouseClick, left, %left%, %top%, 2, 0
+MouseClick, left, %x%, %y%, 2, 0
