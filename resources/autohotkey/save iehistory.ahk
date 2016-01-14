@@ -6,22 +6,31 @@ ComObjError(false)
 SetTitleMatchMode, 2
 historyfile = %1%
 WinWait % "Internet Explorer"
-WinWait % "NRK TV"
+WinWait % "NRK"
+sleep, 1000
 
-for win in ComObjCreate("Shell.Application").Windows
-	If InStr(win.FullName, "iexplore.exe")
-		break
+GetExplorer() {
+    for win in ComObjCreate("Shell.Application").Windows {
+        Sleep, 2000
+        If InStr(win.FullName, "iexplore.exe") {
+            break
+        }
+    }
+    return win
+}
 
-while (win.busy)
+ie := GetExplorer()
+
+while (ie.busy)
 	Sleep, 1000
 
-FileAppend, % A_NowUTC . " " . win.LocationURL . "`n", % historyfile
-activeurl := win.LocationURL
+FileAppend, % A_NowUTC . " " . ie.LocationURL . "`n", % historyfile
+activeurl := ie.LocationURL
 
 while (WinExist("Internet Explorer")){
-	if (activeurl != win.LocationURL){
-		FileAppend, % A_NowUTC . " " . win.LocationURL . "`n", % historyfile
-		activeurl := win.LocationURL
+	if (activeurl != ie.LocationURL){
+		FileAppend, % A_NowUTC . " " . ie.LocationURL . "`n", % historyfile
+		activeurl := ie.LocationURL
 	}
 	sleep, 1000
 }
