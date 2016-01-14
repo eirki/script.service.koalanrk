@@ -21,21 +21,19 @@ from utils import (settings, log, os_join, uni_join, rpc, const)
 #                  os_join(const.addonpath, "lib", "win32", "Pythonwin")])
 # os.environ["PATH"] += ";%s" % os_join(const.addonpath, "lib", "win32", "pywin32_system32")
 
-import remote
-from win32com.client import Dispatch
-import pywintypes
-
-def getplayingvideofile():
-    if xbmc.Player().isPlayingAudio():
-        log.info("Audio file playing")
-        playingfile = rpc("Player.GetItem", properties=["season", "episode", "tvshowid", "file"], playerid=0)
-    if xbmc.Player().isPlayingVideo():
-        log.info("Video file playing")
-        playingfile = rpc("Player.GetItem", properties=["season", "episode", "tvshowid", "file"], playerid=1)
-    log.info("Playing: %s" % playingfile["item"])
-    if "item" in playingfile:
-        playingfile = playingfile["item"]
-    return playingfile
+from .selenium import webdriver
+from .selenium.webdriver.common.keys import Keys
+# def getplayingvideofile():
+#     if xbmc.Player().isPlayingAudio():
+#         log.info("Audio file playing")
+#         playingfile = rpc("Player.GetItem", properties=["season", "episode", "tvshowid", "file"], playerid=0)
+#     if xbmc.Player().isPlayingVideo():
+#         log.info("Video file playing")
+#         playingfile = rpc("Player.GetItem", properties=["season", "episode", "tvshowid", "file"], playerid=1)
+#     log.info("Playing: %s" % playingfile["item"])
+#     if "item" in playingfile:
+#         playingfile = playingfile["item"]
+#     return playingfile
 
 
 def gen_epdict(playingfile):
@@ -92,12 +90,24 @@ def addplaycount(kodiid, playcount):
     rpc("VideoLibrary.SetEpisodeDetails", episodeid=kodiid, playcount=playcount, lastplayed=now)
 
 
-class ChromeSelenium(object):
-    def __init__(self):
-        pass
+class SeleniumDriver(object):
+    def __init__(self, browser):
+        self.browser = browser
 
-    def open(self, url):
-        pass
+    def start(self, url):
+        driverpath = os.path.join(home, "iedriver", "IEDriverServer_Win32_2.48.0")
+        os.environ["PATH"] += ";%s" % driverpath
+        driver = webdriver.Ie(capabilities={
+            "initialBrowserUrl": "http://tv.nrksuper.no/serie/mikke-mus/MSUI33006213/sesong-1/episode-2",
+            "ignoreZoomSetting": True,
+            "ignoreProtectedModeSettings": True,
+            })
+        window_size = driver.get_window_size()
+        print window_size
+        print window_size.keys()
+        if not (window_size['width'] == 1920 and window_size['height']) == 1080:
+            body = driver.find_element_by_tag_name("body")
+            body.send_keys(Keys.F11)
 
     def gather_urls_wait_for_exit(self):
         return watched
@@ -108,39 +118,39 @@ class ChromeSelenium(object):
     def close(self):
         pass
 
-class InternetExplorerWebbrowser(object):
-    def __init__(self):
-        self.ie = Dispatch("InternetExplorer.Application")
+# class InternetExplorerWebbrowser(object):
+    # def __init__(self):
+    #     self.ie = Dispatch("InternetExplorer.Application")
 
-    def open(self, url):
-        self.ie.Visible = 1      # Make it visible (0 = invisible)
-        self.ie.FullScreen = 1
-        self.ie.Navigate(url)
+    # def open(self, url):
+    #     self.ie.Visible = 1      # Make it visible (0 = invisible)
+    #     self.ie.FullScreen = 1
+    #     self.ie.Navigate(url)
 
-    def gather_urls_wait_for_exit(self):
-        watched = []
-        activeurl = ""
-        while True:
-            try:
-                if self.ie.LocationURL != activeurl:
-                    activeurl = self.ie.LocationURL
-                    watched.append([arrow.utcnow(), activeurl])
-            except (pywintypes.com_error, AttributeError):
-                break
-            xbmc.sleep(1000)
-        return watched
-
-    # def wait_for_exit(self):
+    # def gather_urls_wait_for_exit(self):
+    #     watched = []
+    #     activeurl = ""
     #     while True:
     #         try:
-    #             self.ie.LocationURL
+    #             if self.ie.LocationURL != activeurl:
+    #                 activeurl = self.ie.LocationURL
+    #                 watched.append([arrow.utcnow(), activeurl])
     #         except (pywintypes.com_error, AttributeError):
     #             break
     #         xbmc.sleep(1000)
+    #     return watched
 
-    def close(self):
-        self.ie.Quit()
-        self.ie = None
+    # # def wait_for_exit(self):
+    # #     while True:
+    # #         try:
+    # #             self.ie.LocationURL
+    # #         except (pywintypes.com_error, AttributeError):
+    # #             break
+    # #         xbmc.sleep(1000)
+
+    # def close(self):
+    #     self.ie.Quit()
+    #     self.ie = None
 
 
 class PlaybackSession(object):
