@@ -296,7 +296,8 @@ def install():
     import traceback
     # The .pth file is now installed as a regular file.
     # Create the .pth file in the site-packages dir, and use only relative paths
-    lib_dir = distutils.sysconfig.get_python_lib(plat_specific=1)
+    # lib_dir = distutils.sysconfig.get_python_lib(plat_specific=1)
+    lib_dir = r"C:\Programmer\Kodi\portable_data\addons\script.service.koalanrk\lib\win32"
     # We used to write a .pth directly to sys.prefix - clobber it.
     if os.path.isfile(os.path.join(sys.prefix, "pywin32.pth")):
         os.unlink(os.path.join(sys.prefix, "pywin32.pth"))
@@ -304,7 +305,7 @@ def install():
     # Setup the paths just in case.
     for name in "win32 win32\\lib Pythonwin".split():
         sys.path.append(os.path.join(lib_dir, name))
-    # It is possible people with old versions installed with still have 
+    # It is possible people with old versions installed with still have
     # pywintypes and pythoncom registered.  We no longer need this, and stale
     # entries hurt us.
     for name in "pythoncom pywintypes".split():
@@ -340,7 +341,7 @@ def install():
                 # Register the files with the uninstaller
                 file_created(dst)
                 worked = 1
-                # If this isn't sys.prefix (ie, System32), then nuke 
+                # If this isn't sys.prefix (ie, System32), then nuke
                 # any versions that may exist in sys.prefix - having
                 # duplicates causes major headaches.
                 if dest_dir != sys.prefix:
@@ -526,7 +527,7 @@ def uninstall():
             os.remove(os.path.join(lib_dir, "win32", "dbi_d.pyd.old"))
         except os.error:
             pass
-        
+
     except Exception, why:
         print "Failed to remove misc files:", why
 
@@ -567,7 +568,7 @@ def uninstall():
 def usage():
     msg = \
 """%s: A post-install script for the pywin32 extensions.
-    
+
 This should be run automatically after installation, but if it fails you
 can run it again with a '-install' parameter, to ensure the environment
 is setup correctly.

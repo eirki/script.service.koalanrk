@@ -15,6 +15,21 @@ import xbmcgui
 from lib.utils import (settings, rpc, log, progress, dialogs, os_join, uni_join, const)
 from lib import library
 from lib import internet as nrk
+os.environ["PATH"] += ";%s" % os_join(const.addonpath, "lib", "win32", "pywin32_system32")
+# sys.path.extend([os_join(const.addonpath, "lib", "pyHook"),
+#                  os_join(const.addonpath, "lib", "win32"),
+#                  os_join(const.addonpath, "lib", "win32", "win32"),
+#                  os_join(const.addonpath, "lib", "win32", "win32", "lib"),
+#                  os_join(const.addonpath, "lib", "win32", "pypiwin32-219.data", "scripts"),
+#                  os_join(const.addonpath, "lib", "win32", "Pythonwin")])
+sys.path.extend([os_join(const.addonpath, "lib", "pyHook"),
+                 "C:\\Python27\Lib\\site-packages",
+                 "C:\\Python27\Lib\\site-packages\\win32",
+                 "C:\\Python27\Lib\\site-packages\\win32\\lib",
+                 "C:\\Python27\Lib\\site-packages\\pypiwin32-219.data\\scripts",
+                 "C:\\Python27\Lib\\site-packages\\Pythonwin"])
+
+from lib import player
 
 # from https://docs.python.org/2/library/collections.html#collections.OrderedDict
 class LastUpdatedOrderedDict(OrderedDict):
@@ -174,7 +189,19 @@ def deletecookies():
 
 
 def test():
-    pass
+    # from lib import player
+    import pywin32_postinstall
+    pywin32_postinstall.install()
+
+    # import win32api
+    # from win32con import *
+    # import pythoncom
+
+    # import pywintypes
+    # import _win32sysloader
+    # print dir(_win32sysloader)
+    # print help(_win32sysloader)
+    log.info("import finished")
 
 
 def select_mediaitem(database, mediatype):
@@ -206,6 +233,10 @@ def main():
     log.info(action)
     if action in ([''], ["default.py"]):
         action = "startup"
+    elif len(action) == 3:
+        play_id = action[2]
+        player.play(play_id[1:])
+        return
     else:
         action = action[1]
 
@@ -341,4 +372,5 @@ if __name__ == '__main__':
         if progress.active:
             stop()
         MediaDatabase.savetofile()
+        xbmcgui.Window(10000).setProperty("Koala NRK has run", "true")
         log.info("Koala NRK finished (in %s)" % str(arrow.now() - starttime))

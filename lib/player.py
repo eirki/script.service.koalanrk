@@ -3,19 +3,27 @@
 from __future__ import unicode_literals
 from __future__ import division
 import arrow
-from collections import defaultdict
-import json
 import re
 import xbmc
 from datetime import timedelta
-
-import webbrowser
+import sys
+import xbmcgui
+import xbmcplugin
 from multiprocessing.dummy import Process as Thread
-
-from win32com.client import Dispatch
+import os
 
 from utils import (settings, log, os_join, uni_join, rpc, const)
+
+# sys.path.extend([os_join(const.addonpath, "lib", "pyHook"),
+#                  os_join(const.addonpath, "lib", "win32"),
+#                  os_join(const.addonpath, "lib", "win32", "win32"),
+#                  os_join(const.addonpath, "lib", "win32", "win32", "lib"),
+#                  os_join(const.addonpath, "lib", "win32", "Pythonwin")])
+# os.environ["PATH"] += ";%s" % os_join(const.addonpath, "lib", "win32", "pywin32_system32")
+
 import remote
+from win32com.client import Dispatch
+import pywintypes
 
 def getplayingvideofile():
     if xbmc.Player().isPlayingAudio():
@@ -122,13 +130,13 @@ class InternetExplorerWebbrowser(object):
             xbmc.sleep(1000)
         return watched
 
-    def wait_for_exit(self):
-        while True:
-            try:
-                self.ie.LocationURL
-            except (pywintypes.com_error, AttributeError):
-                break
-            xbmc.sleep(1000)
+    # def wait_for_exit(self):
+    #     while True:
+    #         try:
+    #             self.ie.LocationURL
+    #         except (pywintypes.com_error, AttributeError):
+    #             break
+    #         xbmc.sleep(1000)
 
     def close(self):
         self.ie.Quit()
@@ -158,12 +166,8 @@ class PlaybackSession(object):
             thread = Thread(target=remoteprocess.run, args=browser)
             thread.start()
 
-        if settings["mark auto-played"]:
-            self.epdict = gen_epdict(playingfile)
-            self.watched = browser.gather_urls_wait_for_exit()
-        else:
-            browser.wait_for_exit()
-        self.stop()
+        self.epdict = gen_epdict()
+        self.watched = browser.gather_urls_wait_for_exit()
         # log.info("playbackstart finished")
 
     def stop(self):
@@ -186,6 +190,14 @@ class PlaybackSession(object):
         log.info("playbackend finished")
 
 
+
+def play(url):
+    listitem = xbmcgui.ListItem(path=os_join(const.addonpath, "resources", "fakeVid.mp4"))
+    xbmcplugin.setResolvedUrl(handle=int(sys.argv[1]), succeeded=True, listitem=listitem)
+    session = PlaybackSession()
+    session.start(url)
+    session.stop()
+    xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
 
 
     #     log.info("playbackstart starting")
@@ -244,6 +256,3 @@ class PlaybackSession(object):
 #     player = MyPlayer()
 #     xbmc.Monitor().waitForAbort()
 
-def play(url):
-    session = PlaybackSession()
-    session.start(url)

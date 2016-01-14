@@ -5,13 +5,6 @@ from __future__ import unicode_literals
 import json
 import sys
 import os
-bits = 64 if sys.maxsize > 2**32 else 32
-sys.path.extend(["C:\\Users\\ebs\\Dropbox\\Programmering\\HTPC\\pyuserinput\\2\\pyHook\\pyHook_%s" % bits,
-                 "C:\\Users\\ebs\\Dropbox\\Programmering\\HTPC\\pyuserinput\\2\\win32\\pypiwin32_%s" % bits,
-                 "C:\\Users\\ebs\\Dropbox\\Programmering\\HTPC\\pyuserinput\\2\\win32\\pypiwin32_%s\\win32" % bits,
-                 "C:\\Users\\ebs\\Dropbox\\Programmering\\HTPC\\pyuserinput\\2\\win32\\pypiwin32_%s\\win32\\lib" % bits,
-                 "C:\\Users\\ebs\\Dropbox\\Programmering\\HTPC\\pyuserinput\\2\\win32\\pypiwin32_%s\\Pythonwin" % bits])
-os.environ["PATH"] += ";C:\\Users\\ebs\\Dropbox\\Programmering\\HTPC\\pyuserinput\\2\\win32\\pypiwin32_%s\\pywin32_system32" % bits
 
 from PyUserInput.pykeyboard import PyKeyboardEvent
 

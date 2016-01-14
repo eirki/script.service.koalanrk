@@ -130,18 +130,28 @@ def getepisodes(showid):
     in_superuniverse = "isInSuperUniverse: true" in showpage.text
     for seasonnr, seasondata in enumerate(reversed(seasons), start=1):
         seasonid = seasondata.a["data-season"]
-        headers = {'X-Requested-With': 'XMLHttpRequest'}
-        episodepage = reqs.get("https://tv.nrk.no/program/Episodes/%s/%s" % (showid, seasonid), headers=headers).soup()
-        episodedata = episodepage.find_all(class_="episode-item")
-        for episodenr, episode in enumerate(episodedata, start=1):
-            if "no-rights" in episode["class"]:
-                continue
-            episodeid = episode.find(class_="clearfix")["href"]
-            if not date_for_episodenr:
-                seasonnr, episodenr = re.findall(r"sesong-(\d+)/episode-(\d+)", episodeid)[0]
-            epcode = "S%02dE%02d" % (int(seasonnr), int(episodenr))
-            episodes[epcode] = {"seasonnr": int(seasonnr), "episodenr": int(episodenr),
-                                "nrkid": str(episodeid), "in_superuniverse": in_superuniverse}
+        if not in_superuniverse:
+            headers = {'X-Requested-With': 'XMLHttpRequest'}
+            episodepage = reqs.get("https://tv.nrk.no/program/Episodes/%s/%s" % (showid, seasonid), headers=headers).soup()
+            episodedata = episodepage.find_all(class_="episode-item")
+            for episodenr, episode in enumerate(episodedata, start=1):
+                if "no-rights" in episode["class"]:
+                    continue
+                episodeid = episode.find(class_="clearfix")["href"]
+                if not date_for_episodenr:
+                    seasonnr, episodenr = re.findall(r"sesong-(\d+)/episode-(\d+)", episodeid)[0]
+                epcode = "S%02dE%02d" % (int(seasonnr), int(episodenr))
+                episodes[epcode] = {"seasonnr": int(seasonnr), "episodenr": int(episodenr),
+                                    "nrkid": str(episodeid), "in_superuniverse": False}
+        else:
+            episodepage = reqs.get("http://tv.nrksuper.no/program/EpisodesSuper/%s/%s" % (showid, seasonid)).json()
+            for episodenr, episodeitem in enumerate(episodepage["data"], start=1):
+                episodeid = "/serie/%s/%s/%s" % (episodeitem['seriesId'], episodeitem['id'], episodeitem['programUrlMetadata'])
+                if not date_for_episodenr:
+                    seasonnr, episodenr = re.findall(r"sesong-(\d+)/episode-(\d+)", episodeitem['programUrlMetadata'])[0]
+                epcode = "S%02dE%02d" % (int(seasonnr), int(episodenr))
+                episodes[epcode] = {"seasonnr": int(seasonnr), "episodenr": int(episodenr),
+                                    "nrkid": str(episodeid), "in_superuniverse": True}
     return episodes
 
 
