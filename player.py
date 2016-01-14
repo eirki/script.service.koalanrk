@@ -41,13 +41,12 @@ def gen_epdict(playingfile):
     epdict = {}
     for episode in tvshow_dict['episodes']:
         epcode = 'S%02dE%02d' % (episode['season'], episode['episode'])
-        if epcode >= playingepcode:
-            kodiid = episode['episodeid']
-            playcount = episode['playcount']
-            runtime = episode['runtime']
-            with open(episode['file'], 'r') as txt:
-                nrkid = re.sub(r'.*http://tv.nrk(?:super)?.no/(.*?)".*', r"\1", txt.read())
-            epdict[nrkid] = [epcode, kodiid, playcount, runtime]
+        kodiid = episode['episodeid']
+        playcount = episode['playcount']
+        runtime = episode['runtime']
+        with open(episode['file'], 'r') as txt:
+            nrkid = re.sub(r'.*http://tv.nrk(?:super)?.no/(.*?)".*', r"\1", txt.read())
+        epdict[nrkid] = [epcode, kodiid, playcount, runtime]
     return epdict
 
 
