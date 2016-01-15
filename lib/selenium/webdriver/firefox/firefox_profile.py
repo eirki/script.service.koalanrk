@@ -32,8 +32,8 @@ except ImportError:
     from io import BytesIO
 
 from xml.dom import minidom
-from selenium.webdriver.common.proxy import ProxyType
-from selenium.common.exceptions import WebDriverException
+from lib.selenium.webdriver.common.proxy import ProxyType
+from lib.selenium.common.exceptions import WebDriverException
 
 
 WEBDRIVER_EXT = "webdriver.xpi"

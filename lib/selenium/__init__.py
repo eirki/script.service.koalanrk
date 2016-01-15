@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from selenium import selenium
+from lib.selenium import selenium
 
 
 __version__ = "2.48.0"

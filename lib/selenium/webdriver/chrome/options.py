@@ -16,7 +16,7 @@
 # under the License.
 
 import os
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from lib.selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import base64
 
 

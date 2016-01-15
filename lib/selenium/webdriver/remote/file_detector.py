@@ -17,7 +17,7 @@
 
 import abc
 import os
-from selenium.webdriver.common.keys import Keys
+from lib.selenium.webdriver.common.keys import Keys
 
 
 class FileDetector(object):

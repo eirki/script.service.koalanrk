@@ -15,8 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException, UnexpectedTagNameException
+from lib.selenium.webdriver.common.by import By
+from lib.selenium.common.exceptions import NoSuchElementException, UnexpectedTagNameException
 
 class Select:
 
@@ -27,14 +27,14 @@ class Select:
 
         :Args:
          - webelement - element SELECT element to wrap
-        
+
         Example:
-            from selenium.webdriver.support.ui import Select \n
+            from lib.selenium.webdriver.support.ui import Select \n
             Select(driver.find_element_by_tag_name("select")).select_by_index(2)
         """
         if webelement.tag_name.lower() != "select":
             raise UnexpectedTagNameException(
-                "Select only works on <select> elements, not on <%s>" % 
+                "Select only works on <select> elements, not on <%s>" %
                 webelement.tag_name)
         self._el = webelement
         multi = self._el.get_attribute("multiple")
@@ -44,7 +44,7 @@ class Select:
     def options(self):
         """Returns a list of all options belonging to this select tag"""
         return self._el.find_elements(By.TAG_NAME, 'option')
-        
+
     @property
     def all_selected_options(self):
         """Returns a list of all selected options belonging to this select tag"""
@@ -88,7 +88,7 @@ class Select:
            element, and not merely by counting.
 
            :Args:
-            - index - The option at this index will be selected 
+            - index - The option at this index will be selected
            """
         match = str(index)
         matched = False
@@ -104,9 +104,9 @@ class Select:
     def select_by_visible_text(self, text):
         """Select all options that display text matching the argument. That is, when given "Bar" this
            would select an option like:
-             
+
             <option value="foo">Bar</option>
-             
+
            :Args:
             - text - The visible text to match against
            """
@@ -148,9 +148,9 @@ class Select:
     def deselect_by_value(self, value):
         """Deselect all options that have a value matching the argument. That is, when given "foo" this
            would deselect an option like:
-             
+
             <option value="foo">Bar</option>
-             
+
            :Args:
             - value - The value to match against
         """
@@ -177,7 +177,7 @@ class Select:
     def deselect_by_visible_text(self, text):
         """Deselect all options that display text matching the argument. That is, when given "Bar" this
            would deselect an option like:
-             
+
            <option value="foo">Bar</option>
 
            :Args:
@@ -197,7 +197,7 @@ class Select:
     def _unsetSelected(self, option):
         if option.is_selected():
             option.click()
-    
+
     def _escapeString(self, value):
         if '"' in value and "'" in value:
             substrings = value.split("\"")

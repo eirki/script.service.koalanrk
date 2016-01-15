@@ -15,11 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from selenium.common.exceptions import NoSuchElementException
-from selenium.common.exceptions import NoSuchFrameException
-from selenium.common.exceptions import StaleElementReferenceException
-from selenium.common.exceptions import WebDriverException
-from selenium.common.exceptions import NoAlertPresentException
+from lib.selenium.common.exceptions import NoSuchElementException
+from lib.selenium.common.exceptions import NoSuchFrameException
+from lib.selenium.common.exceptions import StaleElementReferenceException
+from lib.selenium.common.exceptions import WebDriverException
+from lib.selenium.common.exceptions import NoAlertPresentException
 
 """
  * Canned "Expected Conditions" which are generally useful within webdriver

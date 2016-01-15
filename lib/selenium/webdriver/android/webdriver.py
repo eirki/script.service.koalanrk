@@ -16,8 +16,8 @@
 # under the License.
 
 import base64
-from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from lib.selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
+from lib.selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 class WebDriver(RemoteWebDriver):
     """

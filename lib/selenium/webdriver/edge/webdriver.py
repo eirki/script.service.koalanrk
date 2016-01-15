@@ -15,10 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from selenium.webdriver.common import utils
-from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
-from selenium.webdriver.remote.remote_connection import RemoteConnection
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from lib.selenium.webdriver.common import utils
+from lib.selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
+from lib.selenium.webdriver.remote.remote_connection import RemoteConnection
+from lib.selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from .service import Service
 
 

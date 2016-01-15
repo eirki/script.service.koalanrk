@@ -18,16 +18,16 @@
 import logging
 import time
 
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from selenium.webdriver.common import utils 
-from selenium.webdriver.remote.command import Command
-from selenium.webdriver.remote.remote_connection import RemoteConnection
-from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
+from lib.selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from lib.selenium.webdriver.common import utils
+from lib.selenium.webdriver.remote.command import Command
+from lib.selenium.webdriver.remote.remote_connection import RemoteConnection
+from lib.selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 
 
 LOGGER = logging.getLogger(__name__)
 PORT = 0 #
-HOST = None 
+HOST = None
 _URL = ""
 class ExtensionConnection(RemoteConnection):
     def __init__(self, host, firefox_profile, firefox_binary=None, timeout=30):
@@ -41,9 +41,9 @@ class ExtensionConnection(RemoteConnection):
             HOST = "127.0.0.1"
 
         PORT = utils.free_port()
-        self.profile.port = PORT 
+        self.profile.port = PORT
         self.profile.update_preferences()
-        
+
         self.profile.add_extension()
 
         self.binary.launch_browser(self.profile)
@@ -61,12 +61,12 @@ class ExtensionConnection(RemoteConnection):
         """Connects to the extension and retrieves the session id."""
         return self.execute(Command.NEW_SESSION,
                             {'desiredCapabilities': DesiredCapabilities.FIREFOX})
-    
+
     @classmethod
     def connect_and_quit(self):
         """Connects to an running browser and quit immediately."""
         self._request('%s/extensions/firefox/quit' % _URL)
-    
+
     @classmethod
     def is_connectable(self):
         """Trys to connect to the extension but do not retrieve context."""

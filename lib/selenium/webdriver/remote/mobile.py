@@ -16,7 +16,7 @@
 # under the License.
 
 from .command import Command
-from selenium.common.exceptions import WebDriverException
+from lib.selenium.common.exceptions import WebDriverException
 
 class Mobile(object):
 

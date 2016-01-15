@@ -17,8 +17,8 @@
 import subprocess
 from subprocess import PIPE
 import time
-from selenium.common.exceptions import WebDriverException
-from selenium.webdriver.common import utils
+from lib.selenium.common.exceptions import WebDriverException
+from lib.selenium.webdriver.common import utils
 
 class Service(object):
     """
@@ -32,7 +32,7 @@ class Service(object):
         :Args:
          - executable_path : Path to the EdgeDriver
          - port : Port the service is running on
-        """    
+        """
 
         self.path = executable_path
 

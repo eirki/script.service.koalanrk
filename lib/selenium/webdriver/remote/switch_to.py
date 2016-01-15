@@ -16,7 +16,7 @@
 # under the License.
 
 from .command import Command
-from selenium.webdriver.common.alert import Alert
+from lib.selenium.webdriver.common.alert import Alert
 
 class SwitchTo:
     def __init__(self, driver):

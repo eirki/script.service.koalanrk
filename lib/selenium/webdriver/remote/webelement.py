@@ -26,10 +26,10 @@ except ImportError:  # 3+
 import base64
 
 from .command import Command
-from selenium.common.exceptions import WebDriverException
-from selenium.common.exceptions import InvalidSelectorException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
+from lib.selenium.common.exceptions import WebDriverException
+from lib.selenium.common.exceptions import InvalidSelectorException
+from lib.selenium.webdriver.common.by import By
+from lib.selenium.webdriver.common.keys import Keys
 
 
 try:

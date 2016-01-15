@@ -29,7 +29,7 @@ class DesiredCapabilities(object):
 
     Usage Example:
 
-        from selenium import webdriver
+        from lib.selenium import webdriver
 
         selenium_grid_url = "http://198.0.0.1:4444/wd/hub"
 

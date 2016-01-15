@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from selenium.webdriver.remote.remote_connection import RemoteConnection
+from lib.selenium.webdriver.remote.remote_connection import RemoteConnection
 
 class ChromeRemoteConnection(RemoteConnection):
 

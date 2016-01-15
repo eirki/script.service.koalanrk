@@ -23,8 +23,8 @@ except ImportError:
     import httplib as http_client
 
 import os
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
+from lib.selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from lib.selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from .service import Service
 
 class WebDriver(RemoteWebDriver):

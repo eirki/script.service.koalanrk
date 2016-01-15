@@ -16,8 +16,8 @@
 # under the License.
 
 import time
-from selenium.common.exceptions import NoSuchElementException
-from selenium.common.exceptions import TimeoutException
+from lib.selenium.common.exceptions import NoSuchElementException
+from lib.selenium.common.exceptions import TimeoutException
 
 POLL_FREQUENCY = 0.5  # How long to sleep inbetween calls to the method
 IGNORED_EXCEPTIONS = (NoSuchElementException,)  # exceptions ignored during calls to the method
@@ -36,7 +36,7 @@ class WebDriverWait(object):
               By default, it contains NoSuchElementException only.
 
            Example:
-            from selenium.webdriver.support.ui import WebDriverWait \n
+            from lib.selenium.webdriver.support.ui import WebDriverWait \n
             element = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id("someId")) \n
             is_disappeared = WebDriverWait(driver, 30, 1, (ElementNotVisibleException)).\ \n
                         until_not(lambda x: x.find_element_by_id("someId").is_displayed())

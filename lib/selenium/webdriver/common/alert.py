@@ -19,7 +19,7 @@
 The Alert implementation.
 """
 
-from selenium.webdriver.remote.command import Command
+from lib.selenium.webdriver.remote.command import Command
 
 
 class Alert(object):

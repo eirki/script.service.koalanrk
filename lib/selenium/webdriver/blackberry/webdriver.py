@@ -20,10 +20,10 @@ import platform
 import time
 import subprocess
 
-from selenium.webdriver.remote.command import Command
-from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
-from selenium.common.exceptions import WebDriverException
-from selenium.webdriver.support.ui import WebDriverWait
+from lib.selenium.webdriver.remote.command import Command
+from lib.selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
+from lib.selenium.common.exceptions import WebDriverException
+from lib.selenium.webdriver.support.ui import WebDriverWait
 
 LOAD_TIMEOUT = 5
 
