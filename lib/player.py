@@ -12,10 +12,16 @@ import xbmcplugin
 from collections import defaultdict, namedtuple
 import subprocess
 import os
+import json
+
 from .selenium import webdriver
 from .selenium.webdriver.common.keys import Keys
+from .selenium.webdriver.common.by import By
+from .selenium.webdriver.support.ui import WebDriverWait
+from .selenium.webdriver.support import expected_conditions as EC
+from .selenium.common.exceptions import TimeoutException
+from .selenium.webdriver.common.action_chains import ActionChains
 from . import selenium
-import json
 
 from utils import (settings, log, os_join, rpc, const)
 
@@ -86,10 +92,10 @@ def getremotemapping():
 
 
 class SeleniumDriver(object):
-    def __init__(self, browser):
-        self.browser = browser
+    def __init__(self):
+        self.browser = settings["browser"]
 
-    def start(self, url):
+    def open(self, url):
         if self.browser == "Internet Explorer":
             driverpath = os_join(const.addonpath, "resources", "IEDriverServer_Win32_2.48.0")
             log.info(driverpath)
@@ -100,8 +106,6 @@ class SeleniumDriver(object):
                 "ignoreProtectedModeSettings": True,
                 })
             window_size = self.driver.get_window_size()
-            print window_size
-            print window_size.keys()
             if not (window_size['width'] == 1920 and window_size['height']) == 1080:
                 body = self.driver.find_element_by_tag_name("body")
                 body.send_keys(Keys.F11)
@@ -113,6 +117,23 @@ class SeleniumDriver(object):
             d = "C:/Users/Eirki/AppData/Local/Google/Chrome/User Data/Default"
             options.add_argument("--user-data-dir=%s" % d)
             self.driver = webdriver.Chrome("D:/Dropbox/Programmering/HTPC/selenium/chromedriver.exe", chrome_options=options)
+        self.trigger_player()
+
+    def trigger_player(self):
+        try:
+            playbutton = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "play-icon")))
+            playbutton.click()
+            playerelement = self.driver.find_element_by_id("playerelement")
+        except TimeoutException:
+            playerelement = self.driver.find_element_by_id("playerelement")
+            playerelement.click()
+
+        while "ProgressTracker" not in self.driver.find_elements_by_tag_name("script")[0].get_attribute('src'):
+            xbmc.sleep(100)
+
+        playerelement = self.driver.find_element_by_id("playerelement")
+        actionChains = ActionChains(self.driver)
+        actionChains.double_click(playerelement).perform()
 
     def gather_urls_wait_for_exit(self):
         log.info("setting up url gathering")
@@ -155,18 +176,22 @@ class SeleniumDriver(object):
 
 def player_wrapper(play_func):
     def wrapper(url):
+        xbmc.executebuiltin("ActivateWindow(busydialog)")
         listitem = xbmcgui.ListItem(path=os_join(const.addonpath, "resources", "fakeVid.mp4"))
         xbmcplugin.setResolvedUrl(handle=int(sys.argv[1]), succeeded=True, listitem=listitem)
-        play_func(url)
-        xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
+        try:
+            play_func(url)
+        finally:
+            xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
+            xbmc.executebuiltin("Dialog.Close(busydialog)")
     return wrapper
 
 
 @player_wrapper
 def play(url):
     log.info("playbackstart starting")
-    browser = SeleniumDriver(settings["browser"])
-    browser.start(url)
+    browser = SeleniumDriver()
+    browser.open(url)
     remoteprocess = None
     if settings["remote"]:
         mapping = getremotemapping()
@@ -185,5 +210,3 @@ def play(url):
         remoteprocess.terminate()
     mark_watched(epdict, browser.watched)
     log.info("playbackend finished")
-
-
