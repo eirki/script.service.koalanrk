@@ -13,29 +13,29 @@ from collections import defaultdict, namedtuple
 import subprocess
 import os
 import json
+import pickle
+import requests
 
-from .selenium import webdriver
-from .selenium.webdriver.common.keys import Keys
-from .selenium.webdriver.common.by import By
-from .selenium.webdriver.support.ui import WebDriverWait
-from .selenium.webdriver.support import expected_conditions as EC
-from .selenium.common.exceptions import TimeoutException
-from .selenium.webdriver.common.action_chains import ActionChains
-from . import selenium
+from lib.selenium import webdriver
+from lib.selenium.webdriver.common.keys import Keys
+from lib.selenium.webdriver.common.by import By
+from lib.selenium.webdriver.support.ui import WebDriverWait
+from lib.selenium.webdriver.support import expected_conditions as EC
+from lib.selenium.common.exceptions import TimeoutException
+from lib.selenium.webdriver.common.action_chains import ActionChains
+from lib import selenium
 
-from utils import (settings, log, os_join, rpc, const)
+from lib.utils import (settings, log, os_join, uni_join, rpc, const)
 
-# def getplayingvideofile():
-#     if xbmc.Player().isPlayingAudio():
-#         log.info("Audio file playing")
-#         playingfile = rpc("Player.GetItem", properties=["season", "episode", "tvshowid", "file"], playerid=0)
-#     if xbmc.Player().isPlayingVideo():
-#         log.info("Video file playing")
-#         playingfile = rpc("Player.GetItem", properties=["season", "episode", "tvshowid", "file"], playerid=1)
-#     log.info("Playing: %s" % playingfile["item"])
-#     if "item" in playingfile:
-#         playingfile = playingfile["item"]
-#     return playingfile
+os.environ["PATH"] += ";%s" % "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\pywin32_system32"
+sys.path.extend(["C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32",
+                 "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\win32",
+                 "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\win32\\lib",
+                 "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\pypiwin32-219.data\\scripts",
+                 "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\Pythonwin"])
+from win32com.client import Dispatch
+import pywintypes
+import win32gui
 
 
 def gen_epdict(kodiid):
@@ -90,33 +90,19 @@ def getremotemapping():
                 remotemapping["Forward"], remotemapping["Rewind"], remotemapping["Continue Playing at prompt"]]
     return controls
 
-
 class SeleniumDriver(object):
-    def __init__(self):
-        self.browser = settings["browser"]
 
     def open(self, url):
-        if self.browser == "Internet Explorer":
-            driverpath = os_join(const.addonpath, "resources", "IEDriverServer_Win32_2.48.0")
-            log.info(driverpath)
-            os.environ["PATH"] = "".join([os.environ["PATH"], ";", driverpath])
-            self.driver = webdriver.Ie(capabilities={
-                "initialBrowserUrl": url,
-                "ignoreZoomSetting": True,
-                "ignoreProtectedModeSettings": True,
-                })
-            window_size = self.driver.get_window_size()
-            if not (window_size['width'] == 1920 and window_size['height']) == 1080:
-                body = self.driver.find_element_by_tag_name("body")
-                body.send_keys(Keys.F11)
-        elif self.browser == "Chrome":
-            options = selenium.webdriver.chrome.options.Options()
-            options.add_experimental_option('excludeSwitches', ['disable-component-update'])
-            options.add_argument('--kiosk')
-            options.add_argument("--profile-directory=Eirik")
-            d = "C:/Users/Eirki/AppData/Local/Google/Chrome/User Data/Default"
-            options.add_argument("--user-data-dir=%s" % d)
-            self.driver = webdriver.Chrome("D:/Dropbox/Programmering/HTPC/selenium/chromedriver.exe", chrome_options=options)
+        options = selenium.webdriver.chrome.options.Options()
+        options.add_experimental_option('excludeSwitches', ['disable-component-update'])
+        options.add_argument('--kiosk')
+        options.add_argument("--profile-directory=Eirik")
+        d = "C:/Users/Eirki/AppData/Local/Google/Chrome/User Data/Default"
+        options.add_argument("--user-data-dir=%s" % d)
+        self.driver = webdriver.Chrome("D:/Dropbox/Programmering/HTPC/selenium/chromedriver.exe", chrome_options=options)
+
+        self.driver.get(url)
+
         self.trigger_player()
 
     def trigger_player(self):
@@ -174,24 +160,50 @@ class SeleniumDriver(object):
         self.driver = None
 
 
+class IEobject(object):
+    def open(self, url):
+        self.ie = Dispatch("InternetExplorer.Application")
+        self.ie.Visible = 1
+        self.ie.FullScreen = 1
+        self.ie.Navigate(url)
+        win32gui.SetForegroundWindow(self.ie.HWND)
+
+    def trigger_player(self):
+        pass
+
+    def gather_urls_wait_for_exit(self):
+        while True:
+            try:
+                xbmc.sleep(1000)
+            except (pywintypes.com_error, AttributeError):
+                break
+
+    def close(self):
+        self.ie.Quit()
+        self.ie = None
+
+
 def player_wrapper(play_func):
-    def wrapper(url):
+    def wrapper(*args):
         xbmc.executebuiltin("ActivateWindow(busydialog)")
-        listitem = xbmcgui.ListItem(path=os_join(const.addonpath, "resources", "fakeVid.mp4"))
-        xbmcplugin.setResolvedUrl(handle=int(sys.argv[1]), succeeded=True, listitem=listitem)
         try:
-            play_func(url)
+            play_func(*args)
         finally:
-            xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
             xbmc.executebuiltin("Dialog.Close(busydialog)")
     return wrapper
 
 
 @player_wrapper
-def play(url):
+def play(playfile):
     log.info("playbackstart starting")
-    browser = SeleniumDriver()
-    browser.open(url)
+    with open(playfile) as txt:
+        strmcnts = txt.read()
+    nrkid = strmcnts.replace("plugin://script.service.koalanrk/?", "").strip()
+    if settings["browser"] == "Internet Explorer":
+        browser = IEobject()
+    elif settings["browser"] == "Chrome":
+        browser = SeleniumDriver()
+    browser.open(nrkid)
     remoteprocess = None
     if settings["remote"]:
         mapping = getremotemapping()
@@ -210,3 +222,26 @@ def play(url):
         remoteprocess.terminate()
     mark_watched(epdict, browser.watched)
     log.info("playbackend finished")
+
+
+
+class MyPlayer(xbmc.Player):
+    def __init__(self):
+        xbmc.Player.__init__(self)
+        log.info("montoring")
+
+    def onPlayBackStarted(self):
+        # log.info("playbackstart starting")
+        playingfile = xbmc.getInfoLabel('ListItem.FileNameAndPath').decode("utf-8")
+        if playingfile.startswith(uni_join(const.libpath, "NRK")):
+            play(playingfile)
+
+        # playingfile = getplayingvideofile()
+        # if playingfile["file"].startswith(uni_join(const.libpath, "NRK")):
+            # self.session = ViewingSession(playingfile)
+
+    # def onPlayBackEnded(self):
+        # log.info("playbackend starting")
+
+player = MyPlayer()
+xbmc.Monitor().waitForAbort()

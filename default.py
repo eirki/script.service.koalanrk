@@ -11,25 +11,12 @@ import os
 from operator import itemgetter
 import xbmc
 import xbmcgui
+import xbmcplugin
 
 from lib.utils import (settings, rpc, log, progress, dialogs, os_join, uni_join, const)
 from lib import library
 from lib import internet as nrk
-os.environ["PATH"] += ";%s" % os_join(const.addonpath, "lib", "win32", "pywin32_system32")
-# sys.path.extend([os_join(const.addonpath, "lib", "pyHook"),
-#                  os_join(const.addonpath, "lib", "win32"),
-#                  os_join(const.addonpath, "lib", "win32", "win32"),
-#                  os_join(const.addonpath, "lib", "win32", "win32", "lib"),
-#                  os_join(const.addonpath, "lib", "win32", "pypiwin32-219.data", "scripts"),
-#                  os_join(const.addonpath, "lib", "win32", "Pythonwin")])
-sys.path.extend([os_join(const.addonpath, "lib", "pyHook"),
-                 "C:\\Python27\Lib\\site-packages",
-                 "C:\\Python27\Lib\\site-packages\\win32",
-                 "C:\\Python27\Lib\\site-packages\\win32\\lib",
-                 "C:\\Python27\Lib\\site-packages\\pypiwin32-219.data\\scripts",
-                 "C:\\Python27\Lib\\site-packages\\Pythonwin"])
-
-from lib import player
+# from lib import player
 
 # from https://docs.python.org/2/library/collections.html#collections.OrderedDict
 class LastUpdatedOrderedDict(OrderedDict):
@@ -187,22 +174,25 @@ def deletecookies():
     if os.path.isfile(cookiefile):
         os.remove(cookiefile)
 
-
 def test():
-    # from lib import player
-    import pywin32_postinstall
-    pywin32_postinstall.install()
-
-    # import win32api
-    # from win32con import *
+    os.environ["PATH"] += ";%s" % "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\pywin32_system32"
+    sys.path.extend(["C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32",
+                     "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\win32",
+                     "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\win32\\lib",
+                     "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\pypiwin32-219.data\\scripts",
+                     "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\Pythonwin"])
+    from win32com.client import Dispatch
+    import pywintypes
+    import win32gui
+    ie = Dispatch("InternetExplorer.Application")
+    ie.Visible = 1
+    ie.FullScreen = 1
+    win32gui.SetForegroundWindow(ie.HWND)
+    # print globals()
+    # print sys.path
     # import pythoncom
-
-    # import pywintypes
-    # import _win32sysloader
-    # print dir(_win32sysloader)
-    # print help(_win32sysloader)
-    log.info("import finished")
-
+    # xbmc.sleep(5)
+    # import pythconcom
 
 def select_mediaitem(database, mediatype):
     sorted_media = sorted(database.items(), key=itemgetter(1))
@@ -234,8 +224,9 @@ def main():
     if action in ([''], ["default.py"]):
         action = "startup"
     elif len(action) == 3:
-        play_id = action[2]
-        player.play(play_id[1:])
+        listitem = xbmcgui.ListItem(path=os_join(const.addonpath, "resources", "fakeVid.mp4"))
+        xbmcplugin.setResolvedUrl(handle=int(sys.argv[1]), succeeded=True, listitem=listitem)
+        xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         return
     else:
         action = action[1]
