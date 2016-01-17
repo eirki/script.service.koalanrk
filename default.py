@@ -16,7 +16,7 @@ import xbmcplugin
 from lib.utils import (settings, rpc, log, progress, dialogs, os_join, uni_join, const)
 from lib import library
 from lib import internet as nrk
-# from lib import player
+from lib import player
 
 # from https://docs.python.org/2/library/collections.html#collections.OrderedDict
 class LastUpdatedOrderedDict(OrderedDict):
@@ -224,9 +224,8 @@ def main():
     if action in ([''], ["default.py"]):
         action = "startup"
     elif len(action) == 3:
-        listitem = xbmcgui.ListItem(path=os_join(const.addonpath, "resources", "fakeVid.mp4"))
-        xbmcplugin.setResolvedUrl(handle=int(sys.argv[1]), succeeded=True, listitem=listitem)
-        xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
+        play_id = action[2]
+        player.play(play_id[1:])
         return
     else:
         action = action[1]

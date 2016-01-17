@@ -172,38 +172,67 @@ class IEobject(object):
         pass
 
     def gather_urls_wait_for_exit(self):
+        log.info("setting up url gathering")
+        self.watched = []
+        found = False
+        while not found:
+            current_nrkid, found = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.ie.LocationURL)
+            xbmc.sleep(1000)
+        startwatch = arrow.now()
+        last_stored_url = self.ie.LocationURL
+
+        WatchedEpisode = namedtuple("Watched", "id duration")
+        log.info("gathering urls")
         while True:
             try:
-                xbmc.sleep(1000)
+                if self.ie.LocationURL != last_stored_url:
+                    new_nrkid, is_newepisode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.ie.LocationURL)
+                    if is_newepisode and current_nrkid != new_nrkid:
+                        duration = arrow.now() - startwatch
+                        self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
+
+                        current_nrkid = new_nrkid
+                        startwatch = arrow.now()
+                    last_stored_url = self.ie.LocationURL
+                    log.info("watched: %s:" % self.watched)
             except (pywintypes.com_error, AttributeError):
+                duration = arrow.now() - startwatch
+                self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
                 break
+            xbmc.sleep(1000)
+        log.info("finished gathering urls")
+        log.info("watched: %s" % self.watched)
 
     def close(self):
-        self.ie.Quit()
-        self.ie = None
+        try:
+            self.ie.Quit()
+        except AttributeError:
+            pass
+        finally:
+            self.ie = None
 
 
 def player_wrapper(play_func):
     def wrapper(*args):
         xbmc.executebuiltin("ActivateWindow(busydialog)")
+        listitem = xbmcgui.ListItem(path=os_join(const.addonpath, "resources", "fakeVid.mp4"))
+        xbmcplugin.setResolvedUrl(handle=int(sys.argv[1]), succeeded=True, listitem=listitem)
         try:
             play_func(*args)
         finally:
+            xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
             xbmc.executebuiltin("Dialog.Close(busydialog)")
     return wrapper
 
 
 @player_wrapper
-def play(playfile):
+def play(url):
     log.info("playbackstart starting")
-    with open(playfile) as txt:
-        strmcnts = txt.read()
-    nrkid = strmcnts.replace("plugin://script.service.koalanrk/?", "").strip()
     if settings["browser"] == "Internet Explorer":
         browser = IEobject()
     elif settings["browser"] == "Chrome":
         browser = SeleniumDriver()
-    browser.open(nrkid)
+    browser.open(url)
     remoteprocess = None
     if settings["remote"]:
         mapping = getremotemapping()
@@ -224,24 +253,3 @@ def play(playfile):
     log.info("playbackend finished")
 
 
-
-class MyPlayer(xbmc.Player):
-    def __init__(self):
-        xbmc.Player.__init__(self)
-        log.info("montoring")
-
-    def onPlayBackStarted(self):
-        # log.info("playbackstart starting")
-        playingfile = xbmc.getInfoLabel('ListItem.FileNameAndPath').decode("utf-8")
-        if playingfile.startswith(uni_join(const.libpath, "NRK")):
-            play(playingfile)
-
-        # playingfile = getplayingvideofile()
-        # if playingfile["file"].startswith(uni_join(const.libpath, "NRK")):
-            # self.session = ViewingSession(playingfile)
-
-    # def onPlayBackEnded(self):
-        # log.info("playbackend starting")
-
-player = MyPlayer()
-xbmc.Monitor().waitForAbort()
