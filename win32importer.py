@@ -1,16 +1,20 @@
 import os
 import sys
 import time
+import xbmc
 
-print "starting wierd importer"
-os.environ["PATH"] += ";%s" % "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\pywin32_system32"
-sys.path.extend(["C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32",
-                 "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\win32",
-                 "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\win32\\lib",
-                 "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\pypiwin32-219.data\\scripts",
-                 "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\Pythonwin"])
+from lib.utils import (os_join, const)
+
+os.environ["PATH"] += ";%s" % os_join(const.addonpath, "lib", "win32", "pywin32_system32")
+sys.path.extend([os_join(const.addonpath, "lib", "pyHook"),
+                 os_join(const.addonpath, "lib", "win32"),
+                 os_join(const.addonpath, "lib", "win32", "win32"),
+                 os_join(const.addonpath, "lib", "win32", "win32", "lib"),
+                 os_join(const.addonpath, "lib", "win32", "pypiwin32-219.data", "scripts"),
+                 os_join(const.addonpath, "lib", "win32", "Pythonwin")])
 from win32com.client import Dispatch
 import pywintypes
 import win32gui
-while True:
-    time.sleep(1000000)
+
+if __name__ == "__main__":
+    xbmc.Monitor().waitForAbort()
