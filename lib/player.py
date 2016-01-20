@@ -9,12 +9,8 @@ from datetime import timedelta
 import sys
 import xbmcgui
 import xbmcplugin
-from collections import defaultdict, namedtuple
-import subprocess
-import os
-import json
-import pickle
-import requests
+from collections import namedtuple
+from multiprocessing.dummy import Process as Thread
 
 from lib.selenium import webdriver
 from lib.selenium.webdriver.common.keys import Keys
@@ -25,17 +21,13 @@ from lib.selenium.common.exceptions import TimeoutException
 from lib.selenium.webdriver.common.action_chains import ActionChains
 from lib import selenium
 
-from lib.utils import (settings, log, os_join, uni_join, rpc, const)
-
-os.environ["PATH"] += ";%s" % "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\pywin32_system32"
-sys.path.extend(["C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32",
-                 "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\win32",
-                 "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\win32\\lib",
-                 "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\pypiwin32-219.data\\scripts",
-                 "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\Pythonwin"])
 from win32com.client import Dispatch
 import pywintypes
 import win32gui
+
+from lib.PyUserInput.pymouse import PyMouse
+from lib.utils import (settings, log, os_join, uni_join, rpc, const)
+from lib import remote
 
 
 def gen_epdict(kodiid):
@@ -79,16 +71,6 @@ def addplaycount(kodiid, playcount):
     now = arrow.now().format("%d-%m-%Y %H:%M:%S")
     rpc("VideoLibrary.SetEpisodeDetails", episodeid=kodiid, playcount=playcount, lastplayed=now)
 
-
-def getremotemapping():
-    try:
-        with open(os_join(const.userdatafolder, "remotemapping.json")) as j:
-            remotemapping = defaultdict(str, json.load(j))
-    except IOError:
-        remotemapping = defaultdict(str)
-    controls = [remotemapping["Play"], remotemapping["Pause"], remotemapping["Stop"],
-                remotemapping["Forward"], remotemapping["Rewind"], remotemapping["Continue Playing at prompt"]]
-    return controls
 
 class SeleniumDriver(object):
 
@@ -160,7 +142,7 @@ class SeleniumDriver(object):
         self.driver = None
 
 
-class IEobject(object):
+class IEbrowser(object):
     def open(self, url):
         self.ie = Dispatch("InternetExplorer.Application")
         self.ie.Visible = 1
@@ -169,7 +151,36 @@ class IEobject(object):
         win32gui.SetForegroundWindow(self.ie.HWND)
 
     def trigger_player(self):
-        pass
+        log.info("triggering player")
+        m = PyMouse()
+        while self.ie.busy:
+            xbmc.sleep(100)
+        try:
+            playicon = next(elem for elem in self.ie.document.body.all.tags("span") if elem.className == 'play-icon')
+            playicon.click()
+            log.info("clicked play")
+            rect =  playicon.getBoundingClientRect()
+            player_coord = {"x": rect.left, "y": rect.top}
+        except StopIteration:
+            log.info("couldn't fint play")
+            playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
+            rect =  playerelement.getBoundingClientRect()
+            player_coord = {"x": (rect.left+rect.right/2), "y": (rect.top+rect.bottom/2)}
+            m.click(button=1, n=1, **player_coord)
+
+        log.info("waitong for player ready for fullscreen")
+        for _ in range(10):
+            player_ready = next((elem for elem in self.ie.document.head.all.tags("script") if "ProgressTracker" in elem.getAttribute("src")), False)
+            if player_ready:
+                break
+            xbmc.sleep(1000)
+        else:
+            log.info("couldnt find progressbar, don't know if player ready")
+
+        log.info("doube_clicking")
+        m.move(**player_coord)
+        xbmc.sleep(100)
+        m.click(button=1, n=2, **player_coord)
 
     def gather_urls_wait_for_exit(self):
         log.info("setting up url gathering")
@@ -219,6 +230,8 @@ def player_wrapper(play_func):
         xbmcplugin.setResolvedUrl(handle=int(sys.argv[1]), succeeded=True, listitem=listitem)
         try:
             play_func(*args)
+        except:
+            raise
         finally:
             xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
             xbmc.executebuiltin("Dialog.Close(busydialog)")
@@ -229,15 +242,17 @@ def player_wrapper(play_func):
 def play(url):
     log.info("playbackstart starting")
     if settings["browser"] == "Internet Explorer":
-        browser = IEobject()
+        browser = IEbrowser()
     elif settings["browser"] == "Chrome":
         browser = SeleniumDriver()
     browser.open(url)
+    browser.trigger_player()
     remoteprocess = None
     if settings["remote"]:
-        mapping = getremotemapping()
         log.info("Launching remote utility")
-        remoteprocess = subprocess.Popen([const.ahkexe, os_join(const.ahkfolder, "remote.ahk"), settings["browser"]]+mapping)
+        remoteprocess = remote.Remote()
+        thread = Thread(target=remoteprocess.run, args=browser)
+        thread.start()
     kodiid = xbmc.getInfoLabel('ListItem.DBID')
     epdict = gen_epdict(kodiid)
     log.info("playbackstart finished")
@@ -248,7 +263,7 @@ def play(url):
     log.info(browser.watched)
     browser.close()
     if remoteprocess:
-        remoteprocess.terminate()
+        remoteprocess.stop()
     mark_watched(epdict, browser.watched)
     log.info("playbackend finished")
 

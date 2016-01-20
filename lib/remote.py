@@ -5,13 +5,12 @@ from __future__ import unicode_literals
 import json
 import sys
 import os
-
+from collections import defaultdict
 from PyUserInput.pykeyboard import PyKeyboardEvent
 
 from utils import const, os_join, dialogs
 import json
 from pprint import pprint
-from multiprocessing.dummy import Process as Thread
 import time
 
 
@@ -50,7 +49,7 @@ def configure_remote():
     with open(os_join(const.userdatafolder, "remotemapping.json"), "w") as j:
         json.dump(remotemapping, j)
 
-def getremotemapping():
+def getmapping():
     try:
         with open(os_join(const.userdatafolder, "remotemapping.json")) as j:
             remotemapping = defaultdict(str, json.load(j))
@@ -70,12 +69,12 @@ class Remote(PyKeyboardEvent):
         except IOError:
             mapping = {}
         pprint(mapping)
-        self.mapping = {mapping["Play"]["code"]: self.rem_play,
-                        mapping["Pause"]["code"]: self.rem_pause,
-                        mapping["Stop"]["code"]: self.rem_stop,
-                        mapping["Forward"]["code"]: self.rem_forward,
-                        mapping["Rewind"]["code"]: self.rem_rewind,
-                        mapping["Continue Playing at prompt"]["code"]: self.rem_cont_play
+        self.mapping = {mapping["Play"]["code"]: self.play,
+                        mapping["Pause"]["code"]: self.pause,
+                        mapping["Stop"]["code"]: self.stop,
+                        mapping["Forward"]["code"]: self.forward,
+                        mapping["Rewind"]["code"]: self.rewind,
+                        mapping["Continue Playing at prompt"]["code"]: self.cont_play
                         }
         PyKeyboardEvent.__init__(self, capture_some=self.mapping.keys())
 
@@ -88,31 +87,25 @@ class Remote(PyKeyboardEvent):
         if press_bool and keycode in self.mapping:
             self.mapping[keycode]()
 
-    def rem_play(self):
+    def play(self):
         print "play"
 
-    def rem_pause(self):
+    def pause(self):
         print "pause"
 
-    def rem_stop(self):
-        print "stop"
-        self.browser.close()
-        self.stop()
-
-    def rem_forward(self):
+    def forward(self):
         print "forward"
 
-    def rem_rewind(self):
+    def rewind(self):
         print "rewind"
 
-    def rem_cont_play(self):
+    def cont_play(self):
         print "cont_play"
 
-if __name__ in "__main__":
-    remote = Remote()
-    thread = Thread(target=remote.run)
-    # remote.run()
-    thread.start()
-    time.sleep(1)
-    print "do other stuff now"
-    # thread.join()
+    def stop(self):
+        try:
+            self.browser.close()
+        except AttributeError:
+            log.info("couldn't close browser (aldeady closed?)")
+        PyKeyboardEvent.stop(self)
+
