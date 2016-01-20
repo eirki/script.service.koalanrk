@@ -17,6 +17,7 @@ from lib.utils import (settings, rpc, log, progress, dialogs, os_join, uni_join,
 from lib import library
 from lib import internet as nrk
 from lib import playback
+from lib import remote
 
 # from https://docs.python.org/2/library/collections.html#collections.OrderedDict
 class LastUpdatedOrderedDict(OrderedDict):
@@ -141,34 +142,6 @@ def prioritize_shows(shows_stored, shows_prioritized):
     xbmc.executebuiltin('SetFocus(%i)' % (id2 + 200))
 
 
-def configure_remote():
-    try:
-        with open(os_join(const.userdatafolder, "remotemapping.json"), "r") as j:
-            remotemapping = json.load(j)
-    except IOError:
-        remotemapping = {}
-    buttonlist = ["Play", "Pause", "Stop", "Forward", "Rewind"]
-    returnkeyscript = os_join(const.ahkfolder, "return key.ahk")
-    while True:
-        optionlist = ["%s: %s" % (button, remotemapping.get(button)) for button in buttonlist]
-        call = dialogs.select('Select function to edit', optionlist)
-        if call == -1:
-            break
-        p = subprocess.Popen([const.ahkexe, returnkeyscript], stdout=subprocess.PIPE)
-        dialogs.ok(heading="Input", line1="Please press intended %s button" % buttonlist[call])
-        key = p.stdout.read()
-        p.stdout.close()
-        pressed = key.split("EndKey:")[-1] if "EndKey" in key else key.split(",")[0]
-        remotemapping[buttonlist[call]] = pressed
-    with open(os_join(const.userdatafolder, "remotemapping.json"), "w") as j:
-        json.dump(remotemapping, j)
-    xbmc.executebuiltin('Addon.OpenSettings(script.service.koalanrk)')
-    id1 = 1
-    xbmc.executebuiltin('SetFocus(%i)' % (id1 + 100))
-    id2 = 1
-    xbmc.executebuiltin('SetFocus(%i)' % (id2 + 200))
-
-
 def deletecookies():
     cookiefile = os_join(const.userdatafolder, "cookies")
     if os.path.isfile(cookiefile):
@@ -252,7 +225,7 @@ def main():
         return
 
     settingsactions = {
-        "configureremote": configure_remote,
+        "configureremote": remote.configure,
         "refreshsettings": refresh_settings,
         "deletecookies": deletecookies,
         "test": test

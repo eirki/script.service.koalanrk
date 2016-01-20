@@ -231,7 +231,7 @@ class PyKeyboardEvent(PyKeyboardEventMeta):
         self.capture = capture
         self.capture_some = set(capture_some) if capture_some else []
 
-        import pyHook
+        from lib import pyHook
 
         PyKeyboardEventMeta.__init__(self)
         self.hm = pyHook.HookManager()

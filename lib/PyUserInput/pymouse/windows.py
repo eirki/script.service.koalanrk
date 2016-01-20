@@ -90,7 +90,7 @@ in Windows. This feature is only available on Mac.')
 
 class PyMouseEvent(PyMouseEventMeta):
     def __init__(self, capture=False, capture_move=False):
-        import pyHook
+        from lib import pyHook
 
         PyMouseEventMeta.__init__(self, capture=capture, capture_move=capture_move)
         self.hm = pyHook.HookManager()
@@ -107,7 +107,7 @@ class PyMouseEvent(PyMouseEventMeta):
         self.state = False
 
     def _action(self, event):
-        import pyHook
+        from lib import pyHook
         x, y = event.Position
 
         if event.Message == pyHook.HookConstants.WM_MOUSEMOVE:

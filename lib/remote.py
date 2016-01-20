@@ -1,53 +1,59 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-# import pyHook
+
 import json
-import sys
-import os
 from collections import defaultdict
-from PyUserInput.pykeyboard import PyKeyboardEvent
+from PyUserInput.pykeyboard import PyKeyboardEvent, PyKeyboard
+from multiprocessing.dummy import Process as Thread
 
-from utils import const, os_join, dialogs
-import json
-from pprint import pprint
-import time
+from utils import (const, os_join, dialogs, log)
 
 
-
-
-class RemoteConfig(PyKeyboardEvent):
+class KeypressGetter(PyKeyboardEvent):
     def __init__(self):
+        self.k = PyKeyboard()
         PyKeyboardEvent.__init__(self, capture=True)
+
+    def run(self):
+        log.info("running keygetter")
+        PyKeyboardEvent.run(self)
 
     def tap(self, keycode, character, press_bool):
         if press_bool:
             self.keycode = keycode
             self.character = character
-            print self.character
+            log.info(self.character)
             self.stop()
+            log.info("keygetter stopped")
+            log.info("clsoing dialog")
+            self.k.tap_key(self.k.escape_key)
 
 
-def configure_remote():
+def configure():
     try:
         with open(os_join(const.userdatafolder, "remotemapping.json"), "r") as j:
             remotemapping = json.load(j)
     except IOError:
         remotemapping = {}
     buttonlist = ["Play", "Pause", "Stop", "Forward", "Rewind", "Continue Playing at prompt"]
-    # while True:
-        # optionlist = ["%s: %s" % (button, remotemapping.get(button)) for button in buttonlist]
-        # call = dialogs.select('Select function to edit', optionlist)
-        # if call == -1:
-            # break
-    for call, button in enumerate(buttonlist):
+    log.info(remotemapping)
+    log.info(buttonlist)
+    while True:
+        optionlist = ["%s: %s" % (button, remotemapping.get(button)) for button in buttonlist]
+        call = dialogs.select('Select function to edit', optionlist)
+        if call == -1:
+            break
+        button = buttonlist[call]
+        keygetter = KeypressGetter()
+        thread = Thread(target=keygetter.run)
+        thread.start()
         dialogs.ok(heading="Input", line1="Please press intended %s button" % button)
-        k = RemoteConfig()
-        k.run()
-        remotemapping[buttonlist[call]] = {'code': k.keycode, 'char': k.character}
-    print remotemapping
+        remotemapping[button] = {'code': keygetter.keycode, 'char': keygetter.character}
+    log.info(remotemapping)
     with open(os_join(const.userdatafolder, "remotemapping.json"), "w") as j:
         json.dump(remotemapping, j)
+
 
 def getmapping():
     try:
@@ -68,7 +74,6 @@ class Remote(PyKeyboardEvent):
                 mapping = json.load(j)
         except IOError:
             mapping = {}
-        pprint(mapping)
         self.mapping = {mapping["Play"]["code"]: self.play,
                         mapping["Pause"]["code"]: self.pause,
                         mapping["Stop"]["code"]: self.stop,

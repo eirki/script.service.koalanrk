@@ -10,7 +10,7 @@
     <setting label="Use multithreading" id="multithreading" type="bool" default="true" />
   </category>
   <category label="Remote control utility">
-    <setting label="Enable remote control utility (Windows only). Restart required" id="remote" type="bool" default="false" />
+    <setting label="Enable remote control utility" id="remote" type="bool" default="false" />
     <setting label="Configure keys" action="RunScript(script.service.koalanrk, configureremote)" type="action" enable="eq(-1,true)" option="close"/>
   </category>
   <category label="Startup settings">
