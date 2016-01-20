@@ -11,12 +11,12 @@ import os
 from operator import itemgetter
 import xbmc
 import xbmcgui
-import xbmcplugin
 
+import win32importer
 from lib.utils import (settings, rpc, log, progress, dialogs, os_join, uni_join, const)
 from lib import library
 from lib import internet as nrk
-from lib import player
+from lib import playback
 
 # from https://docs.python.org/2/library/collections.html#collections.OrderedDict
 class LastUpdatedOrderedDict(OrderedDict):
@@ -225,7 +225,7 @@ def main():
         action = "startup"
     elif len(action) == 3:
         play_id = action[2]
-        player.play(play_id[1:])
+        playback.play(play_id[1:])
         return
     else:
         action = action[1]
