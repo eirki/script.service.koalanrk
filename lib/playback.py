@@ -27,7 +27,7 @@ import win32gui
 
 from lib.PyUserInput.pymouse import PyMouse
 from lib.utils import (settings, log, os_join, uni_join, rpc, const)
-from lib import remote
+from lib.remote import Remote
 
 
 def gen_epdict(kodiid):
@@ -250,7 +250,7 @@ def play(url):
     remoteprocess = None
     if settings["remote"]:
         log.info("Launching remote utility")
-        remoteprocess = remote.Remote()
+        remoteprocess = Remote()
         thread = Thread(target=remoteprocess.run, args=browser)
         thread.start()
     kodiid = xbmc.getInfoLabel('ListItem.DBID')

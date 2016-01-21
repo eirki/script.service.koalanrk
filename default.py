@@ -5,19 +5,18 @@ from __future__ import unicode_literals
 import arrow
 from collections import OrderedDict
 import json
-import subprocess
 import sys
 import os
 from operator import itemgetter
 import xbmc
 import xbmcgui
 
-import win32importer
+import win32hack
 from lib.utils import (settings, rpc, log, progress, dialogs, os_join, uni_join, const)
 from lib import library
 from lib import internet as nrk
 from lib import playback
-from lib import remote
+from lib.remote import Remote
 
 # from https://docs.python.org/2/library/collections.html#collections.OrderedDict
 class LastUpdatedOrderedDict(OrderedDict):
@@ -224,8 +223,12 @@ def main():
     if action == "startup" and not (settings["check watchlist on startup"] or settings["check shows on startup"]):
         return
 
+    if action == "configureremote":
+        remote = Remote()
+        remote.configure()
+        return
+
     settingsactions = {
-        "configureremote": remote.configure,
         "refreshsettings": refresh_settings,
         "deletecookies": deletecookies,
         "test": test
