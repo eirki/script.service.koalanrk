@@ -10,7 +10,6 @@ import sys
 import xbmcgui
 import xbmcplugin
 from collections import namedtuple
-from multiprocessing.dummy import Process as Thread
 
 from lib.selenium import webdriver
 from lib.selenium.webdriver.common.keys import Keys
@@ -165,7 +164,8 @@ class IEbrowser(object):
             log.info("couldn't fint play")
             playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
             rect =  playerelement.getBoundingClientRect()
-            player_coord = {"x": (rect.left+rect.right/2), "y": (rect.top+rect.bottom/2)}
+            player_coord = {"x": (int(rect.left+rect.right/2)), "y": (int(rect.top+rect.bottom/2))}
+            log.info(player_coord)
             m.click(button=1, n=1, **player_coord)
 
         log.info("waitong for player ready for fullscreen")
@@ -181,6 +181,9 @@ class IEbrowser(object):
         m.move(**player_coord)
         xbmc.sleep(100)
         m.click(button=1, n=2, **player_coord)
+
+    def focus_player(self):
+        win32gui.SetForegroundWindow(self.ie.HWND)
 
     def gather_urls_wait_for_exit(self):
         log.info("setting up url gathering")
@@ -215,12 +218,7 @@ class IEbrowser(object):
         log.info("watched: %s" % self.watched)
 
     def close(self):
-        try:
-            self.ie.Quit()
-        except AttributeError:
-            pass
-        finally:
-            self.ie = None
+        self.ie.Quit()
 
 
 def player_wrapper(play_func):
@@ -245,14 +243,12 @@ def play(url):
         browser = IEbrowser()
     elif settings["browser"] == "Chrome":
         browser = SeleniumDriver()
-    browser.open(url)
-    browser.trigger_player()
-    remoteprocess = None
     if settings["remote"]:
         log.info("Launching remote utility")
-        remoteprocess = Remote()
-        thread = Thread(target=remoteprocess.run, args=browser)
-        thread.start()
+        remote = Remote()
+        remote.run(browser)
+    browser.open(url)
+    browser.trigger_player()
     kodiid = xbmc.getInfoLabel('ListItem.DBID')
     epdict = gen_epdict(kodiid)
     log.info("playbackstart finished")
@@ -261,10 +257,15 @@ def play(url):
 
     log.info("playbackend starting")
     log.info(browser.watched)
-    browser.close()
-    if remoteprocess:
-        remoteprocess.stop()
+    try:
+        browser.close()
+    except (AttributeError, pywintypes.com_error):
+        log.info("playback could not close browser. already closed?")
+    try:
+        remote.stop()
+    except AttributeError:
+        log.info("playback could not close remote. already closed?")
+    except NameError:
+        log.info("remote not activated")
     mark_watched(epdict, browser.watched)
     log.info("playbackend finished")
-
-
