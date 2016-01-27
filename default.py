@@ -11,10 +11,11 @@ from operator import itemgetter
 import xbmc
 import xbmcgui
 
-import win32hack
 from lib.utils import (settings, rpc, log, progress, dialogs, os_join, uni_join, const)
 from lib import library
 from lib import internet as nrk
+import win32hack
+win32hack.run()
 from lib import playback
 from lib.remote import Remote
 
