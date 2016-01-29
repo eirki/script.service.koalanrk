@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from __future__ import division
-import arrow
 import re
 import xbmc
-from datetime import timedelta
+from datetime import (timedelta, datetime)
 import sys
 import xbmcgui
 import xbmcplugin
@@ -67,7 +66,7 @@ def mark_watched(epdict, watched):
 
 def addplaycount(kodiid, playcount):
     playcount += 1
-    now = arrow.now().format("%d-%m-%Y %H:%M:%S")
+    now = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
     rpc("VideoLibrary.SetEpisodeDetails", episodeid=kodiid, playcount=playcount, lastplayed=now)
 
 
@@ -109,7 +108,7 @@ class SeleniumDriver(object):
         while not found:
             current_nrkid, found = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.driver.current_url)
             xbmc.sleep(1000)
-        startwatch = arrow.now()
+        startwatch = datetime.now()
         last_stored_url = self.driver.current_url
 
         WatchedEpisode = namedtuple("Watched", "id duration")
@@ -119,15 +118,15 @@ class SeleniumDriver(object):
                 if self.driver.current_url != last_stored_url:
                     new_nrkid, is_newepisode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.driver.current_url)
                     if is_newepisode and current_nrkid != new_nrkid:
-                        duration = arrow.now() - startwatch
+                        duration = datetime.now() - startwatch
                         self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
 
                         current_nrkid = new_nrkid
-                        startwatch = arrow.now()
+                        startwatch = datetime.now()
                     last_stored_url = self.driver.current_url
                     log.info("watched: %s:" % self.watched)
             except (selenium.common.exceptions.WebDriverException, AttributeError):
-                duration = arrow.now() - startwatch
+                duration = datetime.now() - startwatch
                 self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
                 break
             xbmc.sleep(1000)

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-import arrow
+from datetime import datetime
 from collections import OrderedDict
 import json
 import sys
@@ -333,11 +333,11 @@ def main():
 
 if __name__ == '__main__':
     try:
-        starttime = arrow.now()
+        starttime = datetime.now()
         main()
     finally:
         if progress.active:
             stop()
         MediaDatabase.savetofile()
         xbmcgui.Window(10000).setProperty("Koala NRK has run", "true")
-        log.info("Koala NRK finished (in %s)" % str(arrow.now() - starttime))
+        log.info("Koala NRK finished (in %s)" % str(datetime.now() - starttime))
