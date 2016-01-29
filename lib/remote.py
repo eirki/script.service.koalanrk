@@ -138,12 +138,9 @@ class Remote(PyKeyboardEvent):
         self.k.tap_key(self.k.left_key)
 
     def stop(self):
-        log.info("Remote: close triggered")
-        try:
-            self.browser.close()
-        except (AttributeError, pywintypes.com_error):
-            log.info("couldn't close browser (already closed?)")
-        try:
-            self.listener.stop()
-        except AttributeError:
-            log.info("couldn't close remote (already closed?)")
+        log.info("Remote: stop triggered")
+        self.browser.close()
+
+    def close(self):
+        self.listener.stop()
+        log.info("Remote keylistener closed")

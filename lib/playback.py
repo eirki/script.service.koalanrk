@@ -3,12 +3,13 @@
 from __future__ import unicode_literals
 from __future__ import division
 import re
-import xbmc
 from datetime import (timedelta, datetime)
 import sys
+from collections import namedtuple
+import traceback
 import xbmcgui
 import xbmcplugin
-from collections import namedtuple
+import xbmc
 
 from lib.selenium import webdriver
 from lib.selenium.webdriver.common.keys import Keys
@@ -28,10 +29,31 @@ from lib.utils import (settings, log, os_join, uni_join, rpc, const)
 from lib.remote import Remote
 
 
+class NowPlayingOverly(xbmcgui.WindowXMLDialog):
+    def __new__(cls):
+        return super(NowPlayingOverly, cls).__new__(cls, "DialogKaiToast.xml", const.addonpath)
+
+    def __init__(self):
+        super(NowPlayingOverly, self).__init__()
+
+    def setArgs(self, title, duration):
+        self.title = title
+        duration = timedelta(minutes=int(duration))
+        self.finish_time = datetime.now() + duration
+        log.info(self.finish_time)
+
+    def onInit(self):
+        self.getControl(400).setImage(os_join(const.addonpath, "resources", "play.png"))
+        self.getControl(401).setLabel(self.title)
+        self.getControl(402).setLabel("Finish time: {:%H:%M:%S}".format(self.finish_time))
+
+    def close(self):
+        del self
+
+
 def gen_epdict(kodiid):
-    playingfile = rpc("VideoLibrary.GetEpisodeDetails", episodeid=int(kodiid), properties=["tvshowid", "season", "episode"])["episodedetails"]
-    print playingfile
-    tvshowid = playingfile["tvshowid"]
+    playingfile = rpc("VideoLibrary.GetEpisodeDetails", episodeid=int(kodiid), properties=["tvshowid", "season", "episode"])
+    tvshowid = playingfile["episodedetails"]["tvshowid"]
     tvshow_dict = rpc("VideoLibrary.GetEpisodes", tvshowid=tvshowid, properties=[
                       "playcount", "season", "episode", "file", "runtime"])
     epdict = {}
@@ -146,73 +168,75 @@ class IEbrowser(object):
         self.ie.Visible = 1
         self.ie.FullScreen = 1
         self.ie.Navigate(url)
+        self.starturl = url
         win32gui.SetForegroundWindow(self.ie.HWND)
 
     def trigger_player(self):
         log.info("triggering player")
         m = PyMouse()
-        while self.ie.busy:
-            xbmc.sleep(100)
         try:
-            playicon = next(elem for elem in self.ie.document.body.all.tags("span") if elem.className == 'play-icon')
-            playicon.click()
-            log.info("clicked play")
-            rect =  playicon.getBoundingClientRect()
-            player_coord = {"x": rect.left, "y": rect.top}
-        except StopIteration:
-            log.info("couldn't fint play")
-            playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
-            rect =  playerelement.getBoundingClientRect()
-            player_coord = {"x": (int(rect.left+rect.right/2)), "y": (int(rect.top+rect.bottom/2))}
-            log.info(player_coord)
-            m.click(button=1, n=1, **player_coord)
+            while self.ie.busy:
+                xbmc.sleep(100)
+            try:
+                playicon = next(elem for elem in self.ie.document.body.all.tags("span") if elem.className == 'play-icon')
+                playicon.click()
+                log.info("clicked play")
+                rect =  playicon.getBoundingClientRect()
+                player_coord = {"x": rect.left, "y": rect.top}
+            except StopIteration:
+                log.info("couldn't fint play")
+                playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
+                rect =  playerelement.getBoundingClientRect()
+                player_coord = {"x": (int(rect.left+rect.right/2)), "y": (int(rect.top+rect.bottom/2))}
+                log.info(player_coord)
+                m.click(button=1, n=1, **player_coord)
 
-        log.info("waitong for player ready for fullscreen")
-        for _ in range(10):
-            player_ready = next((elem for elem in self.ie.document.head.all.tags("script") if "ProgressTracker" in elem.getAttribute("src")), False)
-            if player_ready:
-                break
-            xbmc.sleep(1000)
-        else:
-            log.info("couldnt find progressbar, don't know if player ready")
+            log.info("waitong for player ready for fullscreen")
+            for _ in range(10):
+                player_ready = next((elem for elem in self.ie.document.head.all.tags("script") if "ProgressTracker" in elem.getAttribute("src")), False)
+                if player_ready:
+                    break
+                xbmc.sleep(1000)
+            else:
+                log.info("couldnt find progressbar, don't know if player ready")
 
-        log.info("doube_clicking")
-        m.move(**player_coord)
-        xbmc.sleep(100)
-        m.click(button=1, n=2, **player_coord)
+            log.info("doube_clicking")
+            m.move(**player_coord)
+            xbmc.sleep(100)
+            m.click(**player_coord)
+            m.click(**player_coord)
+        except (pywintypes.com_error, AttributeError):
+            log.info("trigger_player interrupted, browser closed?")
+            log.info(traceback.format_exc())
 
     def focus_player(self):
         win32gui.SetForegroundWindow(self.ie.HWND)
 
     def gather_urls_wait_for_exit(self):
-        log.info("setting up url gathering")
-        self.watched = []
-        found = False
-        while not found:
-            current_nrkid, found = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.ie.LocationURL)
-            xbmc.sleep(1000)
-        startwatch = arrow.now()
-        last_stored_url = self.ie.LocationURL
-
-        WatchedEpisode = namedtuple("Watched", "id duration")
         log.info("gathering urls")
-        while True:
-            try:
-                if self.ie.LocationURL != last_stored_url:
-                    new_nrkid, is_newepisode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.ie.LocationURL)
-                    if is_newepisode and current_nrkid != new_nrkid:
-                        duration = arrow.now() - startwatch
-                        self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
-
-                        current_nrkid = new_nrkid
-                        startwatch = arrow.now()
-                    last_stored_url = self.ie.LocationURL
+        self.watched = []
+        WatchedEpisode = namedtuple("Watched", "id duration")
+        current_nrkid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.starturl)
+        startwatch = datetime.now()
+        last_stored_url = self.starturl
+        try:
+            while True:
+                if self.ie.LocationURL == last_stored_url:
+                    xbmc.sleep(1000)
+                    continue
+                last_stored_url = self.ie.LocationURL
+                new_nrkid, is_nrkepisode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.ie.LocationURL)
+                if is_nrkepisode and current_nrkid != new_nrkid:
+                    duration = datetime.now() - startwatch
+                    self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
                     log.info("watched: %s:" % self.watched)
-            except (pywintypes.com_error, AttributeError):
-                duration = arrow.now() - startwatch
-                self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
-                break
-            xbmc.sleep(1000)
+
+                    current_nrkid = new_nrkid
+                    startwatch = datetime.now()
+
+        except (pywintypes.com_error, AttributeError):
+            duration = datetime.now() - startwatch
+            self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
         log.info("finished gathering urls")
         log.info("watched: %s" % self.watched)
 
@@ -220,51 +244,39 @@ class IEbrowser(object):
         self.ie.Quit()
 
 
-def player_wrapper(play_func):
-    def wrapper(*args):
-        xbmc.executebuiltin("ActivateWindow(busydialog)")
-        listitem = xbmcgui.ListItem(path=os_join(const.addonpath, "resources", "fakeVid.mp4"))
-        xbmcplugin.setResolvedUrl(handle=int(sys.argv[1]), succeeded=True, listitem=listitem)
-        try:
-            play_func(*args)
-        except:
-            raise
-        finally:
-            xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
-            xbmc.executebuiltin("Dialog.Close(busydialog)")
-    return wrapper
-
-
-@player_wrapper
 def play(url):
     log.info("playbackstart starting")
+    remote = None
+    kodiid = xbmc.getInfoLabel('ListItem.DBID')
+    overlay = NowPlayingOverly()
+    overlay.setArgs(title=xbmc.getInfoLabel('ListItem.Title'), duration=xbmc.getInfoLabel('ListItem.Duration'))
+    overlay.show()
+    listitem = xbmcgui.ListItem(path=os_join(const.addonpath, "resources", "fakeVid.mp4"))
+    xbmcplugin.setResolvedUrl(handle=int(sys.argv[1]), succeeded=True, listitem=listitem)
     if settings["browser"] == "Internet Explorer":
         browser = IEbrowser()
     elif settings["browser"] == "Chrome":
         browser = SeleniumDriver()
     if settings["remote"]:
-        log.info("Launching remote utility")
         remote = Remote()
-        remote.run(browser)
-    browser.open(url)
-    browser.trigger_player()
-    kodiid = xbmc.getInfoLabel('ListItem.DBID')
-    epdict = gen_epdict(kodiid)
-    log.info("playbackstart finished")
-
-    browser.gather_urls_wait_for_exit()
-
-    log.info("playbackend starting")
-    log.info(browser.watched)
+        remote.run(browser=browser)
     try:
-        browser.close()
-    except (AttributeError, pywintypes.com_error):
-        log.info("playback could not close browser. already closed?")
-    try:
-        remote.stop()
-    except AttributeError:
-        log.info("playback could not close remote. already closed?")
-    except NameError:
-        log.info("remote not activated")
-    mark_watched(epdict, browser.watched)
+        browser.open(url)
+        browser.trigger_player()
+        epdict = gen_epdict(kodiid)
+        log.info("playbackstart finished")
+
+        browser.gather_urls_wait_for_exit()
+
+        log.info("playbackend starting")
+        log.info(browser.watched)
+        mark_watched(epdict, browser.watched)
+    except:
+        raise
+    finally:
+        if remote:
+            remote.close()
+        overlay.close()
+        xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
+
     log.info("playbackend finished")
