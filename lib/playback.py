@@ -167,9 +167,10 @@ class IEbrowser(object):
         self.ie = Dispatch("InternetExplorer.Application")
         self.ie.Visible = 1
         self.ie.FullScreen = 1
-        self.ie.Navigate(url)
         self.starturl = url
-        win32gui.SetForegroundWindow(self.ie.HWND)
+        self.ie.Navigate(self.starturl)
+        self.handle = self.ie.HWND
+        win32gui.SetForegroundWindow(self.handle)
 
     def trigger_player(self):
         log.info("triggering player")
@@ -210,7 +211,7 @@ class IEbrowser(object):
             log.info(traceback.format_exc())
 
     def focus_player(self):
-        win32gui.SetForegroundWindow(self.ie.HWND)
+        win32gui.SetForegroundWindow(self.handle)
 
     def gather_urls_wait_for_exit(self):
         log.info("gathering urls")
@@ -240,12 +241,23 @@ class IEbrowser(object):
         log.info("finished gathering urls")
         log.info("watched: %s" % self.watched)
 
+    def wait_until_closed(self):
+        while True:
+            try:
+                is_open = next((win for win in Dispatch("Shell.Application").Windows() if win.HWND == self.handle), False)
+                if is_open:
+                    xbmc.sleep(1000)
+                else:
+                    return
+            except (pywintypes.com_error, AttributeError):
+                pass
+
     def close(self):
         self.ie.Quit()
 
 
 def play(url):
-    log.info("playbackstart starting")
+    log.info("setting up playback")
     remote = None
     kodiid = xbmc.getInfoLabel('ListItem.DBID')
     overlay = NowPlayingOverly()
@@ -260,20 +272,20 @@ def play(url):
     if settings["remote"]:
         remote = Remote()
         remote.run(browser=browser)
+    log.info("starting playback")
     try:
         browser.open(url)
         browser.trigger_player()
         epdict = gen_epdict(kodiid)
-        log.info("playbackstart finished")
 
         browser.gather_urls_wait_for_exit()
 
-        log.info("playbackend starting")
-        log.info(browser.watched)
+        log.info("Playback finished, cleaning up")
         mark_watched(epdict, browser.watched)
     except:
         raise
     finally:
+        browser.wait_until_closed()
         if remote:
             remote.close()
         overlay.close()
