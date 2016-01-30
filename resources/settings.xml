@@ -4,12 +4,10 @@
     <setting label="Password" id="password"  type="text" option="hidden"/>
     <setting label="Use Custom Library Path" default="false" id="usecustomLibPath" type="bool" />
     <setting label="Library Path" default="special://profile/addon_data/script.service.koalanrk/Library" enable="eq(-1,true)" id="LibPath" option="writeable" type="folder" />
-    <setting label="Mark auto-played episodes as watched (Windows + IE/chrome only). Restart required" id="mark auto-played" type="bool" default="false" />
-    <setting label="Enable auto-start video utility (Windows + IE/chrome only). Restart required" id="starter" type="bool" default="false" />
-    <setting label="Browser used for playing files" id="browser" type="select" values="Internet Explorer|Chrome" />
     <setting label="Use multithreading" id="multithreading" type="bool" default="true" />
   </category>
-  <category label="Remote control utility">
+  <category label="Playback">
+    <setting label="Browser" id="browser" type="select" values="Internet Explorer|Chrome" />
     <setting label="Enable remote control utility" id="remote" type="bool" default="false" />
     <setting label="Configure keys" action="RunScript(script.service.koalanrk, configureremote)" type="action" enable="eq(-1,true)" option="close"/>
   </category>

@@ -5,11 +5,29 @@ import json
 from multiprocessing.dummy import Process as Thread
 from collections import namedtuple
 import xbmc
+import xbmcgui
 
-import pywintypes
 from .utils import (const, os_join, dialogs, log)
 from .PyUserInput.pykeyboard import PyKeyboardEvent, PyKeyboard
 from .PyUserInput.pymouse import PyMouse
+
+
+class ConfigurationDialog(xbmcgui.WindowXMLDialog):
+    def __new__(cls):
+        return super(ConfigurationDialog, cls).__new__(cls, "DialogProgress.xml", const.addonpath)
+
+    def __init__(self):
+        super(ConfigurationDialog, self).__init__()
+
+    def set_args(self, buttonname):
+        self.buttonname = buttonname
+
+    def onInit(self):
+        self.getControl(1).setLabel("Input")
+        self.getControl(3).setLabel("Please press intended %s button" % self.buttonname)
+
+    def close(self):
+        del self
 
 
 class ConfigurationListener(PyKeyboardEvent):
@@ -18,12 +36,12 @@ class ConfigurationListener(PyKeyboardEvent):
 
     def get(self, buttonname):
         """Exits after one tap"""
-        thread = Thread(target=PyKeyboardEvent.run, args=[self])
-        thread.start()
-        xbmc.executebuiltin("ActivateWindow(busydialog)")
-        # dialogs.ok(heading="Input", line1="Please press intended %s button" % buttonname)
-        thread.join()
-        xbmc.executebuiltin("Dialog.Close(busydialog)")
+        dialog = ConfigurationDialog()
+        dialog.set_args(buttonname)
+        dialog.show()
+        xbmc.sleep(1) # why?
+        PyKeyboardEvent.run(self)
+        dialog.close()
 
         return self.keycode, self.character
 
@@ -32,6 +50,8 @@ class ConfigurationListener(PyKeyboardEvent):
         if press_bool:
             self.keycode = keycode
             self.character = character
+            log.info(keycode)
+            log.info(character)
             self.stop()
 
     def stop(self):
@@ -92,10 +112,8 @@ class Remote(PyKeyboardEvent):
             json.dump(dict_for_storage, j)
 
     def configure(self):
-        log.info(self.mapping)
-        listener = ConfigurationListener()
         while True:
-            optionlist = ["%s: %s" % (button.name, button.char) for button in self.mapping] + "[Clear]"
+            optionlist = ["%s: %s" % (button.name, button.char) for button in self.mapping] + ["[Clear]"]
             call = dialogs.select('Select function to edit', optionlist)
             if call == -1:
                 break
@@ -103,10 +121,15 @@ class Remote(PyKeyboardEvent):
                 self.mapping = [button._replace(code=None, char=None) for button in self.mapping]
             else:
                 selected_button = self.mapping[call]
+                listener = ConfigurationListener()
                 newkeycode, newcharacter = listener.get(selected_button.name)
                 self.mapping[call] = selected_button._replace(code=newkeycode, char=newcharacter)
         self.store_mapping(self.mapping)
-        # reopen settings
+        xbmc.executebuiltin('Addon.OpenSettings(script.service.koalanrk)')
+        id1 = 1
+        xbmc.executebuiltin('SetFocus(%i)' % (id1 + 100))
+        id2 = 2
+        xbmc.executebuiltin('SetFocus(%i)' % (id2 + 200))
 
     def run(self, browser):
         self.k = PyKeyboard()
@@ -125,7 +148,7 @@ class Remote(PyKeyboardEvent):
         log.info("Remote: playpause triggered")
 
         self.browser.focus_player()
-        self.m.move(**self.corner_coors)
+        self.m.move(**self.wiggle_coors)
         self.k.tap_key(self.k.space_key)
         self.m.move(**self.corner_coors)
 
