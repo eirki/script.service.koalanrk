@@ -7,7 +7,7 @@
     <setting label="Use multithreading" id="multithreading" type="bool" default="true" />
   </category>
   <category label="Playback">
-    <setting label="Browser" id="browser" type="select" values="Internet Explorer|Chrome" />
+    <setting label="Browser" id="browser" type="labelenum" values="Chrome|Internet Explorer" />
     <setting label="Enable remote control utility" id="remote" type="bool" default="false" />
     <setting label="Configure keys" action="RunScript(script.service.koalanrk, configureremote)" type="action" enable="eq(-1,true)" option="close"/>
   </category>
