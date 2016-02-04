@@ -4,10 +4,12 @@ import xbmc
 import xbmcgui
 from multiprocessing.dummy import Process as Thread
 
-from lib.utils import (os_join, const, log)
+from .utils import os_join
+from . import constants as const
+from .xbmcwrappers import log
 log.info("win32 importer hack launching")
 
-os.environ["PATH"] += ";%s" % os_join(const.addonpath, "lib", "win32", "pywin32_system32")
+# os.environ["PATH"] += ";%s" % uni_join(const.addonpath, "lib", "win32", "pywin32_system32").decode("")
 sys.path.extend([os_join(const.addonpath, "lib", "win32"),
                  os_join(const.addonpath, "lib", "win32", "win32"),
                  os_join(const.addonpath, "lib", "win32", "win32", "lib"),

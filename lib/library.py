@@ -10,9 +10,10 @@ import traceback
 import json
 import xml.etree.ElementTree as ET
 
-from lib.utils import (os_join, uni_join, stringtofile, rpc, log, monitor, const, settings)
-import lib.internet as nrk
-
+from . utils import (os_join, uni_join, stringtofile)
+from . import scraper
+from . import constants as const
+from .xbmcwrappers import (rpc, log, monitor, settings)
 
 ###################
 def load_playcount(mediatype, jsonfile, kodiid):
@@ -86,7 +87,7 @@ class Movie(object):
         self.delete_file()
         self.create_file()
         movsubid = re.findall(r'/program/(.*?)/.*', self.nrkid)[0]
-        movinfodict = nrk.getinfodict(movsubid)
+        movinfodict = scraper.getinfodict(movsubid)
         root = ET.Element("movie")
         ET.SubElement(root, "title").text = movinfodict["fullTitle"]
         ET.SubElement(root, "plot").text = movinfodict["description"]
@@ -120,7 +121,7 @@ class Show(object):
 
     def _get_new_unav_episodes(self):
         koala_stored_episodes, all_stored_episodes = self._get_stored_episodes()
-        available_episodes = nrk.getepisodes(self.nrkid)
+        available_episodes = scraper.getepisodes(self.nrkid)
 
         self.new_episodes = []
         for episodecode, epdict in sorted(available_episodes.items()):
@@ -161,7 +162,7 @@ class Show(object):
             episode.add_to_lib(koala_stored_episodes)
 
     def _gen_show_nfo(self):
-        plot, year, image, in_superuniverse = nrk.getshowinfo(self.nrkid)
+        plot, year, image, in_superuniverse = scraper.getshowinfo(self.nrkid)
         root = ET.Element("tvshow")
         ET.SubElement(root, "title").text = self.title
         ET.SubElement(root, "year").text = year
@@ -231,7 +232,7 @@ class Episode(object):
 
     def gen_nfo(self):
         episodesubid = re.findall(r'/serie/.*?/(.*?)/.*', self.nrkid)[0]
-        epinfodict = nrk.getinfodict(episodesubid)
+        epinfodict = scraper.getinfodict(episodesubid)
         root = ET.Element("episodedetails")
         ET.SubElement(root, "title").text = epinfodict["fullTitle"]
         ET.SubElement(root, "showtitle").text = self.showtitle

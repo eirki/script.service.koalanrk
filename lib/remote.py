@@ -7,9 +7,11 @@ from collections import namedtuple
 import xbmc
 import xbmcgui
 
-from .utils import (const, os_join, dialogs, log)
 from .PyUserInput.pykeyboard import PyKeyboardEvent, PyKeyboard
 from .PyUserInput.pymouse import PyMouse
+from . import constants as const
+from .utils import os_join
+from .xbmcwrappers import (log, dialogs)
 
 
 class ConfigurationDialog(xbmcgui.WindowXMLDialog):

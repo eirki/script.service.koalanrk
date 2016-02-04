@@ -7,12 +7,12 @@
   </requires>
   <extension
     point="xbmc.python.script"
-    library="default.py">
+    library="main.py">
     <provides></provides>
   </extension>
   <extension
     point="xbmc.service"
-    library="default.py"
+    library="main.py"
     start="login">
   </extension>
   <extension point="xbmc.addon.metadata">

@@ -10,7 +10,9 @@ from types import MethodType
 from HTMLParser import HTMLParser
 import re
 
-from lib.utils import (log, settings, os_join, const)
+from .utils import os_join
+from . import constants as const
+from .xbmcwrappers import (log, settings)
 
 
 class RequestSession():
@@ -125,7 +127,7 @@ def check_watchlist(movie_database, show_database):
 def getepisodes(showid):
     episodes = {}
     showpage = reqs.get("http://tv.nrk.no/serie/%s/" % showid).soup()
-    date_for_episodenr = "/episode-" not in showpage.find(attrs={"name": "latestepisodeurls"})["content"]
+    date_for_episodenr = showpage.find(attrs={"name": "latestepisodeurls"}) and "/episode-" not in showpage.find(attrs={"name": "latestepisodeurls"})["content"]
     seasons = showpage.find_all(class_="season-menu-item")
     in_superuniverse = "isInSuperUniverse: true" in showpage.text
     for seasonnr, seasondata in enumerate(reversed(seasons), start=1):

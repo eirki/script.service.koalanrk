@@ -24,9 +24,11 @@ from win32com.client import Dispatch
 import pywintypes
 import win32gui
 
-from lib.PyUserInput.pymouse import PyMouse
-from lib.utils import (settings, log, os_join, uni_join, rpc, const)
-from lib.remote import Remote
+from .PyUserInput.pymouse import PyMouse
+from . import constants as const
+from .utils import os_join
+from .remote import Remote
+from .xbmcwrappers import (log, settings, rpc)
 
 
 class NowPlayingOverly(xbmcgui.WindowXMLDialog):

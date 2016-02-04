@@ -11,10 +11,12 @@ from operator import itemgetter
 import xbmc
 import xbmcgui
 
-from lib.utils import (settings, rpc, log, progress, dialogs, os_join, uni_join, const)
+from lib import constants as const
 from lib import library
-from lib import internet as nrk
-import win32hack
+from lib import scraper
+from lib.utils import (os_join, uni_join, parameters_string_to_dict)
+from lib.xbmcwrappers import (settings, rpc, log, progress, dialogs)
+from lib import win32hack
 win32hack.run()
 from lib import playback
 from lib.remote import Remote
@@ -147,25 +149,12 @@ def deletecookies():
     if os.path.isfile(cookiefile):
         os.remove(cookiefile)
 
+
+        del self
+
+
 def test():
-    os.environ["PATH"] += ";%s" % "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\pywin32_system32"
-    sys.path.extend(["C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32",
-                     "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\win32",
-                     "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\win32\\lib",
-                     "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\pypiwin32-219.data\\scripts",
-                     "C:\\Programmer\\Kodi\\portable_data\\addons\\script.service.koalanrk\\lib\\win32\\Pythonwin"])
-    from win32com.client import Dispatch
-    import pywintypes
-    import win32gui
-    ie = Dispatch("InternetExplorer.Application")
-    ie.Visible = 1
-    ie.FullScreen = 1
-    win32gui.SetForegroundWindow(ie.HWND)
-    # print globals()
-    # print sys.path
-    # import pythoncom
-    # xbmc.sleep(5)
-    # import pythconcom
+    pass
 
 def select_mediaitem(database, mediatype):
     sorted_media = sorted(database.items(), key=itemgetter(1))
@@ -192,6 +181,8 @@ def stop():
 
 def main():
     log.info("Starting Koala NRK")
+    params = parameters_string_to_dict(sys.argv[2])
+    mode = params.get('mode', None)
     action = sys.argv
     log.info(action)
     if action in ([''], ["default.py"]):
@@ -313,7 +304,7 @@ def main():
     elif action in ["watchlist", "startup"]:
         if (action == "startup" and settings["check watchlist on startup"]) or (action == "watchlist"):
             progress.update(25)
-            results = nrk.check_watchlist(movie_database, show_database)
+            results = scraper.check_watchlist(movie_database, show_database)
             unav_movies, unav_shows, added_movies, added_shows = results
             if unav_movies or unav_shows:
                 progress.update(50)
