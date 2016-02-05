@@ -181,18 +181,23 @@ def stop():
 
 def main():
     log.info("Starting Koala NRK")
-    params = parameters_string_to_dict(sys.argv[2])
+    log.info(sys.argv)
+    params = parameters_string_to_dict(sys.argv[-1])
+    log.info(params)
     mode = params.get('mode', None)
-    action = sys.argv
+    action = params.get('action', None)
     log.info(action)
-    if action in ([''], ["default.py"]):
+    if sys.argv in ([''], ["default.py"]):
+        mode = "library"
         action = "startup"
-    elif len(action) == 3:
-        play_id = action[2]
-        playback.play(play_id[1:])
+
+    if mode == "play":
+        url = params['url']
+        playback.play(url)
         return
-    else:
-        action = action[1]
+
+    if action == "startup" and not (settings["check watchlist on startup"] or settings["check shows on startup"]):
+        return
 
     run = True
     if xbmcgui.Window(10000).getProperty("Koala NRK running") == "true":
@@ -212,8 +217,6 @@ def main():
                    line3=uni_join(const.libpath, "NRK movies"))
         return
 
-    if action == "startup" and not (settings["check watchlist on startup"] or settings["check shows on startup"]):
-        return
 
     if action == "configureremote":
         remote = Remote()
@@ -225,7 +228,7 @@ def main():
         "deletecookies": deletecookies,
         "test": test
     }
-    if action in settingsactions:
+    if mode == "setting":
         settingsactions[action]()
         return
 
