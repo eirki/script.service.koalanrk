@@ -11,14 +11,16 @@ import xbmcgui
 import xbmcplugin
 import xbmc
 
+import socket
+import httplib
+import urllib2
+
 from lib.selenium import webdriver
-from lib.selenium.webdriver.common.keys import Keys
 from lib.selenium.webdriver.common.by import By
 from lib.selenium.webdriver.support.ui import WebDriverWait
 from lib.selenium.webdriver.support import expected_conditions as EC
-from lib.selenium.common.exceptions import TimeoutException
+from lib.selenium.common.exceptions import (TimeoutException, WebDriverException)
 from lib.selenium.webdriver.common.action_chains import ActionChains
-from lib import selenium
 
 from win32com.client import Dispatch
 import pywintypes
@@ -38,11 +40,10 @@ class NowPlayingOverly(xbmcgui.WindowXMLDialog):
     def __init__(self):
         super(NowPlayingOverly, self).__init__()
 
-    def setArgs(self, title, duration):
+    def set_args(self, title, duration):
         self.title = title
         duration = timedelta(minutes=int(duration))
         self.finish_time = datetime.now() + duration
-        log.info(self.finish_time)
 
     def onInit(self):
         self.getControl(400).setImage(os_join(const.addonpath, "resources", "play.png"))
@@ -95,73 +96,110 @@ def addplaycount(kodiid, playcount):
 
 
 class SeleniumDriver(object):
-
     def open(self, url):
-        options = selenium.webdriver.chrome.options.Options()
+        self.seleniumerrors = (AttributeError, socket.error, httplib.CannotSendRequest,
+                               WebDriverException, httplib.BadStatusLine, urllib2.URLError)
+        self.starturl = url
+        options = webdriver.chrome.options.Options()
         options.add_experimental_option('excludeSwitches', ['disable-component-update'])
-        options.add_argument('--kiosk')
-        options.add_argument("--profile-directory=Eirik")
-        d = "C:/Users/Eirki/AppData/Local/Google/Chrome/User Data/Default"
-        options.add_argument("--user-data-dir=%s" % d)
-        self.driver = webdriver.Chrome("D:/Dropbox/Programmering/HTPC/selenium/chromedriver.exe", chrome_options=options)
+        options.add_argument("--kiosk")
+        options.add_argument("--user-data-dir=%s" % os_join(const.userdatafolder, "chromeprofile"))
+        if const.os == "linux":
+            driverpath = os_join(const.addonpath, "resources", "chromedriver_linux32", "chromedriver")
+        elif const.os == "windows":
+            driverpath = os_join(const.addonpath, "resources", "chromedriver_win32", "chromedriver.exe")
+        elif const.os == "osx":
+            driverpath = os_join(const.addonpath, "resources", "chromedriver_mac32", "chromedriver")
+        self.driver = webdriver.Chrome(executable_path=driverpath, chrome_options=options)
 
-        self.driver.get(url)
+        self.driver.get("http://%s" % url)
 
-        self.trigger_player()
 
     def trigger_player(self):
+        log.info("triggering player")
+        m = PyMouse()
         try:
-            playbutton = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "play-icon")))
-            playbutton.click()
-            playerelement = self.driver.find_element_by_id("playerelement")
-        except TimeoutException:
-            playerelement = self.driver.find_element_by_id("playerelement")
-            playerelement.click()
+            try:
+                playbutton = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "play-icon")))
+                playbutton.click()
+                rect = playbutton.location
+                size = playbutton.size
+            except TimeoutException:
+                playerelement = self.driver.find_element_by_id("playerelement")
+                playerelement.click()
+                rect = playerelement.location
+                size = playerelement.size
+            player_coord = {"x": int(rect['x']+(size['width']/2)),
+                            "y": int(rect['y']+(size['height']/2))}
+            log.info(player_coord)
+            log.info("waitong for player ready for fullscreen")
+            i = 0
+            while i < 10:
+                player_ready = "ProgressTracker" in self.driver.find_elements_by_tag_name("script")[0].get_attribute('src')
+                if player_ready:
+                    break
+                else:
+                    xbmc.sleep(1000)
+            else:
+                log.info("couldnt find progressbar, don't know if player ready")
 
-        while "ProgressTracker" not in self.driver.find_elements_by_tag_name("script")[0].get_attribute('src'):
-            xbmc.sleep(100)
+            log.info("doube_clicking")
+            # playerelement = self.driver.find_element_by_id("playerelement")
+            m.move(**player_coord)
+            xbmc.sleep(200)
+            m.click(n=2, **player_coord)
 
-        playerelement = self.driver.find_element_by_id("playerelement")
-        actionChains = ActionChains(self.driver)
-        actionChains.double_click(playerelement).perform()
+
+        except self.seleniumerrors:
+            log.info("trigger_player interrupted, browser closed?")
+            log.info(traceback.format_exc())
 
     def gather_urls_wait_for_exit(self):
-        log.info("setting up url gathering")
-        self.watched = []
-        found = False
-        while not found:
-            current_nrkid, found = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.driver.current_url)
-            xbmc.sleep(1000)
-        startwatch = datetime.now()
-        last_stored_url = self.driver.current_url
-
-        WatchedEpisode = namedtuple("Watched", "id duration")
         log.info("gathering urls")
-        while True:
-            try:
-                if self.driver.current_url != last_stored_url:
-                    new_nrkid, is_newepisode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.driver.current_url)
-                    if is_newepisode and current_nrkid != new_nrkid:
-                        duration = datetime.now() - startwatch
-                        self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
-
-                        current_nrkid = new_nrkid
-                        startwatch = datetime.now()
-                    last_stored_url = self.driver.current_url
+        self.watched = []
+        WatchedEpisode = namedtuple("Watched", "id duration")
+        current_nrkid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.starturl)
+        startwatch = datetime.now()
+        last_stored_url = self.starturl
+        try:
+            while True:
+                if self.driver.current_url == last_stored_url:
+                    xbmc.sleep(1000)
+                    continue
+                last_stored_url = self.driver.current_url
+                new_nrkid, is_nrkepisode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.driver.current_url)
+                if is_nrkepisode and current_nrkid != new_nrkid:
+                    duration = datetime.now() - startwatch
+                    self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
                     log.info("watched: %s:" % self.watched)
-            except (selenium.common.exceptions.WebDriverException, AttributeError):
-                duration = datetime.now() - startwatch
-                self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
-                break
-            xbmc.sleep(1000)
+
+                    current_nrkid = new_nrkid
+                    startwatch = datetime.now()
+        except self.seleniumerrors:
+            duration = datetime.now() - startwatch
+            self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
         log.info("finished gathering urls")
         log.info("watched: %s" % self.watched)
 
+    def focus_player(self):
+        self.driver.execute_script("window.focus();")
+
+    def wait_until_closed(self):
+        log.info("wait_until_closed")
+        try:
+            while self.driver.title:
+                xbmc.sleep(200)
+        except self.seleniumerrors:
+            try:
+                self.close()
+            except self.seleniumerrors:
+                pass
+        log.info("wait_until_closed finished")
+
+
+
     def close(self):
-        log.info("ensuring selenium closed")
-        if self.driver:
-            self.driver.quit()
-        self.driver = None
+        self.driver.quit()
 
 
 class IEbrowser(object):
@@ -170,9 +208,9 @@ class IEbrowser(object):
         self.ie.Visible = 1
         self.ie.FullScreen = 1
         self.starturl = url
-        self.ie.Navigate(self.starturl)
         self.handle = self.ie.HWND
         win32gui.SetForegroundWindow(self.handle)
+        self.ie.Navigate(self.starturl)
 
     def trigger_player(self):
         log.info("triggering player")
@@ -184,12 +222,12 @@ class IEbrowser(object):
                 playicon = next(elem for elem in self.ie.document.body.all.tags("span") if elem.className == 'play-icon')
                 playicon.click()
                 log.info("clicked play")
-                rect =  playicon.getBoundingClientRect()
+                rect = playicon.getBoundingClientRect()
                 player_coord = {"x": rect.left, "y": rect.top}
             except StopIteration:
                 log.info("couldn't fint play")
                 playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
-                rect =  playerelement.getBoundingClientRect()
+                rect = playerelement.getBoundingClientRect()
                 player_coord = {"x": (int(rect.left+rect.right/2)), "y": (int(rect.top+rect.bottom/2))}
                 log.info(player_coord)
                 m.click(button=1, n=1, **player_coord)
@@ -205,15 +243,13 @@ class IEbrowser(object):
 
             log.info("doube_clicking")
             m.move(**player_coord)
-            xbmc.sleep(100)
-            m.click(**player_coord)
-            m.click(**player_coord)
+            xbmc.sleep(200)
+            m.click(n=2, **player_coord)
+            # xbmc.sleep(70)
+            # m.click(**player_coord)
         except (pywintypes.com_error, AttributeError):
             log.info("trigger_player interrupted, browser closed?")
             log.info(traceback.format_exc())
-
-    def focus_player(self):
-        win32gui.SetForegroundWindow(self.handle)
 
     def gather_urls_wait_for_exit(self):
         log.info("gathering urls")
@@ -243,12 +279,15 @@ class IEbrowser(object):
         log.info("finished gathering urls")
         log.info("watched: %s" % self.watched)
 
+    def focus_player(self):
+        win32gui.SetForegroundWindow(self.handle)
+
     def wait_until_closed(self):
         while True:
             try:
                 is_open = next((win for win in Dispatch("Shell.Application").Windows() if win.HWND == self.handle), False)
                 if is_open:
-                    xbmc.sleep(1000)
+                    xbmc.sleep(200)
                 else:
                     return
             except (pywintypes.com_error, AttributeError):
@@ -263,7 +302,7 @@ def play(url):
     remote = None
     kodiid = xbmc.getInfoLabel('ListItem.DBID')
     overlay = NowPlayingOverly()
-    overlay.setArgs(title=xbmc.getInfoLabel('ListItem.Title'), duration=xbmc.getInfoLabel('ListItem.Duration'))
+    overlay.set_args(title=xbmc.getInfoLabel('ListItem.Title'), duration=xbmc.getInfoLabel('ListItem.Duration'))
     overlay.show()
     listitem = xbmcgui.ListItem(path=os_join(const.addonpath, "resources", "fakeVid.mp4"))
     xbmcplugin.setResolvedUrl(handle=int(sys.argv[1]), succeeded=True, listitem=listitem)
