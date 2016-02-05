@@ -35,7 +35,7 @@ class Movie(object):
         self.title = movietitle
         self.kodiid = None
         self.path = uni_join(const.libpath, "NRK movies")
-        self.filename = "%s.htm" % stringtofile(self.title)
+        self.filename = "%s.strm" % stringtofile(self.title)
         self.nfofilename = "%s.nfo" % stringtofile(self.title)
         self.jsonfilename = "%s.json" % stringtofile(self.title)
 
@@ -62,8 +62,7 @@ class Movie(object):
 
     def create_file(self):
         with open(os_join(self.path, self.filename), "w") as txt:
-            txt.write('<meta http-equiv="REFRESH" content="0;'
-                  'url=http://tv.nrk.no%s"> <body bgcolor="#ffffff">' % self.nrkid)
+            txt.write("plugin://script.service.koalanrk/?mode=play&url=tv.nrk.no%s" % self.nrkid)
         log.debug("File created: %s " % self.title)
 
     def add_to_lib(self):
@@ -195,7 +194,7 @@ class Episode(object):
         self.kodiid = kodiid
         self.playcount = int(playcount)
         self.path = uni_join(const.libpath, "NRK shows", stringtofile(self.showtitle), "Season %s" % self.seasonnr)
-        self.filename = "%s %s.htm" % (stringtofile(self.showtitle), self.code)
+        self.filename = "%s %s.strm" % (stringtofile(self.showtitle), self.code)
         self.nfofilename = "%s %s.nfo" % (stringtofile(self.showtitle), self.code)
         self.jsonfilename = "%s %s.json" % (stringtofile(self.showtitle), self.code)
 
@@ -214,9 +213,8 @@ class Episode(object):
         if not exists(os_join(self.path)):
             os.makedirs(os_join(self.path))
         with open(os_join(self.path, self.filename), "w") as txt:
-            txt.write('<meta http-equiv="REFRESH" content="0;'
-                      'url=http://tv.nrk%s.no%s">'
-                      '<body bgcolor="#ffffff">' % ("super" if self.in_superuniverse else "", self.nrkid))
+            txt.write("plugin://script.service.koalanrk/?mode=play&url=tv.nrk%s.no%s" %
+                      ("super" if self.in_superuniverse else "", self.nrkid))
 
     def add_to_lib(self, koala_stored_episodes):
         if self.code in koala_stored_episodes:
