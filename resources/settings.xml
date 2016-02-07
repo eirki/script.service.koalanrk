@@ -5,32 +5,31 @@
     <setting label="Use Custom Library Path" default="false" id="usecustomLibPath" type="bool" />
     <setting label="Library Path" default="special://profile/addon_data/script.service.koalanrk/Library" enable="eq(-1,true)" id="LibPath" option="writeable" type="folder" />
     <setting label="Use multithreading" id="multithreading" type="bool" default="true" />
+
+    <setting label="Startup settings" type="lsep"/>
+    <setting label="Check for added/removed movies, TV shows and episodes on startup" id="check on startup" type="bool" default="true"/>
+    <setting label="Check all stored TV shows for added/removed episodes on startup" id="all_shows_on_startup" type="bool" default="false" enable="eq(-1,true)"/>
+    <setting label="No. of TV shows to check" id="n_shows_to_update" default="10"  option="int" range="0,1,20" type="slider"  enable="eq(-1,false) + eq(-2,true)"/>
+    <setting label="Prioritize shows (always checked in startup process)" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=prioritize)" type="action" option="close" enable="eq(-2,false) + eq(-3,true)"/>
+    <setting label="Show progress notification" id="startupnotification" type="bool" default="true" enable="eq(-4,true)"/>
   </category>
   <category label="Playback">
     <setting label="Browser" id="browser" type="labelenum" values="Chrome|Internet Explorer" />
     <setting label="Enable remote control utility" id="remote" type="bool" default="false" />
     <setting label="Configure keys" action="RunScript(script.service.koalanrk, ?mode=setting&amp;action=configureremote)" type="action" enable="eq(-1,true)" option="close"/>
-  </category>
-  <category label="Startup settings">
-    <setting label="Check watchlist for added/removed media on startup" id="check watchlist on startup" type="bool" default="true"/>
-    <setting label="Check stored TV shows for added/removed episodes on startup" id="check shows on startup" type="bool"  default="true"/>
-    <setting label="Check all stored TV shows" id="all_shows_on_startup" type="bool" default="false" enable="eq(-1,true)"/>
-    <setting label="No. of TV shows to check" id="n_shows_to_update" default="10"  option="int" range="0,1,20" type="slider"  enable="eq(-1,false) + eq(-2,true)"/>
-    <setting label="Prioritize shows (always checked in startup process)" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=prioritize)" type="action" option="close" enable="eq(-2,false) + eq(-3,true)"/>
-    <setting label="Show progress notification" id="startupnotification" type="bool" default="true" />
     <setting label="Watch live" action="RunScript(script.service.koalanrk, ?mode=live)" type="action" option="close"/>
   </category>
   <category label="Update actions ">
-    <setting label="Check My List for added/removed media" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=watchlist)" type="action"  option="close"/>
-    <setting label="Update single show" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=update_single)" type="action"  option="close"/>
-    <setting label="Update all shows" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=update_all)" type="action"  option="close"/>
-    <setting label="Exclude show" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=exclude_show)" type="action"  option="close"/>
-    <setting label="Readd show" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=readd_show)" type="action"  option="close"/>
-    <setting label="Exclude movie" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=exclude_movie)" type="action"  option="close"/>
-    <setting label="Readd movie" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=readd_movie)" type="action"  option="close"/>
+    <setting label="Check My List for added/removed movies or TV shows" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=watchlist)" type="action"  option="close"/>
+    <setting label="Check single show for added/removed episodes" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=update_single)" type="action"  option="close"/>
+    <setting label="Check all shows for added/removed episodes" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=update_all)" type="action"  option="close"/>
+    <setting label="Exclude show from library" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=exclude_show)" type="action"  option="close"/>
+    <setting label="Readd show to library" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=readd_show)" type="action"  option="close"/>
+    <setting label="Exclude movie from library" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=exclude_movie)" type="action"  option="close"/>
+    <setting label="Readd movie to library" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=readd_movie)" type="action"  option="close"/>
   </category>
   <category label="Debug">
-    <setting label="Remove all shows and movies" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=remove_all)" type="action"  option="close"/>
+    <setting label="Remove all shows and movies from library" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=remove_all)" type="action"  option="close"/>
     <setting label="Delete cookies" action="RunScript(script.service.koalanrk, ?mode=setting&amp;action=deletecookies)" type="action" />
     <setting label="Refresh Settings" action="RunScript(script.service.koalanrk, ?mode=setting&amp;action=refreshsettings)" type="action"  option="close" />
     <setting label="Test action" action="RunScript(script.service.koalanrk, ?mode=setting&amp;action=test)" type="action" option="close"/>

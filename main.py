@@ -206,13 +206,13 @@ def main():
         playback.play(url)
         return
 
-    if action == "startup" and not (settings["check watchlist on startup"] or settings["check shows on startup"]):
     if mode == "live":
         channel_id, channel_name = select_channel()
         if channel_id:
             playback.playlive(channel_id, channel_name)
         return
 
+    if action == "startup" and not settings["check on startup"]:
         return
 
     run = True
@@ -321,22 +321,21 @@ def main():
         show_database.remove(show_database.stored.items())
 
     elif action in ["watchlist", "startup"]:
-        if (action == "startup" and settings["check watchlist on startup"]) or (action == "watchlist"):
-            progress.update(25)
-            results = scraper.check_watchlist(movie_database, show_database)
-            unav_movies, unav_shows, added_movies, added_shows = results
-            if unav_movies or unav_shows:
-                progress.update(50)
-                library.remove(movies=unav_movies, shows=unav_shows)
-                movie_database.remove(unav_movies)
-                show_database.remove(unav_shows)
-            if added_movies or added_shows:
-                progress.update(75)
-                library.update_add_create(movies=added_movies, shows=added_shows)
-                movie_database.update(added_movies)
-                show_database.update(added_shows)
-        if action == "startup" and settings["check shows on startup"]:
-            progress.update(90)
+        progress.update(25)
+        results = scraper.check_watchlist(movie_database, show_database)
+        unav_movies, unav_shows, added_movies, added_shows = results
+        if unav_movies or unav_shows:
+            progress.update(50)
+            library.remove(movies=unav_movies, shows=unav_shows)
+            movie_database.remove(unav_movies)
+            show_database.remove(unav_shows)
+        if added_movies or added_shows:
+            progress.update(60)
+            library.update_add_create(movies=added_movies, shows=added_shows)
+            movie_database.update(added_movies)
+            show_database.update(added_shows)
+        if action == "startup":
+            progress.update(75)
             shows_to_update = get_n_shows_to_update(show_database)
             library.update_add_create(shows=shows_to_update)
             show_database.update(shows_to_update)
