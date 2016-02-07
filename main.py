@@ -79,6 +79,16 @@ class MediaDatabase(object):
                 json.dump(database, p, indent=2)
 
 
+def select_channel():
+    channels = ["NRK1", "NRK2", "NRK3", "NRKsuper"]
+    call = dialogs.select('Select channel', channels)
+    if call == -1:
+        return None
+    channel_name = channels[call]
+    channel_id = "tv.nrk.no/direkte/%s" % channel_name.lower()
+    return channel_id, channel_name
+
+
 def get_n_shows_to_update(show_database):
     pri_shows = []
     n_shows = list(show_database.stored)
@@ -197,6 +207,12 @@ def main():
         return
 
     if action == "startup" and not (settings["check watchlist on startup"] or settings["check shows on startup"]):
+    if mode == "live":
+        channel_id, channel_name = select_channel()
+        if channel_id:
+            playback.playlive(channel_id, channel_name)
+        return
+
         return
 
     run = True

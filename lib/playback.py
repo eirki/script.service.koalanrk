@@ -10,7 +10,6 @@ import traceback
 import xbmcgui
 import xbmcplugin
 import xbmc
-
 import socket
 import httplib
 import urllib2
@@ -20,13 +19,11 @@ from lib.selenium.webdriver.common.by import By
 from lib.selenium.webdriver.support.ui import WebDriverWait
 from lib.selenium.webdriver.support import expected_conditions as EC
 from lib.selenium.common.exceptions import (TimeoutException, WebDriverException)
-from lib.selenium.webdriver.common.action_chains import ActionChains
-
 from win32com.client import Dispatch
 import pywintypes
 import win32gui
-
 from .PyUserInput.pymouse import PyMouse
+
 from . import constants as const
 from .utils import os_join
 from .remote import Remote
@@ -40,15 +37,14 @@ class NowPlayingOverly(xbmcgui.WindowXMLDialog):
     def __init__(self):
         super(NowPlayingOverly, self).__init__()
 
-    def set_args(self, title, duration):
+    def set_args(self, title, subtitle=None):
         self.title = title
-        duration = timedelta(minutes=int(duration))
-        self.finish_time = datetime.now() + duration
+        self.subtitle = subtitle
 
     def onInit(self):
         self.getControl(400).setImage(os_join(const.addonpath, "resources", "play.png"))
         self.getControl(401).setLabel(self.title)
-        self.getControl(402).setLabel("Finish time: {:%H:%M:%S}".format(self.finish_time))
+        self.getControl(402).setLabel(self.subtitle)
 
     def close(self):
         del self
@@ -114,25 +110,29 @@ class SeleniumDriver(object):
 
         self.driver.get("http://%s" % url)
 
-
     def trigger_player(self):
         log.info("triggering player")
-        m = PyMouse()
         try:
             try:
                 playbutton = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "play-icon")))
                 playbutton.click()
-                rect = playbutton.location
-                size = playbutton.size
             except TimeoutException:
                 playerelement = self.driver.find_element_by_id("playerelement")
                 playerelement.click()
-                rect = playerelement.location
-                size = playerelement.size
+        except self.seleniumerrors:
+            log.info("trigger_player interrupted, browser closed?")
+            log.info(traceback.format_exc())
+
+    def enter_fullscreen(self):
+        try:
+            m = PyMouse()
+            playerelement = self.driver.find_element_by_id("playerelement")
+            rect = playerelement.location
+            size = playerelement.size
             player_coord = {"x": int(rect['x']+(size['width']/2)),
                             "y": int(rect['y']+(size['height']/2))}
+
             log.info(player_coord)
-            log.info("waitong for player ready for fullscreen")
             i = 0
             while i < 10:
                 player_ready = "ProgressTracker" in self.driver.find_elements_by_tag_name("script")[0].get_attribute('src')
@@ -144,15 +144,12 @@ class SeleniumDriver(object):
                 log.info("couldnt find progressbar, don't know if player ready")
 
             log.info("doube_clicking")
-            # playerelement = self.driver.find_element_by_id("playerelement")
             m.move(**player_coord)
             xbmc.sleep(200)
             m.click(n=2, **player_coord)
-
-
         except self.seleniumerrors:
-            log.info("trigger_player interrupted, browser closed?")
-            log.info(traceback.format_exc())
+                log.info("enter_fullscreen interrupted, browser closed?")
+                log.info(traceback.format_exc())
 
     def gather_urls_wait_for_exit(self):
         log.info("gathering urls")
@@ -196,8 +193,6 @@ class SeleniumDriver(object):
                 pass
         log.info("wait_until_closed finished")
 
-
-
     def close(self):
         self.driver.quit()
 
@@ -211,10 +206,11 @@ class IEbrowser(object):
         self.handle = self.ie.HWND
         win32gui.SetForegroundWindow(self.handle)
         self.ie.Navigate(self.starturl)
+        self.m = PyMouse()
+        self.player_coord = None
 
     def trigger_player(self):
         log.info("triggering player")
-        m = PyMouse()
         try:
             while self.ie.busy:
                 xbmc.sleep(100)
@@ -223,18 +219,30 @@ class IEbrowser(object):
                 playicon.click()
                 log.info("clicked play")
                 rect = playicon.getBoundingClientRect()
-                player_coord = {"x": rect.left, "y": rect.top}
+                self.player_coord = {"x": rect.left, "y": rect.top}
             except StopIteration:
                 log.info("couldn't fint play")
                 playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
                 rect = playerelement.getBoundingClientRect()
-                player_coord = {"x": (int(rect.left+rect.right/2)), "y": (int(rect.top+rect.bottom/2))}
-                log.info(player_coord)
-                m.click(button=1, n=1, **player_coord)
+                self.player_coord = {"x": (int(rect.left+rect.right/2)), "y": (int(rect.top+rect.bottom/2))}
+                self.m.click(button=1, n=1, **self.player_coord)
+        except (pywintypes.com_error, AttributeError):
+            log.info("trigger_player interrupted, browser closed?")
+            log.info(traceback.format_exc())
+
+    def enter_fullscreen(self):
+        try:
+            if not self.player_coord:
+                while self.ie.busy:
+                    xbmc.sleep(100)
+                playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
+                rect = playerelement.getBoundingClientRect()
+                self.player_coord = {"x": (int(rect.left+rect.right/2)), "y": (int(rect.top+rect.bottom/2))}
 
             log.info("waitong for player ready for fullscreen")
             for _ in range(10):
-                player_ready = next((elem for elem in self.ie.document.head.all.tags("script") if "ProgressTracker" in elem.getAttribute("src")), False)
+                player_ready = next((elem for elem in self.ie.document.head.all.tags("script")
+                                     if "ProgressTracker" in elem.getAttribute("src")), False)
                 if player_ready:
                     break
                 xbmc.sleep(1000)
@@ -242,13 +250,11 @@ class IEbrowser(object):
                 log.info("couldnt find progressbar, don't know if player ready")
 
             log.info("doube_clicking")
-            m.move(**player_coord)
+            self.m.move(**self.player_coord)
             xbmc.sleep(200)
-            m.click(n=2, **player_coord)
-            # xbmc.sleep(70)
-            # m.click(**player_coord)
+            self.m.click(n=2, **self.player_coord)
         except (pywintypes.com_error, AttributeError):
-            log.info("trigger_player interrupted, browser closed?")
+            log.info("enter_fullscreen interrupted, browser closed?")
             log.info(traceback.format_exc())
 
     def gather_urls_wait_for_exit(self):
@@ -300,9 +306,13 @@ class IEbrowser(object):
 def play(url):
     log.info("setting up playback")
     remote = None
+    epdict = {}
     kodiid = xbmc.getInfoLabel('ListItem.DBID')
+    durationstr = xbmc.getInfoLabel('ListItem.Duration')
+    duration = timedelta(minutes=int(durationstr))
+    finish_time = datetime.now() + duration
     overlay = NowPlayingOverly()
-    overlay.set_args(title=xbmc.getInfoLabel('ListItem.Title'), duration=xbmc.getInfoLabel('ListItem.Duration'))
+    overlay.set_args(title=xbmc.getInfoLabel('ListItem.Title'), subtitle="Finish time: {:%H:%M:%S}".format(finish_time))
     overlay.show()
     listitem = xbmcgui.ListItem(path=os_join(const.addonpath, "resources", "fakeVid.mp4"))
     xbmcplugin.setResolvedUrl(handle=int(sys.argv[1]), succeeded=True, listitem=listitem)
@@ -317,19 +327,45 @@ def play(url):
     try:
         browser.open(url)
         browser.trigger_player()
+        browser.enter_fullscreen()
         epdict = gen_epdict(kodiid)
-
         browser.gather_urls_wait_for_exit()
-
-        log.info("Playback finished, cleaning up")
-        mark_watched(epdict, browser.watched)
     except:
         raise
     finally:
+        overlay.close()
         browser.wait_until_closed()
+        log.info("Playback finished, cleaning up")
+        mark_watched(epdict, browser.watched)
         if remote:
             remote.close()
-        overlay.close()
         xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
+    log.info("playbackend finished")
 
+
+def playlive(channel_id, channel_name):
+    log.info("setting up playback")
+    overlay = NowPlayingOverly()
+    overlay.set_args(title=channel_name, subtitle="Watching live")
+    overlay.show()
+    if settings["browser"] == "Internet Explorer":
+        browser = IEbrowser()
+    elif settings["browser"] == "Chrome":
+        browser = SeleniumDriver()
+    if settings["remote"]:
+        remote = Remote()
+        remote.run(browser=browser)
+    log.info("starting playback")
+    try:
+        browser.open(channel_id)
+        browser.enter_fullscreen()
+    except:
+        raise
+    finally:
+        overlay.close()
+        browser.wait_until_closed()
+        log.info("Playback finished, cleaning up")
+        if remote:
+            remote.close()
+        xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
     log.info("playbackend finished")

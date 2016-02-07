@@ -18,6 +18,7 @@
     <setting label="No. of TV shows to check" id="n_shows_to_update" default="10"  option="int" range="0,1,20" type="slider"  enable="eq(-1,false) + eq(-2,true)"/>
     <setting label="Prioritize shows (always checked in startup process)" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=prioritize)" type="action" option="close" enable="eq(-2,false) + eq(-3,true)"/>
     <setting label="Show progress notification" id="startupnotification" type="bool" default="true" />
+    <setting label="Watch live" action="RunScript(script.service.koalanrk, ?mode=live)" type="action" option="close"/>
   </category>
   <category label="Update actions ">
     <setting label="Check My List for added/removed media" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=watchlist)" type="action"  option="close"/>
