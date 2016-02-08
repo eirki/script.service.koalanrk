@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-import os
+
 import xbmcaddon
 import xbmc
 
@@ -16,7 +16,7 @@ else:
 if xbmc.getCondVisibility("system.platform.linux"):
     os = "linux"
 elif xbmc.getCondVisibility("system.platform.windows"):
-    os = "windows"
+    os = "win"
 elif xbmc.getCondVisibility("system.platform.osx"):
     os = "osx"
 elif xbmc.getCondVisibility("system.platform.android"):
