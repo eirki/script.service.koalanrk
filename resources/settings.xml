@@ -4,7 +4,7 @@
     <setting label="Password" id="password"  type="text" option="hidden"/>
     <setting label="Use Custom Library Path" default="false" id="usecustomLibPath" type="bool" />
     <setting label="Library Path" default="special://profile/addon_data/script.service.koalanrk/Library" enable="eq(-1,true)" id="LibPath" option="writeable" type="folder" />
-    <setting label="Use multithreading" id="multithreading" type="bool" default="true" />
+    <setting label="Use multithreading when updating library" id="multithreading" type="bool" default="true" />
 
     <setting label="Startup settings" type="lsep"/>
     <setting label="Check for added/removed movies, TV shows and episodes on startup" id="check on startup" type="bool" default="true"/>
@@ -15,9 +15,9 @@
   </category>
   <category label="Playback">
     <setting label="Browser" id="browser" type="labelenum" values="Chrome|Internet Explorer" />
-    <setting label="Enable remote control utility" id="remote" type="bool" default="false" />
-    <setting label="Configure keys" action="RunScript(script.service.koalanrk, ?mode=setting&amp;action=configureremote)" type="action" enable="eq(-1,true)" option="close"/>
     <setting label="Watch live" action="RunScript(script.service.koalanrk, ?mode=live)" type="action" option="close"/>
+    <setting label="Enable remote control" id="remote" type="bool" default="false" />
+    <setting label="Configure remote control" action="RunScript(script.service.koalanrk, ?mode=setting&amp;action=configureremote)" type="action" enable="eq(-1,true)" option="close" subsetting="true"/>
   </category>
   <category label="Update actions ">
     <setting label="Check My List for added/removed movies or TV shows" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=watchlist)" type="action"  option="close"/>
