@@ -27,7 +27,7 @@ from .PyUserInput.pymouse import PyMouse
 from . import constants as const
 from .utils import os_join
 from .remote import Remote
-from .xbmcwrappers import (log, settings, rpc)
+from .xbmcwrappers import (log, settings, rpc, dialogs)
 
 
 class NowPlayingOverly(xbmcgui.WindowXMLDialog):
@@ -100,12 +100,7 @@ class SeleniumDriver(object):
         options.add_experimental_option('excludeSwitches', ['disable-component-update'])
         options.add_argument("--kiosk")
         options.add_argument("--user-data-dir=%s" % os_join(const.userdatafolder, "chromeprofile"))
-        if const.os == "linux":
-            driverpath = os_join(const.addonpath, "resources", "chromedriver_linux32", "chromedriver")
-        elif const.os == "windows":
-            driverpath = os_join(const.addonpath, "resources", "chromedriver_win32", "chromedriver.exe")
-        elif const.os == "osx":
-            driverpath = os_join(const.addonpath, "resources", "chromedriver_mac32", "chromedriver")
+        driverpath = os_join(const.addonpath, "resources", "chromedriver_%s32" % const.os, "chromedriver")
         self.driver = webdriver.Chrome(executable_path=driverpath, chrome_options=options)
 
         self.driver.get("http://%s" % url)
@@ -343,7 +338,20 @@ def play(url):
     log.info("playbackend finished")
 
 
-def playlive(channel_id, channel_name):
+def select_channel():
+    channels = ["NRK1", "NRK2", "NRK3", "NRKsuper"]
+    call = dialogs.select('Select channel', channels)
+    if call == -1:
+        return None, None
+    channel_name = channels[call]
+    channel_id = "tv.nrk.no/direkte/%s" % channel_name.lower()
+    return channel_id, channel_name
+
+
+def playlive():
+    channel_id, channel_name = select_channel()
+    if not channel_id:
+        return
     log.info("setting up playback")
     overlay = NowPlayingOverly()
     overlay.set_args(title=channel_name, subtitle="Watching live")
