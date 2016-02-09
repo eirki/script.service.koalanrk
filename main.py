@@ -96,11 +96,11 @@ def get_n_shows_to_update(show_database):
 
 def koalasetup():
     if not os.path.exists(const.userdatafolder):
-        os.mkdir(const.userdatafolder)
+        os.makedirs(const.userdatafolder)
     if not os.path.exists(os_join(const.libpath, "NRK shows")):
-        os.mkdir(os_join(const.libpath, "NRK shows"))
+        os.makedirs(os_join(const.libpath, "NRK shows"))
     if not os.path.exists(os_join(const.libpath, "NRK movies")):
-        os.mkdir(os_join(const.libpath, "NRK movies"))
+        os.makedirs(os_join(const.libpath, "NRK movies"))
 
 
 def is_libpath_added():
@@ -198,7 +198,7 @@ def main():
         playback.playlive()
         return
 
-    if action == "startup" and not settings["check on startup"]:
+    if action == "startup" and not settings["watchlist on startup"]:
         return
 
     run = True
@@ -334,5 +334,4 @@ if __name__ == '__main__':
         if progress.active:
             stop()
         MediaDatabase.savetofile()
-        xbmcgui.Window(10000).setProperty("Koala NRK has run", "true")
         log.info("Koala NRK finished (in %s)" % str(datetime.now() - starttime))
