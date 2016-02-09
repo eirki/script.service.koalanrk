@@ -4,13 +4,10 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from functools import wraps
-import json
 import os
-import sys
-import xbmc
-import xbmcgui
 
 from . import constants as const
+
 
 def byteify(input):
     if isinstance(input, dict):
@@ -50,10 +47,7 @@ def stringtofile(string):
     string = string.replace('*', '')
     string = string.replace('...', '')
     string = string[:90]
-    if const.os == "windows":
-        return string
-    else:
-        return string.encode("utf-8")
+    return string
 
 
 def wrap_unicode(func):
@@ -69,10 +63,11 @@ def wrap_unicode(func):
 
 def os_join(*args):
     path = os.path.join(*args)
-    if const.os == "windows":
+    if const.os == "win":
         return path
     else:
         return path.encode("utf-8")
+
 uni_join = os.path.join
 
 
