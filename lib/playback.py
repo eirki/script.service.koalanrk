@@ -51,6 +51,7 @@ class NowPlayingOverly(xbmcgui.WindowXMLDialog):
 
 
 def gen_epdict(kodiid):
+    Epinfo = namedtuple("Epinfo", "code kodiid playcount runtime")
     playingfile = rpc("VideoLibrary.GetEpisodeDetails", episodeid=int(kodiid), properties=["tvshowid", "season", "episode"])
     tvshowid = playingfile["episodedetails"]["tvshowid"]
     tvshow_dict = rpc("VideoLibrary.GetEpisodes", tvshowid=tvshowid, properties=[
@@ -60,29 +61,26 @@ def gen_epdict(kodiid):
         epcode = 'S%02dE%02d' % (episode['season'], episode['episode'])
         kodiid = episode['episodeid']
         playcount = episode['playcount']
-        runtime = episode['runtime']
+        runtime = timedelta(seconds=episode['runtime'])
         with open(episode['file'], 'r') as txt:
             nrkid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", txt.read()).strip()
-        epdict[nrkid] = [epcode, kodiid, playcount, runtime]
-    log.info("epdict: %s" % epdict)
+        epdict[nrkid] = Epinfo(epcode, kodiid, playcount, runtime)
     return epdict
 
 
 def mark_watched(epdict, watched):
-    log.info("mark_watched")
-    for nrkid, watchedduration in watched:
-        if nrkid in epdict:
-            epcode, kodiid, playcount, runtime = epdict[nrkid]
-            runtime = timedelta(seconds=runtime)
-            log.info("%s runtime: %s" % (epcode, runtime.seconds))
-            if watchedduration.seconds / runtime.seconds >= 0.9:
-                addplaycount(kodiid, playcount)
-                log.info("%s: Marked as watched" % epcode)
-            else:
-                log.info("%s: Skipped, only partially watched (%s vs. %s)" % (epcode, runtime.seconds, watchedduration.seconds))
-            #     add partially watched flag?
+    for watched_ep in watched:
+        if watched_ep.id not in epdict:
+            log.info("nrkid not found in epdict: %s" % watched_ep.id)
         else:
-            log.info("nrkid not found in epdict: %s" % nrkid)
+            stored_ep = epdict[watched_ep.id]
+            if watched_ep.duration.seconds / stored_ep.runtime.seconds >= 0.9:
+                addplaycount(stored_ep.kodiid, stored_ep.playcount)
+                log.info("%s: Marked as watched" % stored_ep.code)
+            else:
+                log.info("%s: Skipped, only partially watched (%s vs. %s)" %
+                         (stored_ep.code, stored_ep.runtime.seconds, watched_ep.duration.seconds))
+            #     add partially watched flag?
 
 
 def addplaycount(kodiid, playcount):
@@ -95,7 +93,7 @@ class SeleniumDriver(object):
     def open(self, url):
         self.seleniumerrors = (AttributeError, socket.error, httplib.CannotSendRequest,
                                WebDriverException, httplib.BadStatusLine, urllib2.URLError)
-        self.starturl = url
+        self.starturl = "http://%s" % url
         options = webdriver.chrome.options.Options()
         options.add_experimental_option('excludeSwitches', ['disable-component-update'])
         options.add_argument("--kiosk")
@@ -103,7 +101,7 @@ class SeleniumDriver(object):
         driverpath = os_join(const.addonpath, "resources", "chromedriver_%s32" % const.os, "chromedriver")
         self.driver = webdriver.Chrome(executable_path=driverpath, chrome_options=options)
 
-        self.driver.get("http://%s" % url)
+        self.driver.get(self.starturl)
 
     def trigger_player(self):
         log.info("triggering player")
@@ -197,7 +195,7 @@ class IEbrowser(object):
         self.ie = Dispatch("InternetExplorer.Application")
         self.ie.Visible = 1
         self.ie.FullScreen = 1
-        self.starturl = url
+        self.starturl = "http://%s" % url
         self.handle = self.ie.HWND
         win32gui.SetForegroundWindow(self.handle)
         self.ie.Navigate(self.starturl)
