@@ -144,7 +144,8 @@ class Remote(PyKeyboardEvent):
         self.listener = RemoteListener(funcmap)
         self.listener.run()
         missing_keys = [button.name for button in self.mapping if button.code not in funcmap]
-        log.info("Note, following actions are not mapped to remote: %s" % missing_keys)
+        if missing_keys:
+            log.info("Note, following actions are not mapped to remote: %s" % missing_keys)
 
     def playpause(self):
         log.info("Remote: playpause triggered")
