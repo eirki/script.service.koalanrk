@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 import multiprocessing.dummy as threading
 import os
-from os.path import exists
 import re
 import traceback
 import json
@@ -74,7 +73,7 @@ class Movie(object):
         if 'movies' in moviedict:
             self.kodiid = moviedict['movies'][0]['movieid']
             jsonfilepath = os_join(self.path, self.jsonfilename)
-            if exists(jsonfilepath):
+            if os.path.exists(jsonfilepath):
                 load_playcount("movie", jsonfilepath, self.kodiid)
             self.nonadded = False
             log.info("Movie added: %s" % self.title)
@@ -210,7 +209,7 @@ class Episode(object):
         os.remove(os_join(self.path, self.filename))
 
     def create_file(self):
-        if not exists(os_join(self.path)):
+        if not os.path.exists(os_join(self.path)):
             os.makedirs(os_join(self.path))
         with open(os_join(self.path, self.filename), "w") as txt:
             txt.write("plugin://%s/?mode=play&url=tv.nrk%s.no%s" %
@@ -220,7 +219,7 @@ class Episode(object):
         if self.code in koala_stored_episodes:
             self.kodiid = koala_stored_episodes[self.code].kodiid
             jsonfilepath = os_join(self.path, self.jsonfilename)
-            if exists(jsonfilepath):
+            if os.path.exists(jsonfilepath):
                 load_playcount("episode", jsonfilepath, self.kodiid)
             self.nonadded = False
             log.info("Episoded added: %s %s" % (self.showtitle, self.code))
