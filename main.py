@@ -114,7 +114,7 @@ def is_libpath_added():
 def refresh_settings():
     xbmc.executebuiltin('Dialog.Close(dialog)')
     xbmc.executebuiltin('ReloadSkin')
-    xbmc.executebuiltin('Addon.OpenSettings(script.service.koalanrk)')
+    xbmc.executebuiltin('Addon.OpenSettings(%s)' % const.addonid)
 
 
 def prioritize_shows(shows_stored, shows_prioritized):
@@ -137,7 +137,7 @@ def prioritize_shows(shows_stored, shows_prioritized):
         else:
             showtitles[call] = showtitle.replace("[Prioritized] ", "")
             shows_prioritized.remove(showid)
-    xbmc.executebuiltin('Addon.OpenSettings(script.service.koalanrk)')
+    xbmc.executebuiltin('Addon.OpenSettings(%s)' % const.addonid)
     id1 = 2
     xbmc.executebuiltin('SetFocus(%i)' % (id1 + 100))
     id2 = 4

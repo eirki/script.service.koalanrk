@@ -62,7 +62,7 @@ class Movie(object):
 
     def create_file(self):
         with open(os_join(self.path, self.filename), "w") as txt:
-            txt.write("plugin://script.service.koalanrk/?mode=play&url=tv.nrk.no%s" % self.nrkid)
+            txt.write("plugin://%s/?mode=play&url=tv.nrk.no%s" % (const.addonid, self.nrkid))
         log.debug("File created: %s " % self.title)
 
     def add_to_lib(self):
@@ -213,8 +213,8 @@ class Episode(object):
         if not exists(os_join(self.path)):
             os.makedirs(os_join(self.path))
         with open(os_join(self.path, self.filename), "w") as txt:
-            txt.write("plugin://script.service.koalanrk/?mode=play&url=tv.nrk%s.no%s" %
-                      ("super" if self.in_superuniverse else "", self.nrkid))
+            txt.write("plugin://%s/?mode=play&url=tv.nrk%s.no%s" %
+                      (const.addonid, "super" if self.in_superuniverse else "", self.nrkid))
 
     def add_to_lib(self, koala_stored_episodes):
         if self.code in koala_stored_episodes:
