@@ -8,11 +8,14 @@ import re
 import traceback
 import json
 import xml.etree.ElementTree as ET
+import xbmcgui
+from operator import attrgetter
 
 from . utils import (os_join, uni_join, stringtofile)
 from . import scraper
 from . import constants as const
-from .xbmcwrappers import (rpc, log, monitor, settings)
+from . import database
+from .xbmcwrappers import (rpc, log, monitor, settings, progress, dialogs)
 
 ###################
 def load_playcount(mediatype, jsonfile, kodiid):
@@ -29,6 +32,16 @@ def save_playcount(jsonfile, playcount):
 
 ###################
 class Movie(object):
+    @classmethod
+    def init_databases(cls):
+        cls.db = database.MediaDatabase('movies', return_as=cls)
+        cls.db_excluded = database.MediaDatabase('excluded movies', return_as=cls)
+
+    @classmethod
+    def commit_databases(cls):
+        cls.db.savetofile()
+        cls.db_excluded.savetofile()
+
     def __init__(self, movieid, movietitle):
         self.nrkid = movieid
         self.title = movietitle
@@ -55,6 +68,7 @@ class Movie(object):
             log.info("Removed: %s" % (self.title))
         else:
             log.info("Couldn't find file: %s" % (self.title))
+        Movie.db.remove(self.nrkid)
 
     def delete_file(self):
         os.remove(os_join(self.path, self.filename))
@@ -80,6 +94,7 @@ class Movie(object):
         else:
             self.nonadded = True
             log.info("Movie added, but not scraped: %s" % self.title)
+        Movie.db.upsert(self.nrkid, self.title)
 
     def gen_nfo(self):
         self.delete_file()
@@ -98,6 +113,18 @@ class Movie(object):
 
 
 class Show(object):
+    @classmethod
+    def init_databases(cls):
+        cls.db = database.MediaDatabase('shows', return_as=cls, store_as=database.LastUpdatedOrderedDict)
+        cls.db_excluded = database.MediaDatabase('excluded shows', return_as=cls)
+        cls.db_prioritized = database.MediaDatabase('prioritized shows', return_as=cls)
+
+    @classmethod
+    def commit_databases(cls):
+        cls.db.savetofile()
+        cls.db_excluded.savetofile()
+        cls.db_prioritized.savetofile()
+
     def __init__(self, showid, showtitle):
         self.nrkid = showid
         self.title = showtitle
@@ -137,6 +164,7 @@ class Show(object):
         koala_stored_episodes, all_stored_episodes = self._get_stored_episodes()
         for episode in koala_stored_episodes.values():
             episode.remove()
+        Show.db.remove(self.nrkid)
 
     def update(self):
         log.info("Updating show: %s" % self.title)
@@ -153,11 +181,14 @@ class Show(object):
             episode.add_to_lib(koala_stored_episodes)
             if episode.nonadded:
                 self.nonadded_episodes.append(episode)
+        if self.nonadded_episodes:
+            Show.db.upsert(self.nrkid, self.title)
 
     def add_nonadded_eps_to_lib(self, second_attempt=False):
         koala_stored_episodes, all_stored_episodes = self._get_stored_episodes()
         for episode in self.nonadded_episodes:
             episode.add_to_lib(koala_stored_episodes)
+        Show.db.upsert(self.nrkid, self.title)
 
     def _gen_show_nfo(self):
         plot, year, image, in_superuniverse = scraper.getshowinfo(self.nrkid)
@@ -243,43 +274,179 @@ class Episode(object):
 
 
 ###################
-def mapwrapper(func):
+def mapfuncs(func):
+    '''1: execute list of functions sent as arg, 2: print traceback otherwise swallowed due to multithreading'''
     try:
         func()
     except:
-        traceback.print_exc()
+        log.info(traceback.format_exc())
         raise
 
 
-def remove(movies=(), shows=()):
-    movieobjs = [Movie(movieid, showtitle) for movieid, showtitle in movies]
-    showobjs = [Show(showid, showtitle) for showid, showtitle in shows]
-    for movie in movieobjs:
+def execute(movies_to_remove=(), shows_to_remove=(), movies_to_add=(), shows_to_update=()):
+    progress.goto(20)
+    for movie in movies_to_remove:
         movie.remove()
 
-    for show in showobjs:
+    progress.goto(30)
+    for show in shows_to_remove:
         show.remove_all_episodes()
 
+    if (movies_to_add or shows_to_update):
+        progress.goto(40)
+        scraper.setup()
+        pool = threading.Pool(10 if settings['multithreading'] else 1)
+        create_files = ([movie.create_file for movie in movies_to_add] +
+                        [show.update for show in shows_to_update])
+        pool.map(mapfuncs, create_files)
 
-def update_add_create(movies=(), shows=()):
-    movieobjs = [Movie(movieid, showtitle) for movieid, showtitle in movies]
-    showobjs = [Show(showid, showtitle) for showid, showtitle in shows]
-    pool = threading.Pool(len(movieobjs+showobjs) if settings['multithreading'] else 1)
+        if (movies_to_add or any(show.new_episodes for show in shows_to_update)):
+            progress.goto(50)
+            monitor.update_video_library()
 
-    pool.map(mapwrapper, [movie.create_file for movie in movieobjs])
-    pool.map(mapwrapper, [show.update for show in showobjs])
-    if not (movieobjs or any(show.new_episodes for show in showobjs)):
+            progress.goto(60)
+            add_to_lib = ([movie.add_to_lib for movie in movies_to_add] +
+                          [show.add_eps_to_lib for show in shows_to_update])
+            pool.map(mapfuncs, add_to_lib)
+
+            nonadded_movies = [movie for movie in movies_to_add if movie.nonadded]
+            shows_w_nonadded = [show for show in shows_to_update if show.nonadded_episodes]
+
+            if (nonadded_movies or shows_w_nonadded):
+                progress.goto(70)
+                gen_nfos_for_nonadded = ([movie.gen_nfo for movie in nonadded_movies] +
+                                         [show.gen_nfos for show in shows_w_nonadded])
+                pool.map(mapfuncs, gen_nfos_for_nonadded)
+
+                progress.goto(80)
+                monitor.update_video_library()
+
+                progress.goto(90)
+                add_nonadded_to_lib = ([movie.add_to_lib for movie in nonadded_movies] +
+                                       [show.add_nonadded_eps_to_lib for show in shows_w_nonadded])
+                pool.map(mapfuncs, add_nonadded_to_lib)
+
+                progress.goto(100)
+
+
+def select_mediaitem(mediadb):
+    if not mediadb.all:
+        dialogs.ok(heading="No %s" % mediadb.name,
+                   line1="No %s in database" % (mediadb.name))
+        return
+    sorted_media = sorted(mediadb.all, key=attrgetter("title"))
+    titles = [media.title for media in sorted_media]
+    call = dialogs.select(list=titles, heading='Select %s' % mediadb.name[:-1])
+    return sorted_media[call] if call != -1 else None
+
+
+def update_all():
+    execute(shows_to_update=Show.db.all)
+
+
+def remove_all():
+    execute(movies_to_remove=Movie.db.all, shows_to_remove=Show.db.all)
+
+
+def update_single():
+    show = select_mediaitem(Show.db)
+    if show:
+        execute(shows_to_update=[show])
+
+
+def exclude_show():
+    show = select_mediaitem(Show.db)
+    if show:
+        execute(shows_to_remove=[show])
+        Show.db_excluded.upsert(show.nrkid, show.title)
+
+
+def exclude_movie():
+    movie = select_mediaitem(Movie.db)
+    if movie:
+        execute(movies_to_remove=[movie])
+        Movie.db_excluded.upsert(movie.nrkid, movie.title)
+
+
+def readd_show():
+    show = select_mediaitem(Show.db_excluded)
+    if show:
+        execute(shows_to_update=[show])
+        Show.db_excluded.remove(show.nrkid)
+
+
+def readd_movie():
+    movie = select_mediaitem(Movie.db_excluded)
+    if movie:
+        execute(movies_to_add=movie)
+        Movie.db_excluded.remove(movie.nrkid)
+
+
+def check_watchlist():
+    all_ids = set.union(Movie.db.ids, Movie.db_excluded.ids, Show.db.ids, Show.db_excluded.ids)
+    progress.goto(10)
+    scraper.setup()
+    results = scraper.check_watchlist(stored_movies=Movie.db.all, stored_shows=Show.db.all, all_ids=all_ids)
+    unav_movies, unav_shows, added_movies, added_shows = results
+    unav_movies = [Movie(movie.nrkid, movie.title) for movie in unav_movies]
+    unav_shows = [Show(show.nrkid, show.title) for show in unav_shows]
+    added_movies = [Movie(movie.nrkid, movie.title) for movie in added_movies]
+    added_shows = [Show(show.nrkid, show.title) for show in added_shows]
+    return unav_movies, unav_shows, added_movies, added_shows
+
+
+def only_watchlist():
+    unav_movies, unav_shows, added_movies, added_shows = check_watchlist()
+    execute(movies_to_remove=unav_movies, shows_to_remove=unav_shows, movies_to_add=added_movies, shows_to_update=added_shows)
+
+
+def startup():
+    unav_movies, unav_shows, added_movies, added_shows = check_watchlist()
+    shows_to_update = []
+    if settings["check shows on startup"]:
+        prioritized = [show for show in Show.db_prioritized.all if show.nrkid in Show.db.ids]
+        nonprioritized = [show for show in Show.db.all if show.nrkid not in Show.db_prioritized.ids]
+        n = settings["n shows to update"]
+        shows_to_update = prioritized + nonprioritized[:n]
+    execute(movies_to_remove=unav_movies, shows_to_remove=unav_shows,
+            movies_to_add=added_movies, shows_to_update=added_shows+shows_to_update)
+
+
+def main(action):
+    Movie.init_databases()
+    Show.init_databases()
+
+    if action == "remove_all" and not (Show.db.all or Movie.db.all):
+        dialogs.ok(heading="No media", line1="No media seems to have been added")
+        return
+    elif action in ["prioritize", "exclude_show", "readd_show", "update_single", "update_all"] and not Show.db.all:
+        dialogs.ok(heading="No shows", line1="No shows seem to have been added")
+        return
+    elif action in ["exclude_movie", "readd_movie"] and not Movie.db.all:
+        dialogs.ok(heading="No movies", line1="No movies seem to have been added")
         return
 
-    monitor.update_video_library()
-    pool.map(mapwrapper, [movie.add_to_lib for movie in movieobjs])
-    pool.map(mapwrapper, [show.add_eps_to_lib for show in showobjs])
+    library_actions = {
+        "update_all": update_all,
+        "remove_all": remove_all,
+        "update_single": update_single,
+        "exclude_show": exclude_show,
+        "exclude_movie": exclude_movie,
+        "readd_show": readd_show,
+        "readd_movie": readd_movie,
+        "watchlist": only_watchlist,
+        "startup": startup
+        }
+    action_func = library_actions[action]
 
-    if not (any(movie.nonadded for movie in movieobjs) or any(show.nonadded_episodes for show in showobjs)):
-        return
-
-    pool.map(mapwrapper, [movie.gen_nfo for movie in movieobjs if movie.nonadded])
-    pool.map(mapwrapper, [show.gen_nfos for show in showobjs if show.nonadded_episodes])
-    monitor.update_video_library()
-    pool.map(mapwrapper, [movie.add_to_lib for movie in movieobjs if movie.nonadded])
-    pool.map(mapwrapper, [show.add_nonadded_eps_to_lib for show in showobjs if show.nonadded_episodes])
+    try:
+        progress.create(heading="Updating NRK", force=False if action == "startup" else True)
+        xbmcgui.Window(10000).setProperty("Koala NRK running", "true")
+        action_func()
+    except:
+        raise
+    finally:
+        progress.close()
+        Movie.commit_databases()
+        Show.commit_databases()
+        xbmcgui.Window(10000).setProperty("Koala NRK running", "false")

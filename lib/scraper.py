@@ -9,15 +9,18 @@ import requests
 from types import MethodType
 from HTMLParser import HTMLParser
 import re
+from collections import namedtuple
 
 from .utils import os_join
 from . import constants as const
 from .xbmcwrappers import (log, settings)
 
+Mediatuple = namedtuple("Media", "nrkid title")
 
 class RequestSession():
     def __init__(self):
         self.session = requests.Session()
+        self.is_setup = False
         try:
             with open(os_join(const.userdatafolder, "cookies"), 'rb') as f:
                 self.session.cookies = pickle.load(f)
@@ -69,6 +72,8 @@ def login(loginpage):
 
 
 def setup():
+    if reqs.is_setup:
+        return
     print "checking login status"
     loginpage = reqs.get("https://tv.nrk.no/logginn", verify=False)
     print loginpage.soup().find('title').text
@@ -78,13 +83,11 @@ def setup():
     payload = {t['name']: t.get('value') for t in loginpage.soup().find_all('input', attrs={'type': 'hidden'})}
     reqs.post(url, data=payload)
     reqs.save_cookies()
+    reqs.is_setup = True
 
 
-def check_watchlist(movie_database, show_database):
+def check_watchlist(stored_movies, stored_shows, all_ids):
     setup()
-    stored_show_ids = set(show_database.stored)
-    stored_movie_ids = set(movie_database.stored)
-    excluded_ids = set(movie_database.excluded) | set(show_database.excluded)
     watchlistpage = reqs.get("https://tv.nrk.no/mycontent")
     mediaitems = json.loads(watchlistpage.text.replace("\r\n", ""))
     present_ids = set()
@@ -100,23 +103,26 @@ def check_watchlist(movie_database, show_database):
             mediaid = "/program/%s/%s" % (media["program"]["myContentId"], media["program"]["programUrlMetadata"])
             # mediaid = media["program"]["programUrlMetadata"]
             # mediaid = media["program"]["myContentId"]
-            if mediaid not in (stored_movie_ids | excluded_ids):
+            if mediaid not in all_ids:
                 mediatitle = media["program"]["mainTitle"]
-                added_movies.append((mediaid, mediatitle))
+                added_movies.append(Mediatuple(mediaid, mediatitle))
+
         elif mediatype == "show":
             mediaid = media["program"]["seriesId"]
-            if mediaid not in (stored_show_ids | excluded_ids):
+            if mediaid not in all_ids:
                 mediatitle = media["program"]["seriesTitle"]
-                added_shows.append((mediaid, mediatitle))
+                added_shows.append(Mediatuple(mediaid, mediatitle))
         present_ids.add(mediaid)
     unavailable_shows = []
-    for showid, showtitle in show_database.stored.items():
-        if showid not in present_ids:
-            unavailable_shows.append((showid, showtitle))
+    unavailable_shows = []
+    for show in stored_shows:
+        if show.nrkid not in present_ids:
+            unavailable_shows.append(show)
     unavailable_movies = []
-    for movieid, movietitle in movie_database.stored.items():
-        if movieid not in present_ids:
-            unavailable_movies.append((movieid, movietitle))
+    for movie in stored_movies:
+        if movie.nrkid not in present_ids:
+            unavailable_movies.append(movie)
+
     log.info("added_shows:\n %s" % added_shows)
     log.info("unavailable_shows:\n %s" % unavailable_shows)
     log.info("added_movies:\n %s" % added_movies)

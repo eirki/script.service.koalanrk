@@ -77,42 +77,29 @@ class Dialogs(object):
 dialogs = Dialogs()
 
 
-class PDialog(object):
-    if settings["startupnotification"] or sys.argv == ['']:
-        def __init__(self):
-            self.active = False
+class ProgressDialog(object):
+    def __init__(self):
+        self.active = False
 
-        def create(self, heading, message=None, force=False):
-            self.active = True
-            self.force = force
-            self.perc = 1
+    def create(self, heading, force):
+        self.heading = heading
+        self.force = force
+        self.level = 0
+
+    def goto(self, level):
+        if (not self.active) and (settings["startupnotification"] or self.force):
             self.pDialog = xbmcgui.DialogProgressBG()
-            self.pDialog.create(heading, message)
+            self.pDialog.create(self.heading)
+            self.active = True
 
-        def update(self, percent=None, heading=None, message=None, increment=False):
-            self.perc = percent
-            self.pDialog.update(percent, message=message)
+        if self.active:
+            self.level = level
+            self.pDialog.update(self.level)
 
-        def close(self):
-            while self.perc < 100:
-                self.perc += 2
-                self.pDialog.update(self.perc)
-                xbmc.sleep(10)
+    def close(self):
+        if self.active:
             self.pDialog.close()
-
-    else:
-        def __init__(self):
-            pass
-
-        def create(self, heading, message=None, force=False):
-            pass
-
-        def update(self, percent=None, heading=None, message=None, increment=False):
-            pass
-
-        def close(self):
-            pass
-progress = PDialog()
+progress = ProgressDialog()
 
 
 class ScanMonitor(xbmc.Monitor):
