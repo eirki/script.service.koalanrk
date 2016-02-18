@@ -90,6 +90,9 @@ def addplaycount(kodiid, playcount):
 
 
 class SeleniumDriver(object):
+    def __init__(self):
+        self.watched = []
+
     def open(self, url):
         self.seleniumerrors = (AttributeError, socket.error, httplib.CannotSendRequest,
                                WebDriverException, httplib.BadStatusLine, urllib2.URLError)
@@ -146,7 +149,6 @@ class SeleniumDriver(object):
 
     def gather_urls_wait_for_exit(self):
         log.info("gathering urls")
-        self.watched = []
         WatchedEpisode = namedtuple("Watched", "id duration")
         current_urlid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.starturl)
         startwatch = datetime.now()
@@ -191,6 +193,9 @@ class SeleniumDriver(object):
 
 
 class IEbrowser(object):
+    def __init__(self):
+        self.watched = []
+
     def open(self, url):
         self.ie = Dispatch("InternetExplorer.Application")
         self.ie.Visible = 1
@@ -252,7 +257,6 @@ class IEbrowser(object):
 
     def gather_urls_wait_for_exit(self):
         log.info("gathering urls")
-        self.watched = []
         WatchedEpisode = namedtuple("Watched", "id duration")
         current_urlid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.starturl)
         startwatch = datetime.now()
@@ -329,9 +333,9 @@ def play(url):
         overlay.close()
         browser.wait_until_closed()
         log.info("Playback finished, cleaning up")
-        mark_watched(epdict, browser.watched)
         if remote:
             remote.close()
+        mark_watched(epdict, browser.watched)
         xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
     log.info("playbackend finished")
 
