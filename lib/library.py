@@ -18,20 +18,45 @@ from . import database
 from .xbmcwrappers import (rpc, log, monitor, settings, progress, dialogs)
 
 ###################
-def load_playcount(mediatype, jsonfile, kodiid):
-    with open(jsonfile, "r") as f:
-        playcount = json.load(f)
-    rpc("VideoLibrary.Set%sDetails" % mediatype.capitalize(), **{mediatype+"id": kodiid, "playcount": playcount})
-    os.remove(jsonfile)
+class SharedMediaMethods(object):
+    def load_playcount(self):
+        jsonfilepath = os_join(self.path, self.jsonfilename)
+        if os.path.exists(jsonfilepath):
+            with open(jsonfilepath, "r") as f:
+                playcount = json.load(f)
+            rpc("VideoLibrary.Set%sDetails" % self.mediatype.capitalize(),
+                **{"".join([self.mediatype, "id"]): self.kodiid, "playcount": playcount})
+            os.remove(jsonfilepath)
+
+    def save_playcount(self):
+        if self.playcount > 0:
+            jsonfilepath = os_join(self.path, self.jsonfilename)
+            with open(jsonfilepath, "w") as f:
+                json.dump(self.playcount, f)
+
+    def delete_strm(self):
+        os.remove(os_join(self.path, self.strmfilename))
+        try:
+            os.removedirs(os_join(self.path))
+        except OSError:
+            pass
+
+    def remove_from_lib(self):
+        rpc("VideoLibrary.Remove%s" % self.mediatype.capitalize(), **{"".join([self.mediatype, "id"]): self.kodiid})
+
+    def write_strm(self):
+        if not os.path.exists(os_join(self.path)):
+            os.makedirs(os_join(self.path))
+        with open(os_join(self.path, self.strmfilename), "w") as txt:
+            txt.write("plugin://%s/?mode=play&url=tv.nrk%s.no%s" %
+                      (const.addonid, "super" if self.in_superuniverse else "", self.nrkid))
+
+    def write_nfo(self, root):
+        tree = ET.ElementTree(root)
+        tree.write(os_join(self.path, self.nfofilename), xml_declaration=True, encoding='utf-8', method="xml")
 
 
-def save_playcount(jsonfile, playcount):
-    with open(jsonfile, 'w') as f:
-        json.dump(playcount, f)
-
-
-###################
-class Movie(object):
+class Movie(SharedMediaMethods):
     @classmethod
     def init_databases(cls):
         cls.db = database.MediaDatabase('movies', return_as=cls)
@@ -43,62 +68,29 @@ class Movie(object):
         cls.db_excluded.savetofile()
 
     def __init__(self, movieid, movietitle):
+        self.mediatype = "movie"
         self.nrkid = movieid
         self.title = movietitle
-        self.kodiid = None
         self.path = uni_join(const.libpath, "NRK movies")
-        self.filename = "%s.strm" % stringtofile(self.title)
+        self.strmfilename = "%s.strm" % stringtofile(self.title)
         self.nfofilename = "%s.nfo" % stringtofile(self.title)
         self.jsonfilename = "%s.json" % stringtofile(self.title)
+        self.in_superuniverse = False
 
-    def remove(self):
-        moviedict = rpc("VideoLibrary.GetMovies",
-                        properties=["file", 'playcount'],
-                        multifilter={"and": [
-                              ("filename", "is", self.filename),
+    def _get_lib_entry(self):
+        moviesdict = rpc("VideoLibrary.GetMovies",
+                         properties=["file", 'playcount'],
+                         multifilter={"and": [
+                              ("filename", "is", self.strmfilename),
                               ("path", "startswith", self.path)]})
-        if 'movies' in moviedict:
-            self.kodiid = moviedict['movies'][0]['movieid']
-            playcount = moviedict['movies'][0]['playcount']
-            if playcount > 0:
-                jsonfilepath = os_join(self.path, self.jsonfilename)
-                save_playcount(jsonfilepath, playcount)
-            rpc("VideoLibrary.RemoveMovie", movieid=self.kodiid)
-            self.delete_file()
-            log.info("Removed: %s" % (self.title))
+        if 'movies' not in moviesdict:
+            return None
         else:
-            log.info("Couldn't find file: %s" % (self.title))
-        Movie.db.remove(self.nrkid)
+            return moviesdict['movies'][0]
 
-    def delete_file(self):
-        os.remove(os_join(self.path, self.filename))
-
-    def create_file(self):
-        with open(os_join(self.path, self.filename), "w") as txt:
-            txt.write("plugin://%s/?mode=play&url=tv.nrk.no%s" % (const.addonid, self.nrkid))
-        log.debug("File created: %s " % self.title)
-
-    def add_to_lib(self):
-        moviedict = rpc("VideoLibrary.GetMovies",
-                        properties=["file"],
-                        multifilter={"and": [
-                              ("filename", "is", self.filename),
-                              ("path", "startswith", self.path)]})
-        if 'movies' in moviedict:
-            self.kodiid = moviedict['movies'][0]['movieid']
-            jsonfilepath = os_join(self.path, self.jsonfilename)
-            if os.path.exists(jsonfilepath):
-                load_playcount("movie", jsonfilepath, self.kodiid)
-            self.nonadded = False
-            log.info("Movie added: %s" % self.title)
-        else:
-            self.nonadded = True
-            log.info("Movie added, but not scraped: %s" % self.title)
-        Movie.db.upsert(self.nrkid, self.title)
-
-    def gen_nfo(self):
-        self.delete_file()
-        self.create_file()
+    def _gen_nfo(self):
+        super(Movie, self).delete_strm()
+        super(Movie, self).write_strm()
         movsubid = re.findall(r'/program/(.*?)/.*', self.nrkid)[0]
         movinfodict = scraper.getinfodict(movsubid)
         root = ET.Element("movie")
@@ -108,11 +100,45 @@ class Movie(object):
         fanart = ET.SubElement(root, "fanart")
         ET.SubElement(fanart, "thumb").text = movinfodict['images']["webImages"][-1]["imageUrl"]
         ET.SubElement(root, "runtime").text = re.sub(r"PT(\d+)M.*", r"\1", movinfodict["duration"])
-        tree = ET.ElementTree(root)
-        tree.write(os_join(self.path, self.nfofilename), xml_declaration=True, encoding='utf-8', method="xml")
+        super(Movie, self).write_nfo(root)
+
+    def remove(self):
+        log.info("Removing movie: %s" % self.title)
+        dbinfo = self._get_lib_entry()
+        if not dbinfo:
+            log.info("Couldn't find in library: %s" % (self.title))
+        else:
+            self.kodiid = dbinfo['movieid']
+            self.playcount = dbinfo['playcount']
+            super(Movie, self).save_playcount()
+            super(Movie, self).remove_from_lib()
+            super(Movie, self).delete_strm()
+        Movie.db.remove(self.nrkid)
+        log.info("Finished removing movie: %s" % self.title)
+
+    def add(self):
+        log.info("Adding movie: %s" % self.title)
+        super(Movie, self).write_strm()
+        log.info("STRM created, waiting for lib update: %s" % self.title)
+        yield
+
+        dbinfo = self._get_lib_entry()
+        if not dbinfo:
+            self._gen_nfo()
+            log.info("NFO created, waiting for second lib update: %s" % self.title)
+            yield
+
+            dbinfo = self._get_lib_entry()
+            if not dbinfo:
+                log.info("failed to add movie")
+                return
+        self.kodiid = dbinfo['movieid']
+        super(Movie, self).load_playcount()
+        log.info("Finished adding movie: %s" % self.title)
+        Movie.db.upsert(self.nrkid, self.title)
 
 
-class Show(object):
+class Show(SharedMediaMethods):
     @classmethod
     def init_databases(cls):
         cls.db = database.MediaDatabase('shows', return_as=cls, store_as=database.LastUpdatedOrderedDict)
@@ -126,69 +152,64 @@ class Show(object):
         cls.db_prioritized.savetofile()
 
     def __init__(self, showid, showtitle):
+        self.mediatype = "show"
         self.nrkid = showid
         self.title = showtitle
         self.path = uni_join(const.libpath, "NRK shows", stringtofile(self.title))
+        self.nfofilename = "tvshow.nfo"
 
     def _get_stored_episodes(self):
         stored_episodes = rpc("VideoLibrary.GetEpisodes",
                               properties=["season", "episode", "file", "playcount"],
                               filter={"field": "filename", "operator": "startswith", "value": "%s S" % stringtofile(self.title)})
-        self.all_stored_episodes = set()
-        self.koala_stored_episodes = dict()
+        all_stored_episodes = set()
+        koala_stored_episodes = dict()
         for epdict in stored_episodes.get('episodes', []):
             episodecode = "S%02dE%02d" % (int(epdict['season']), int(epdict['episode']))
-            self.all_stored_episodes.add(episodecode)
+            all_stored_episodes.add(episodecode)
             if epdict["file"].startswith(self.path):
-                episode = Episode(self.title, epdict["season"], epdict["episode"], kodiid=epdict["episodeid"], playcount=epdict["playcount"])
-                self.koala_stored_episodes[episodecode] = episode
-        return self.koala_stored_episodes, self.all_stored_episodes
+                episode = Episode(self.title, epdict["season"], epdict["episode"],
+                                  kodiid=epdict["episodeid"], playcount=epdict["playcount"])
+                koala_stored_episodes[episodecode] = episode
+        return koala_stored_episodes, all_stored_episodes
 
     def _get_new_unav_episodes(self):
         koala_stored_episodes, all_stored_episodes = self._get_stored_episodes()
         available_episodes = scraper.getepisodes(self.nrkid)
 
-        self.new_episodes = []
-        for episodecode, epdict in sorted(available_episodes.items()):
-            if episodecode not in all_stored_episodes:
-                episode = Episode(self.title, epdict['seasonnr'], epdict['episodenr'],
-                                  nrkid=epdict['nrkid'], in_superuniverse=epdict['in_superuniverse'])
-                self.new_episodes.append(episode)
+        unav_episodes = [episode for episode in koala_stored_episodes.values()
+                         if episode.code not in available_episodes]
 
-        self.unav_episodes = []
-        for episodecode, episode in sorted(koala_stored_episodes.items()):
-            if episodecode not in available_episodes:
-                self.unav_episodes.append(episode)
+        new_episodes = [Episode(self.title, episode['seasonnr'], episode['episodenr'],
+                                nrkid=episode['nrkid'], in_superuniverse=episode['in_superuniverse'])
+                        for episodecode, episode in available_episodes.items()
+                        if episodecode not in all_stored_episodes]
 
-    def remove_all_episodes(self):
-        koala_stored_episodes, all_stored_episodes = self._get_stored_episodes()
-        for episode in koala_stored_episodes.values():
+        return unav_episodes, new_episodes
+
+    def _remove_episodes(self, episodes):
+        for episode in episodes:
             episode.remove()
-        Show.db.remove(self.nrkid)
 
-    def update(self):
-        log.info("Updating show: %s" % self.title)
-        self._get_new_unav_episodes()
-        for episode in self.unav_episodes:
-            episode.remove()
-        for episode in self.new_episodes:
-            episode.create_file()
+    def _write_strms(self, episodes):
+        for episode in episodes:
+            episode.write_strm()
 
-    def add_eps_to_lib(self):
-        koala_stored_episodes, all_stored_episodes = self._get_stored_episodes()
-        self.nonadded_episodes = []
-        for episode in self.new_episodes:
-            episode.add_to_lib(koala_stored_episodes)
+    def _check_eps_added(self, episodes):
+        koala_stored_episodes, _ = self._get_stored_episodes()
+        nonadded_episodes = []
+        for episode in episodes:
+            episode.check_added(koala_stored_episodes)
             if episode.nonadded:
-                self.nonadded_episodes.append(episode)
-        if self.nonadded_episodes:
-            Show.db.upsert(self.nrkid, self.title)
+                nonadded_episodes.append(episode)
+        return nonadded_episodes
 
-    def add_nonadded_eps_to_lib(self, second_attempt=False):
-        koala_stored_episodes, all_stored_episodes = self._get_stored_episodes()
-        for episode in self.nonadded_episodes:
-            episode.add_to_lib(koala_stored_episodes)
-        Show.db.upsert(self.nrkid, self.title)
+    def _gen_nfos(self, nonadded_episodes):
+        koala_stored_episodes, _ = self._get_stored_episodes()
+        if not koala_stored_episodes:
+            self._gen_show_nfo()
+        for episode in nonadded_episodes:
+            episode.gen_nfo()
 
     def _gen_show_nfo(self):
         plot, year, image, in_superuniverse = scraper.getshowinfo(self.nrkid)
@@ -201,64 +222,76 @@ class Show(object):
         ET.SubElement(fanart, "thumb").text = image
         if in_superuniverse:
             ET.SubElement(root, "genre").text = "Children"
-        tree = ET.ElementTree(root)
-        tree.write(os_join(self.path, "tvshow.nfo"), xml_declaration=True, encoding='utf-8', method="xml")
+        super(Show, self).write_nfo(root)
 
-    def gen_nfos(self):
-        if (self.nonadded_episodes == self.new_episodes) and not self.all_stored_episodes:
-            self._gen_show_nfo()
-        for episode in self.nonadded_episodes:
-            episode.gen_nfo()
-            episode.delete_file()
-            episode.create_file()
+    def _load_eps_playcount(self, episodes):
+        for episode in episodes:
+            episode.load_playcount()
+
+    def remove(self):
+        log.info("Removing show: %s" % self.title)
+        koala_stored_episodes, _ = self._get_stored_episodes()
+        for episode in koala_stored_episodes.values():
+            episode.remove()
+        Show.db.remove(self.nrkid)
+        log.info("Finished removing show: %s" % self.title)
+
+    def update_add(self):
+        log.info("Updating show: %s" % self.title)
+        unav_episodes, new_episodes = self._get_new_unav_episodes()
+        if unav_episodes:
+            self._remove_episodes(unav_episodes)
+        if new_episodes:
+            self._write_strms(new_episodes)
+            log.info("STRMs created, waiting for lib update: %s" % self.title)
+            yield
+
+            nonadded_episodes = self._check_eps_added(new_episodes)
+            if nonadded_episodes:
+                self._gen_nfos(nonadded_episodes)
+                log.info("NFOs created, waiting for second lib update: %s" % self.title)
+                yield
+
+            self._load_eps_playcount(new_episodes)
+        Show.db.upsert(self.nrkid, self.title)
+        log.info("Finished updating show: %s" % self.title)
 
 
-class Episode(object):
+class Episode(SharedMediaMethods):
     def __init__(self, showtitle, seasonnr, episodenr, in_superuniverse=None, nrkid=None, kodiid=None, playcount=0):
+        self.mediatype = "episode"
         self.showtitle = showtitle
         self.seasonnr = int(seasonnr)
         self.episodenr = int(episodenr)
-        self.code = "S%02dE%02d" % (seasonnr, episodenr)
-        self.in_superuniverse = in_superuniverse
         self.nrkid = nrkid
         self.kodiid = kodiid
+        self.code = "S%02dE%02d" % (seasonnr, episodenr)
+        self.in_superuniverse = in_superuniverse
         self.playcount = int(playcount)
         self.path = uni_join(const.libpath, "NRK shows", stringtofile(self.showtitle), "Season %s" % self.seasonnr)
-        self.filename = "%s %s.strm" % (stringtofile(self.showtitle), self.code)
+        self.strmfilename = "%s %s.strm" % (stringtofile(self.showtitle), self.code)
         self.nfofilename = "%s %s.nfo" % (stringtofile(self.showtitle), self.code)
         self.jsonfilename = "%s %s.json" % (stringtofile(self.showtitle), self.code)
 
     def remove(self):
-        if self.playcount > 0:
-            jsonfilepath = os_join(self.path, self.jsonfilename)
-            save_playcount(jsonfilepath, self.playcount)
-        rpc("VideoLibrary.RemoveEpisode", episodeid=self.kodiid)
-        self.delete_file()
-        log.info("Removed: %s %s" % (self.showtitle, self.code))
+        super(Episode, self).save_playcount()
+        super(Episode, self).remove_from_lib()
+        super(Episode, self).delete_strm()
 
-    def delete_file(self):
-        os.remove(os_join(self.path, self.filename))
+    def load_playcount(self):
+        super(Episode, self).load_playcount()
 
-    def create_file(self):
-        if not os.path.exists(os_join(self.path)):
-            os.makedirs(os_join(self.path))
-        with open(os_join(self.path, self.filename), "w") as txt:
-            txt.write("plugin://%s/?mode=play&url=tv.nrk%s.no%s" %
-                      (const.addonid, "super" if self.in_superuniverse else "", self.nrkid))
-
-    def add_to_lib(self, koala_stored_episodes):
-        if self.code in koala_stored_episodes:
-            self.kodiid = koala_stored_episodes[self.code].kodiid
-            jsonfilepath = os_join(self.path, self.jsonfilename)
-            if os.path.exists(jsonfilepath):
-                load_playcount("episode", jsonfilepath, self.kodiid)
-            self.nonadded = False
-            log.info("Episoded added: %s %s" % (self.showtitle, self.code))
-        else:
+    def check_added(self, koala_stored_episodes):
+        if self.code not in koala_stored_episodes:
             self.nonadded = True
-            log.info("Episoded added, but not scraped: %s %s" % (self.showtitle, self.code))
+        else:
+            self.kodiid = koala_stored_episodes[self.code].kodiid
+            self.nonadded = False
+            log.info("Episode added: %s %s" % (self.showtitle, self.code))
 
     def gen_nfo(self):
+        super(Episode, self).delete_strm()
+        super(Episode, self).write_strm()
         episodesubid = re.findall(r'/serie/.*?/(.*?)/.*', self.nrkid)[0]
         epinfodict = scraper.getinfodict(episodesubid)
         root = ET.Element("episodedetails")
@@ -269,64 +302,68 @@ class Episode(object):
         ET.SubElement(root, "plot").text = epinfodict["description"]
         ET.SubElement(root, "thumb").text = epinfodict['images']["webImages"][-1]["imageUrl"]
         ET.SubElement(root, "runtime").text = re.sub(r"PT(\d+)M.*", r"\1", epinfodict["duration"])
-        tree = ET.ElementTree(root)
-        tree.write(os_join(self.path, self.nfofilename), xml_declaration=True, encoding='utf-8', method="xml")
+        super(Episode, self).write_nfo(root)
 
 
 ###################
 def mapfuncs(func):
     '''1: execute list of functions sent as arg, 2: print traceback otherwise swallowed due to multithreading'''
     try:
-        func()
+        next(func)
+    except StopIteration:
+        return False
     except:
         log.info(traceback.format_exc())
         raise
+    return True
 
 
-def execute(movies_to_remove=(), shows_to_remove=(), movies_to_add=(), shows_to_update=()):
+def execute(movies_to_remove=(), shows_to_remove=(), movies_to_add=(), shows_to_update_add=()):
     progress.goto(20)
     for movie in movies_to_remove:
         movie.remove()
 
     progress.goto(30)
     for show in shows_to_remove:
-        show.remove_all_episodes()
+        show.remove()
 
-    if (movies_to_add or shows_to_update):
+    if (movies_to_add or shows_to_update_add):
         progress.goto(40)
-        scraper.setup()
+
         pool = threading.Pool(10 if settings['multithreading'] else 1)
-        create_files = ([movie.create_file for movie in movies_to_add] +
-                        [show.update for show in shows_to_update])
-        pool.map(mapfuncs, create_files)
 
-        if (movies_to_add or any(show.new_episodes for show in shows_to_update)):
-            progress.goto(50)
-            monitor.update_video_library()
+        # 1 - Create/delete STRMs
+        # All
+        # For added movies: generate STRMs.
+        # For shows to update: check ep. availability, delete STRMs for unavailable episodes generate STRMs for new episodes
+        # For added shows: get available episodes, generate STRMs for all episodes
+        step1 = ([movie.add() for movie in movies_to_add] +
+                 [show.update_add() for show in shows_to_update_add])
+        progress.goto(50)
+        results = pool.map(mapfuncs, step1)
 
+        # 2 - Load playcount or generate NFO
+        # If any movies in movies_to_add or any shows with new_episodes in shows_to_update_add
+        # For movies: check that movie was added to library. if so: load playcount, if not: generate NFO
+        # For shows: check that new episodes were added to library. if so: load playcount, if not: generate NFOs
+        step2 = [func for (func, generator_active) in zip(step1, results) if generator_active]
+        if any(step2):
             progress.goto(60)
-            add_to_lib = ([movie.add_to_lib for movie in movies_to_add] +
-                          [show.add_eps_to_lib for show in shows_to_update])
-            pool.map(mapfuncs, add_to_lib)
+            monitor.update_video_library()
+            progress.goto(70)
+            results = pool.map(mapfuncs, step2)
 
-            nonadded_movies = [movie for movie in movies_to_add if movie.nonadded]
-            shows_w_nonadded = [show for show in shows_to_update if show.nonadded_episodes]
-
-            if (nonadded_movies or shows_w_nonadded):
-                progress.goto(70)
-                gen_nfos_for_nonadded = ([movie.gen_nfo for movie in nonadded_movies] +
-                                         [show.gen_nfos for show in shows_w_nonadded])
-                pool.map(mapfuncs, gen_nfos_for_nonadded)
-
+            # 3 - Load playcount 2
+            # If any nonadded movies or shows with nonadded_episodes
+            # Load playcount for movies/episodes added via NFO
+            step3 = [func for (func, generator_active) in zip(step2, results) if generator_active]
+            if any(step3):
                 progress.goto(80)
                 monitor.update_video_library()
-
                 progress.goto(90)
-                add_nonadded_to_lib = ([movie.add_to_lib for movie in nonadded_movies] +
-                                       [show.add_nonadded_eps_to_lib for show in shows_w_nonadded])
-                pool.map(mapfuncs, add_nonadded_to_lib)
+                pool.map(mapfuncs, step3)
 
-                progress.goto(100)
+    progress.goto(99)
 
 
 def select_mediaitem(mediadb):
@@ -341,7 +378,7 @@ def select_mediaitem(mediadb):
 
 
 def update_all():
-    execute(shows_to_update=Show.db.all)
+    execute(shows_to_update_add=Show.db.all)
 
 
 def remove_all():
@@ -351,7 +388,7 @@ def remove_all():
 def update_single():
     show = select_mediaitem(Show.db)
     if show:
-        execute(shows_to_update=[show])
+        execute(shows_to_update_add=[show])
 
 
 def exclude_show():
@@ -371,14 +408,14 @@ def exclude_movie():
 def readd_show():
     show = select_mediaitem(Show.db_excluded)
     if show:
-        execute(shows_to_update=[show])
+        execute(shows_to_update_add=[show])
         Show.db_excluded.remove(show.nrkid)
 
 
 def readd_movie():
     movie = select_mediaitem(Movie.db_excluded)
     if movie:
-        execute(movies_to_add=movie)
+        execute(movies_to_add=[movie])
         Movie.db_excluded.remove(movie.nrkid)
 
 
@@ -397,19 +434,19 @@ def check_watchlist():
 
 def only_watchlist():
     unav_movies, unav_shows, added_movies, added_shows = check_watchlist()
-    execute(movies_to_remove=unav_movies, shows_to_remove=unav_shows, movies_to_add=added_movies, shows_to_update=added_shows)
+    execute(movies_to_remove=unav_movies, shows_to_remove=unav_shows, movies_to_add=added_movies, shows_to_update_add=added_shows)
 
 
 def startup():
     unav_movies, unav_shows, added_movies, added_shows = check_watchlist()
-    shows_to_update = []
+    shows_to_update_add = []
     if settings["check shows on startup"]:
         prioritized = [show for show in Show.db_prioritized.all if show.nrkid in Show.db.ids]
         nonprioritized = [show for show in Show.db.all if show.nrkid not in Show.db_prioritized.ids]
         n = settings["n shows to update"]
-        shows_to_update = prioritized + nonprioritized[:n]
+        shows_to_update_add = prioritized + nonprioritized[:n]
     execute(movies_to_remove=unav_movies, shows_to_remove=unav_shows,
-            movies_to_add=added_movies, shows_to_update=added_shows+shows_to_update)
+            movies_to_add=added_movies, shows_to_update_add=added_shows+shows_to_update_add)
 
 
 def main(action):
