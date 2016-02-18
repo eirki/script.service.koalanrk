@@ -15,7 +15,7 @@ from .utils import os_join
 from . import constants as const
 from .xbmcwrappers import (log, settings)
 
-Mediatuple = namedtuple("Media", "nrkid title")
+Mediatuple = namedtuple("Media", "urlid title")
 
 class RequestSession():
     def __init__(self):
@@ -116,11 +116,11 @@ def check_watchlist(stored_movies, stored_shows, all_ids):
     unavailable_shows = []
     unavailable_shows = []
     for show in stored_shows:
-        if show.nrkid not in present_ids:
+        if show.urlid not in present_ids:
             unavailable_shows.append(show)
     unavailable_movies = []
     for movie in stored_movies:
-        if movie.nrkid not in present_ids:
+        if movie.urlid not in present_ids:
             unavailable_movies.append(movie)
 
     log.info("added_shows:\n %s" % added_shows)
@@ -150,7 +150,7 @@ def getepisodes(showid):
                     seasonnr, episodenr = re.findall(r"sesong-(\d+)/episode-(\d+)", episodeid)[0]
                 epcode = "S%02dE%02d" % (int(seasonnr), int(episodenr))
                 episodes[epcode] = {"seasonnr": int(seasonnr), "episodenr": int(episodenr),
-                                    "nrkid": str(episodeid), "in_superuniverse": False}
+                                    "urlid": str(episodeid), "in_superuniverse": False}
         else:
             episodepage = reqs.get("http://tv.nrksuper.no/program/EpisodesSuper/%s/%s" % (showid, seasonid)).json()
             for episodenr, episodeitem in enumerate(episodepage["data"], start=1):
@@ -159,7 +159,7 @@ def getepisodes(showid):
                     seasonnr, episodenr = re.findall(r"sesong-(\d+)/episode-(\d+)", episodeitem['programUrlMetadata'])[0]
                 epcode = "S%02dE%02d" % (int(seasonnr), int(episodenr))
                 episodes[epcode] = {"seasonnr": int(seasonnr), "episodenr": int(episodenr),
-                                    "nrkid": str(episodeid), "in_superuniverse": True}
+                                    "urlid": str(episodeid), "in_superuniverse": True}
     return episodes
 
 

@@ -49,7 +49,7 @@ class SharedMediaMethods(object):
             os.makedirs(os_join(self.path))
         with open(os_join(self.path, self.strmfilename), "w") as txt:
             txt.write("plugin://%s/?mode=play&url=tv.nrk%s.no%s" %
-                      (const.addonid, "super" if self.in_superuniverse else "", self.nrkid))
+                      (const.addonid, "super" if self.in_superuniverse else "", self.urlid))
 
     def write_nfo(self, root):
         tree = ET.ElementTree(root)
@@ -69,7 +69,7 @@ class Movie(SharedMediaMethods):
 
     def __init__(self, movieid, movietitle):
         self.mediatype = "movie"
-        self.nrkid = movieid
+        self.urlid = movieid
         self.title = movietitle
         self.path = uni_join(const.libpath, "NRK movies")
         self.strmfilename = "%s.strm" % stringtofile(self.title)
@@ -91,7 +91,7 @@ class Movie(SharedMediaMethods):
     def _gen_nfo(self):
         super(Movie, self).delete_strm()
         super(Movie, self).write_strm()
-        movsubid = re.findall(r'/program/(.*?)/.*', self.nrkid)[0]
+        movsubid = re.findall(r'/program/(.*?)/.*', self.urlid)[0]
         movinfodict = scraper.getinfodict(movsubid)
         root = ET.Element("movie")
         ET.SubElement(root, "title").text = movinfodict["fullTitle"]
@@ -113,7 +113,7 @@ class Movie(SharedMediaMethods):
             super(Movie, self).save_playcount()
             super(Movie, self).remove_from_lib()
             super(Movie, self).delete_strm()
-        Movie.db.remove(self.nrkid)
+        Movie.db.remove(self.urlid)
         log.info("Finished removing movie: %s" % self.title)
 
     def add(self):
@@ -135,7 +135,7 @@ class Movie(SharedMediaMethods):
         self.kodiid = dbinfo['movieid']
         super(Movie, self).load_playcount()
         log.info("Finished adding movie: %s" % self.title)
-        Movie.db.upsert(self.nrkid, self.title)
+        Movie.db.upsert(self.urlid, self.title)
 
 
 class Show(SharedMediaMethods):
@@ -153,7 +153,7 @@ class Show(SharedMediaMethods):
 
     def __init__(self, showid, showtitle):
         self.mediatype = "show"
-        self.nrkid = showid
+        self.urlid = showid
         self.title = showtitle
         self.path = uni_join(const.libpath, "NRK shows", stringtofile(self.title))
         self.nfofilename = "tvshow.nfo"
@@ -175,13 +175,13 @@ class Show(SharedMediaMethods):
 
     def _get_new_unav_episodes(self):
         koala_stored_episodes, all_stored_episodes = self._get_stored_episodes()
-        available_episodes = scraper.getepisodes(self.nrkid)
+        available_episodes = scraper.getepisodes(self.urlid)
 
         unav_episodes = [episode for episode in koala_stored_episodes.values()
                          if episode.code not in available_episodes]
 
         new_episodes = [Episode(self.title, episode['seasonnr'], episode['episodenr'],
-                                nrkid=episode['nrkid'], in_superuniverse=episode['in_superuniverse'])
+                                urlid=episode['urlid'], in_superuniverse=episode['in_superuniverse'])
                         for episodecode, episode in available_episodes.items()
                         if episodecode not in all_stored_episodes]
 
@@ -212,7 +212,7 @@ class Show(SharedMediaMethods):
             episode.gen_nfo()
 
     def _gen_show_nfo(self):
-        plot, year, image, in_superuniverse = scraper.getshowinfo(self.nrkid)
+        plot, year, image, in_superuniverse = scraper.getshowinfo(self.urlid)
         root = ET.Element("tvshow")
         ET.SubElement(root, "title").text = self.title
         ET.SubElement(root, "year").text = year
@@ -233,7 +233,7 @@ class Show(SharedMediaMethods):
         koala_stored_episodes, _ = self._get_stored_episodes()
         for episode in koala_stored_episodes.values():
             episode.remove()
-        Show.db.remove(self.nrkid)
+        Show.db.remove(self.urlid)
         log.info("Finished removing show: %s" % self.title)
 
     def update_add(self):
@@ -253,17 +253,17 @@ class Show(SharedMediaMethods):
                 yield
 
             self._load_eps_playcount(new_episodes)
-        Show.db.upsert(self.nrkid, self.title)
+        Show.db.upsert(self.urlid, self.title)
         log.info("Finished updating show: %s" % self.title)
 
 
 class Episode(SharedMediaMethods):
-    def __init__(self, showtitle, seasonnr, episodenr, in_superuniverse=None, nrkid=None, kodiid=None, playcount=0):
+    def __init__(self, showtitle, seasonnr, episodenr, in_superuniverse=None, urlid=None, kodiid=None, playcount=0):
         self.mediatype = "episode"
         self.showtitle = showtitle
         self.seasonnr = int(seasonnr)
         self.episodenr = int(episodenr)
-        self.nrkid = nrkid
+        self.urlid = urlid
         self.kodiid = kodiid
         self.code = "S%02dE%02d" % (seasonnr, episodenr)
         self.in_superuniverse = in_superuniverse
@@ -292,7 +292,7 @@ class Episode(SharedMediaMethods):
     def gen_nfo(self):
         super(Episode, self).delete_strm()
         super(Episode, self).write_strm()
-        episodesubid = re.findall(r'/serie/.*?/(.*?)/.*', self.nrkid)[0]
+        episodesubid = re.findall(r'/serie/.*?/(.*?)/.*', self.urlid)[0]
         epinfodict = scraper.getinfodict(episodesubid)
         root = ET.Element("episodedetails")
         ET.SubElement(root, "title").text = epinfodict["fullTitle"]
@@ -395,28 +395,28 @@ def exclude_show():
     show = select_mediaitem(Show.db)
     if show:
         execute(shows_to_remove=[show])
-        Show.db_excluded.upsert(show.nrkid, show.title)
+        Show.db_excluded.upsert(show.urlid, show.title)
 
 
 def exclude_movie():
     movie = select_mediaitem(Movie.db)
     if movie:
         execute(movies_to_remove=[movie])
-        Movie.db_excluded.upsert(movie.nrkid, movie.title)
+        Movie.db_excluded.upsert(movie.urlid, movie.title)
 
 
 def readd_show():
     show = select_mediaitem(Show.db_excluded)
     if show:
         execute(shows_to_update_add=[show])
-        Show.db_excluded.remove(show.nrkid)
+        Show.db_excluded.remove(show.urlid)
 
 
 def readd_movie():
     movie = select_mediaitem(Movie.db_excluded)
     if movie:
         execute(movies_to_add=[movie])
-        Movie.db_excluded.remove(movie.nrkid)
+        Movie.db_excluded.remove(movie.urlid)
 
 
 def check_watchlist():
@@ -425,10 +425,10 @@ def check_watchlist():
     scraper.setup()
     results = scraper.check_watchlist(stored_movies=Movie.db.all, stored_shows=Show.db.all, all_ids=all_ids)
     unav_movies, unav_shows, added_movies, added_shows = results
-    unav_movies = [Movie(movie.nrkid, movie.title) for movie in unav_movies]
-    unav_shows = [Show(show.nrkid, show.title) for show in unav_shows]
-    added_movies = [Movie(movie.nrkid, movie.title) for movie in added_movies]
-    added_shows = [Show(show.nrkid, show.title) for show in added_shows]
+    unav_movies = [Movie(movie.urlid, movie.title) for movie in unav_movies]
+    unav_shows = [Show(show.urlid, show.title) for show in unav_shows]
+    added_movies = [Movie(movie.urlid, movie.title) for movie in added_movies]
+    added_shows = [Show(show.urlid, show.title) for show in added_shows]
     return unav_movies, unav_shows, added_movies, added_shows
 
 
@@ -441,8 +441,8 @@ def startup():
     unav_movies, unav_shows, added_movies, added_shows = check_watchlist()
     shows_to_update_add = []
     if settings["check shows on startup"]:
-        prioritized = [show for show in Show.db_prioritized.all if show.nrkid in Show.db.ids]
-        nonprioritized = [show for show in Show.db.all if show.nrkid not in Show.db_prioritized.ids]
+        prioritized = [show for show in Show.db_prioritized.all if show.urlid in Show.db.ids]
+        nonprioritized = [show for show in Show.db.all if show.urlid not in Show.db_prioritized.ids]
         n = settings["n shows to update"]
         shows_to_update_add = prioritized + nonprioritized[:n]
     execute(movies_to_remove=unav_movies, shows_to_remove=unav_shows,

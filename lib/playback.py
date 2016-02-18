@@ -63,15 +63,15 @@ def gen_epdict(kodiid):
         playcount = episode['playcount']
         runtime = timedelta(seconds=episode['runtime'])
         with open(episode['file'], 'r') as txt:
-            nrkid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", txt.read()).strip()
-        epdict[nrkid] = Epinfo(epcode, kodiid, playcount, runtime)
+            urlid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", txt.read()).strip()
+        epdict[urlid] = Epinfo(epcode, kodiid, playcount, runtime)
     return epdict
 
 
 def mark_watched(epdict, watched):
     for watched_ep in watched:
         if watched_ep.id not in epdict:
-            log.info("nrkid not found in epdict: %s" % watched_ep.id)
+            log.info("urlid not found in epdict: %s" % watched_ep.id)
         else:
             stored_ep = epdict[watched_ep.id]
             if watched_ep.duration.seconds / stored_ep.runtime.seconds >= 0.9:
@@ -148,7 +148,7 @@ class SeleniumDriver(object):
         log.info("gathering urls")
         self.watched = []
         WatchedEpisode = namedtuple("Watched", "id duration")
-        current_nrkid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.starturl)
+        current_urlid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.starturl)
         startwatch = datetime.now()
         last_stored_url = self.starturl
         try:
@@ -157,17 +157,17 @@ class SeleniumDriver(object):
                     xbmc.sleep(1000)
                     continue
                 last_stored_url = self.driver.current_url
-                new_nrkid, is_nrkepisode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.driver.current_url)
-                if is_nrkepisode and current_nrkid != new_nrkid:
+                new_urlid, is_nrkepisode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.driver.current_url)
+                if is_nrkepisode and current_urlid != new_urlid:
                     duration = datetime.now() - startwatch
-                    self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
+                    self.watched.append(WatchedEpisode(id=current_urlid, duration=duration))
                     log.info("watched: %s:" % self.watched)
 
-                    current_nrkid = new_nrkid
+                    current_urlid = new_urlid
                     startwatch = datetime.now()
         except self.seleniumerrors:
             duration = datetime.now() - startwatch
-            self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
+            self.watched.append(WatchedEpisode(id=current_urlid, duration=duration))
         log.info("finished gathering urls")
         log.info("watched: %s" % self.watched)
 
@@ -254,7 +254,7 @@ class IEbrowser(object):
         log.info("gathering urls")
         self.watched = []
         WatchedEpisode = namedtuple("Watched", "id duration")
-        current_nrkid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.starturl)
+        current_urlid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.starturl)
         startwatch = datetime.now()
         last_stored_url = self.starturl
         try:
@@ -263,18 +263,18 @@ class IEbrowser(object):
                     xbmc.sleep(1000)
                     continue
                 last_stored_url = self.ie.LocationURL
-                new_nrkid, is_nrkepisode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.ie.LocationURL)
-                if is_nrkepisode and current_nrkid != new_nrkid:
+                new_urlid, is_nrkepisode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.ie.LocationURL)
+                if is_nrkepisode and current_urlid != new_urlid:
                     duration = datetime.now() - startwatch
-                    self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
+                    self.watched.append(WatchedEpisode(id=current_urlid, duration=duration))
                     log.info("watched: %s:" % self.watched)
 
-                    current_nrkid = new_nrkid
+                    current_urlid = new_urlid
                     startwatch = datetime.now()
 
         except (pywintypes.com_error, AttributeError):
             duration = datetime.now() - startwatch
-            self.watched.append(WatchedEpisode(id=current_nrkid, duration=duration))
+            self.watched.append(WatchedEpisode(id=current_urlid, duration=duration))
         log.info("finished gathering urls")
         log.info("watched: %s" % self.watched)
 

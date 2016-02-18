@@ -58,18 +58,18 @@ def prioritize_shows():
     sorted_shows = sorted(library.Show.db.all, key=attrgetter("title"))
     titles = [media.title for media in sorted_shows]
     for i, show in enumerate(sorted_shows):
-        if show.nrkid in library.Show.db_prioritized.ids:
+        if show.urlid in library.Show.db_prioritized.ids:
             titles[i] = "[Prioritized] %s" % show.title
     while True:
         call = dialogs.select('Select prioritized shows', titles)
         if call == -1:
             break
         show = sorted_shows[call]
-        if show.nrkid not in library.Show.db_prioritized.ids:
-            library.Show.db_prioritized.upsert(show.nrkid, show.title)
+        if show.urlid not in library.Show.db_prioritized.ids:
+            library.Show.db_prioritized.upsert(show.urlid, show.title)
             titles[call] = "[Prioritized] %s" % show.title
         else:
-            library.Show.db_prioritized.remove(show.nrkid)
+            library.Show.db_prioritized.remove(show.urlid)
             titles[call] = show.title.replace("[Prioritized] ", "")
     library.Show.db_prioritized.savetofile()
     # open_addonsettings(id1=2, id2=4)

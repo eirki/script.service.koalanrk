@@ -30,24 +30,24 @@ class MediaDatabase(object):
             self.database = store_as()
         self.edited = False
         self.initial_ids = set(self.database)
-        self.initial_all = [self.return_as(ntflxid, title) for ntflxid, title in self.database.items()]
+        self.initial_all = [self.return_as(urlid, title) for urlid, title in self.database.items()]
 
     def savetofile(self):
         if self.edited:
             with open(self.filepath, 'w') as jf:
                 json.dump(self.database.items(), jf, indent=2)
 
-    def upsert(self, ntflxid, title):
+    def upsert(self, urlid, title):
         '''update or insert:
         insert if id not in database.
         if id is in database and store_as=LastUpdatedOrderedDict, put id and title at end of database'''
         with self.lock:
-            self.database[ntflxid] = title
+            self.database[urlid] = title
             self.edited = True
 
-    def remove(self, ntflxid):
+    def remove(self, urlid):
         with self.lock:
-            del self.database[ntflxid]
+            del self.database[urlid]
             self.edited = True
 
     @property
@@ -55,7 +55,7 @@ class MediaDatabase(object):
         if not self.edited:
             return self.initial_all
         else:
-            return [self.return_as(ntflxid, title) for ntflxid, title in self.database.items()]
+            return [self.return_as(urlid, title) for urlid, title in self.database.items()]
 
     @property
     def ids(self):
