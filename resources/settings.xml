@@ -9,8 +9,8 @@
     <setting label="Startup settings" type="lsep"/>
     <setting label="Check for added/removed movies, TV shows and episodes on startup" id="watchlist on startup" type="bool" default="true"/>
     <setting label="Check stored TV shows for added/removed episodes on startup" id="shows on startup" type="bool" default="false" enable="eq(-1,true)"/>
-    <setting label="No. of TV shows to check" id="n_shows_to_update" default="10"  option="int" range="0,1,20" type="slider"  enable="eq(-1,false) + eq(-2,true)"/>
-    <setting label="Prioritize shows (always checked in startup process)" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=prioritize)" type="action" option="close" enable="eq(-2,false) + eq(-3,true)"/>
+    <setting label="No. of TV shows to check" id="n shows to update" default="10"  option="int" range="0,1,20" type="slider"  enable="eq(-1,true) + eq(-2,true)"/>
+    <setting label="Prioritize shows (always checked in startup process)" action="RunScript(script.service.koalanrk, ?mode=library&amp;action=prioritize)" type="action" option="close" enable="eq(-2,true) + eq(-3,true)"/>
     <setting label="Show progress notification" id="startupnotification" type="bool" default="true" enable="eq(-4,true)"/>
   </category>
   <category label="Playback">
