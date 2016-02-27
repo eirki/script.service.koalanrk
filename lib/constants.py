@@ -7,6 +7,8 @@ import xbmc
 
 addon = xbmcaddon.Addon()
 addonid = addon.getAddonInfo("id").decode("utf-8")
+provider = "NRK"
+addonname = "Koala %s" % provider
 addonpath = xbmc.translatePath(addon.getAddonInfo('path')).decode("utf-8")
 userdatafolder = xbmc.translatePath("special://profile/addon_data/%s" % addonid).decode("utf-8")
 if addon.getSetting("usecustomLibPath"):

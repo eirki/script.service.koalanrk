@@ -2,13 +2,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 import json
-import sys
 import xbmc
 import xbmcgui
 
 from .utils import (wrap_unicode, byteify)
 from . import constants as const
-
 
 
 class SettingsAsDict(dict):
@@ -144,10 +142,10 @@ def rpc(method, multifilter=False, **kwargs):
 
 class Log(object):
     def info(self, input):
-        xbmc.log(byteify("[Koala NRK] %s" % input), xbmc.LOGNOTICE)
+        xbmc.log(byteify("[%s] %s" % (const.addonname, input)), xbmc.LOGNOTICE)
 
     def debug(self, input):
-        xbmc.log(byteify("[Koala NRK] %s" % input), xbmc.LOGDEBUG)
+        xbmc.log(byteify("[%s] %s" % (const.addonname, input)), xbmc.LOGDEBUG)
 log = Log()
 
 

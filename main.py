@@ -23,10 +23,10 @@ from lib.remote import Remote
 def koalasetup():
     if not os.path.exists(const.userdatafolder):
         os.makedirs(const.userdatafolder)
-    if not os.path.exists(os_join(const.libpath, "NRK shows")):
-        os.makedirs(os_join(const.libpath, "NRK shows"))
-    if not os.path.exists(os_join(const.libpath, "NRK movies")):
-        os.makedirs(os_join(const.libpath, "NRK movies"))
+    if not os.path.exists(os_join(const.libpath, "%s shows" % const.provider)):
+        os.makedirs(os_join(const.libpath, "%s shows" % const.provider))
+    if not os.path.exists(os_join(const.libpath, "%s movies" % const.provider)):
+        os.makedirs(os_join(const.libpath, "%s movies" % const.provider))
 
 
 def is_libpath_added():
@@ -97,8 +97,8 @@ def main():
         action = "startup"
 
     if mode == "play":
-        url = params['url']
-        playback.play(url)
+        urlid = params['urlid']
+        playback.play(urlid)
         return
 
     if mode == "live":
@@ -130,7 +130,7 @@ def main():
 
     elif mode == "library":
         run = True
-        if xbmcgui.Window(10000).getProperty("Koala NRK running") == "true":
+        if xbmcgui.Window(10000).getProperty("%s running" % const.addonname) == "true":
             run = dialogs.yesno(heading="Running",
                                 line1="Koala is running. ",
                                 line2="Running multiple instances cause instablity.",
@@ -141,8 +141,8 @@ def main():
         if not is_libpath_added():
             dialogs.ok(heading="Koala path not in video sources",
                        line1="Koala library paths have not been added to Kodi video sources:",
-                       line2=uni_join(const.libpath, "NRK shows"),
-                       line3=uni_join(const.libpath, "NRK movies"))
+                       line2=uni_join(const.libpath, "%s shows" % const.provider),
+                       line3=uni_join(const.libpath, "%s movies" % const.provider))
             return
         library.main(action)
 
@@ -151,4 +151,4 @@ if __name__ == '__main__':
         starttime = datetime.now()
         main()
     finally:
-        log.info("Koala NRK finished (in %s)" % str(datetime.now() - starttime))
+        log.info("%s finished (in %s)" % (const.addonname, str(datetime.now() - starttime)))

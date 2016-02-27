@@ -93,10 +93,10 @@ class SeleniumDriver(object):
     def __init__(self):
         self.watched = []
 
-    def open(self, url):
+    def open(self, urlid):
         self.seleniumerrors = (AttributeError, socket.error, httplib.CannotSendRequest,
                                WebDriverException, httplib.BadStatusLine, urllib2.URLError)
-        self.starturl = "http://%s" % url
+        self.starturl = "http://%s" % urlid
         options = webdriver.chrome.options.Options()
         options.add_experimental_option('excludeSwitches', ['disable-component-update'])
         options.add_argument("--kiosk")
@@ -159,8 +159,8 @@ class SeleniumDriver(object):
                     xbmc.sleep(1000)
                     continue
                 last_stored_url = self.driver.current_url
-                new_urlid, is_nrkepisode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.driver.current_url)
-                if is_nrkepisode and current_urlid != new_urlid:
+                new_urlid, is_episode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.driver.current_url)
+                if is_episode and current_urlid != new_urlid:
                     duration = datetime.now() - startwatch
                     self.watched.append(WatchedEpisode(id=current_urlid, duration=duration))
                     log.info("watched: %s:" % self.watched)
@@ -196,11 +196,11 @@ class IEbrowser(object):
     def __init__(self):
         self.watched = []
 
-    def open(self, url):
+    def open(self, urlid):
         self.ie = Dispatch("InternetExplorer.Application")
         self.ie.Visible = 1
         self.ie.FullScreen = 1
-        self.starturl = "http://%s" % url
+        self.starturl = "http://%s" % urlid
         self.handle = self.ie.HWND
         win32gui.SetForegroundWindow(self.handle)
         self.ie.Navigate(self.starturl)
@@ -267,8 +267,8 @@ class IEbrowser(object):
                     xbmc.sleep(1000)
                     continue
                 last_stored_url = self.ie.LocationURL
-                new_urlid, is_nrkepisode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.ie.LocationURL)
-                if is_nrkepisode and current_urlid != new_urlid:
+                new_urlid, is_episode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", self.ie.LocationURL)
+                if is_episode and current_urlid != new_urlid:
                     duration = datetime.now() - startwatch
                     self.watched.append(WatchedEpisode(id=current_urlid, duration=duration))
                     log.info("watched: %s:" % self.watched)

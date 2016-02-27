@@ -71,7 +71,7 @@ class Movie(SharedMediaMethods):
         self.mediatype = "movie"
         self.urlid = movieid
         self.title = movietitle
-        self.path = uni_join(const.libpath, "NRK movies")
+        self.path = uni_join(const.libpath, "%s movies" % const.provider)
         self.strmfilename = "%s.strm" % stringtofile(self.title)
         self.nfofilename = "%s.nfo" % stringtofile(self.title)
         self.jsonfilename = "%s.json" % stringtofile(self.title)
@@ -155,7 +155,7 @@ class Show(SharedMediaMethods):
         self.mediatype = "show"
         self.urlid = showid
         self.title = showtitle
-        self.path = uni_join(const.libpath, "NRK shows", stringtofile(self.title))
+        self.path = uni_join(const.libpath, "%s shows" % const.provider, stringtofile(self.title))
         self.nfofilename = "tvshow.nfo"
 
     def _get_stored_episodes(self):
@@ -268,7 +268,7 @@ class Episode(SharedMediaMethods):
         self.code = "S%02dE%02d" % (seasonnr, episodenr)
         self.in_superuniverse = in_superuniverse
         self.playcount = int(playcount)
-        self.path = uni_join(const.libpath, "NRK shows", stringtofile(self.showtitle), "Season %s" % self.seasonnr)
+        self.path = uni_join(const.libpath, "%s shows" % const.provider, stringtofile(self.showtitle), "Season %s" % self.seasonnr)
         self.strmfilename = "%s %s.strm" % (stringtofile(self.showtitle), self.code)
         self.nfofilename = "%s %s.nfo" % (stringtofile(self.showtitle), self.code)
         self.jsonfilename = "%s %s.json" % (stringtofile(self.showtitle), self.code)
@@ -477,8 +477,8 @@ def main(action):
     action_func = library_actions[action]
 
     try:
-        progress.create(heading="Updating NRK", force=False if action == "startup" else True)
-        xbmcgui.Window(10000).setProperty("Koala NRK running", "true")
+        progress.create(heading="Updating %s" % const.provider, force=False if action == "startup" else True)
+        xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "true")
         action_func()
     except:
         raise
@@ -486,4 +486,4 @@ def main(action):
         progress.close()
         Movie.commit_databases()
         Show.commit_databases()
-        xbmcgui.Window(10000).setProperty("Koala NRK running", "false")
+        xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "false")
