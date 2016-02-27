@@ -37,16 +37,6 @@ def is_libpath_added():
     return False
 
 
-def parameters_string_to_dict(parameters):
-    paramDict = {}
-    if parameters:
-        paramPairs = parameters[1:].split("&")
-        for paramsPair in paramPairs:
-            paramSplits = paramsPair.split('=')
-            if (len(paramSplits)) == 2:
-                paramDict[paramSplits[0]] = paramSplits[1]
-    return paramDict
-
 def refresh_settings():
     xbmc.executebuiltin('Dialog.Close(dialog)')
     xbmc.executebuiltin('ReloadSkin')
@@ -85,16 +75,30 @@ def test():
     print const.addonid
 
 
+def get_params(argv):
+    if argv in ([''], ["main.py"]):
+        params = {"mode": "library", "action": "startup"}
+    else:
+        params = {}
+        if argv[0] == "main.py":
+            arg_pairs = argv[1:]
+        elif argv[0] == "plugin://%s/" % const.addonid:
+            arg_pairs = argv[2][1:].split("&")
+        for arg_pair in arg_pairs:
+            arg, val = arg_pair.split('=')
+            params[arg] = val
+    return params
+
+
 # Execution
 def main():
-    log.info("Starting Koala NRK")
-    params = parameters_string_to_dict(sys.argv[-1])
+    log.info("Starting %s" % const.addonname)
+    log.info(sys.argv)
+    params = get_params(sys.argv)
+    log.info(params)
     mode = params.get('mode', None)
     action = params.get('action', None)
     log.info(action)
-    if sys.argv in ([''], ["default.py"]):
-        mode = "library"
-        action = "startup"
 
     if mode == "play":
         urlid = params['urlid']
