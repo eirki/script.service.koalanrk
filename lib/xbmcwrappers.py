@@ -149,3 +149,8 @@ class Log(object):
 log = Log()
 
 
+def open_settings(id1=1, id2=1):
+    xbmc.executebuiltin('Addon.OpenSettings(%s)' % const.addonid)
+    xbmc.executebuiltin('SetFocus(%i)' % (id1 - 1 + 100))
+    xbmc.executebuiltin('SetFocus(%i)' % (id2 - 1 + 200))
+

@@ -127,11 +127,6 @@ class Remote(PyKeyboardEvent):
                 newkeycode, newcharacter = listener.get(selected_button.name)
                 self.mapping[call] = selected_button._replace(code=newkeycode, char=newcharacter)
         self.store_mapping(self.mapping)
-        xbmc.executebuiltin('Addon.OpenSettings(script.service.koalanrk)')
-        id1 = 1
-        xbmc.executebuiltin('SetFocus(%i)' % (id1 + 100))
-        id2 = 2
-        xbmc.executebuiltin('SetFocus(%i)' % (id2 + 200))
 
     def run(self, browser):
         self.k = PyKeyboard()

@@ -12,7 +12,7 @@ import xbmcgui
 from lib import constants as const
 from lib import library
 from lib.utils import (os_join, uni_join)
-from lib.xbmcwrappers import (settings, rpc, log, dialogs)
+from lib.xbmcwrappers import (settings, rpc, log, dialogs, open_settings)
 if const.os == "win":
     from lib import win32hack
     win32hack.run()
@@ -76,8 +76,10 @@ def test():
 
 
 def get_params(argv):
-    if argv in ([''], ["main.py"]):
+    if argv == ['']:
         params = {"mode": "library", "action": "startup"}
+    elif argv == ["main.py"]:
+        params = {"mode": "setting", "action": "open_settings"}
     else:
         params = {}
         if argv[0] == "main.py":
@@ -91,15 +93,7 @@ def get_params(argv):
 
 
 # Execution
-def main():
-    log.info("Starting %s" % const.addonname)
-    log.info(sys.argv)
-    params = get_params(sys.argv)
-    log.info(params)
-    mode = params.get('mode', None)
-    action = params.get('action', None)
-    log.info(action)
-
+def main(mode, action):
     if mode == "play":
         urlid = params['urlid']
         playback.play(urlid)
@@ -127,7 +121,8 @@ def main():
             "refreshsettings": refresh_settings,
             "deletecookies": deletecookies,
             "test": test,
-            "prioritize": prioritize_shows
+            "prioritize": prioritize_shows,
+            "open_settings": open_settings
         }
         settingsactions[action]()
         return
@@ -150,9 +145,39 @@ def main():
             return
         library.main(action)
 
+
+def reopen_settings(action):
+    settings_order = {
+        "nrk1": [1, 1],
+        "nrk2": [1, 2],
+        "nrk3": [1, 3],
+        "nrksuper": [1, 4],
+        "browse": [1, 5],
+        "watchlist": [2, 1],
+        "update_single": [2, 2],
+        "update_all": [2, 3],
+        "exclude_show": [2, 4],
+        "readd_show": [2, 5],
+        "exclude_movie": [2, 6],
+        "readd_movie": [2, 7],
+        "configureremote": [3, 4],
+        "prioritize": [3, 10],
+        "remove_all": [5, 1],
+        "deletecookies": [5, 2],
+        "refreshsettings": [5, 3],
+        "test": [5, 4],
+        }
+    if action in settings_order:
+        open_settings(*settings_order[action])
+
 if __name__ == '__main__':
     try:
         starttime = datetime.now()
-        main()
+        log.info("Starting %s" % const.addonname)
+        params = get_params(sys.argv)
+        mode = params.get('mode', None)
+        action = params.get('action', None)
+        main(mode, action)
     finally:
+        reopen_settings(action)
         log.info("%s finished (in %s)" % (const.addonname, str(datetime.now() - starttime)))
