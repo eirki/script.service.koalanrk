@@ -17,7 +17,7 @@
   </extension>
   <extension point="xbmc.addon.metadata">
     <summary lang="en">Adds your NRK watchlist to the Kodi library</summary>
-    <description lang="en">Koala NRK is an add-on for Kodi, which adds your NRK watchlist ("Mitt innhold") into your Kodi library, and updates it regularly.Koala stands for Kodi Add to Library Addon.&#xD;&#xA;&#xD;&#xA;Koala NRK is not affiliated with NRK or Kodi. Original artwork for logo created by Mete Eraydın, licensed under CC.</description>
+    <description lang="en">Koala NRK is an add-on for Kodi, which adds your NRK watchlist ("Mitt innhold") into your Kodi library, and updates it regularly. Koala stands for Kodi Add to Library Addon.&#xD;&#xA;&#xD;&#xA;Koala NRK is not affiliated with NRK or Kodi. Original artwork for logo created by Mete Eraydın, licensed under CC.</description>
     <disclaimer lang="en"></disclaimer>
     <language></language>
     <platform>all</platform>
