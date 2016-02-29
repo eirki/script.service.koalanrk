@@ -19,7 +19,7 @@ sys.path.extend([os_join(const.addonpath, "lib", "win32"),
 
 def daemon_service():
     xbmcgui.Window(10000).setProperty("win32 importer hack running", "true")
-    log.info("win32 importer hack service running in background")
+    log.info("win32 importer hack service running in background, from %s" % const.addo)
     from win32com.client import Dispatch
     import pywintypes
     import win32gui
