@@ -15,11 +15,8 @@ from lib import constants as const
 from lib.utils import (os_join, uni_join)
 from lib.xbmcwrappers import (log, settings, rpc)
 if const.os == "win":
-    sys.path.extend([os_join(const.addonpath, "lib", "win32"),
-                     os_join(const.addonpath, "lib", "win32", "win32"),
-                     os_join(const.addonpath, "lib", "win32", "win32", "lib"),
-                     os_join(const.addonpath, "lib", "win32", "pypiwin32-219.data", "scripts"),
-                     os_join(const.addonpath, "lib", "win32", "Pythonwin")])
+    from lib import win32hack
+    win32hack.run()
     from win32com.client import Dispatch
     import pywintypes
     import win32gui

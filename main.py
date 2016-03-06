@@ -13,11 +13,10 @@ from lib import constants as const
 from lib import library
 from lib.utils import (os_join, uni_join)
 from lib.xbmcwrappers import (settings, rpc, log, dialogs, open_settings)
-# if const.os == "win":
-    # from lib import win32hack
-    # win32hack.run()
-# from lib import playback
-# from lib.remote import Remote
+if const.os == "win":
+    from lib import win32hack
+    win32hack.wait()
+from lib.remote import Remote
 
 
 def koalasetup():
