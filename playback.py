@@ -37,35 +37,34 @@ def getplayingvideofile():
     return playingfile
 
 
-def get_stored_episodes(kodiid):
+def get_episodes(startkodiid):
     Epinfo = namedtuple("Epinfo", "code kodiid playcount runtime")
-    playingfile = rpc("VideoLibrary.GetEpisodeDetails", episodeid=int(kodiid), properties=["tvshowid", "season", "episode"])
+    playingfile = rpc("VideoLibrary.GetEpisodeDetails", episodeid=startkodiid,
+                      properties=["tvshowid", "season", "episode"])
     tvshowid = playingfile["episodedetails"]["tvshowid"]
     tvshow_dict = rpc("VideoLibrary.GetEpisodes", tvshowid=tvshowid, properties=[
                       "playcount", "season", "episode", "file", "runtime"])
-    epdict = {}
+    stored_episodes = {}
     for episode in tvshow_dict['episodes']:
         epcode = 'S%02dE%02d' % (episode['season'], episode['episode'])
         kodiid = episode['episodeid']
         playcount = episode['playcount']
         runtime = timedelta(seconds=episode['runtime'])
         with open(episode['file'], 'r') as txt:
-            urlid = re.sub(r"urlid=([^&]*)", r"\1", txt.read())
-        epdict[urlid] = Epinfo(epcode, kodiid, playcount, runtime)
-    log.info(epdict)
-    return epdict
-
-
-def setplaycount(kodiid, playcount):
-    now = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
-    rpc("VideoLibrary.SetEpisodeDetails", episodeid=kodiid, playcount=playcount, lastplayed=now)
+            urlid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", txt.read())
+        stored_episodes[urlid] = Epinfo(epcode, kodiid, playcount, runtime)
+        if kodiid == startkodiid:
+            starturlid = urlid
+    return starturlid, stored_episodes
 
 
 def mark_watched(episode, started_watching_at):
     finished_watching_at = datetime.now()
     watch_duration = finished_watching_at - started_watching_at
     if watch_duration.seconds / episode.runtime.seconds >= 0.9:
-        setplaycount(episode.kodiid, episode.playcount+1)
+    if watch_duration.seconds / episode.runtime.seconds >= 0:
+        rpc("VideoLibrary.SetEpisodeDetails", episodeid=episode.kodiid,
+            playcount=episode.playcount+1, lastplayed=finished_watching_at.strftime("%d-%m-%Y %H:%M:%S"))
         log.info("%s: Marked as watched" % episode.code)
     else:
         log.info("%s: Skipped, only partially watched (%s vs. %s)" %
