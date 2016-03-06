@@ -108,8 +108,45 @@ class InternetExplorer(object):
         else:
             log.info("could not connect to Internet Explorer")
 
-    def login(self):
-        pass
+    def trigger_player(self):
+        log.info("triggering player")
+        while self.ie.busy:
+            xbmc.sleep(100)
+        try:
+            playicon = next(elem for elem in self.ie.document.body.all.tags("span") if elem.className == 'play-icon')
+            playicon.click()
+            log.info("clicked play")
+            rect = playicon.getBoundingClientRect()
+            self.player_coord = {"x": rect.left, "y": rect.top}
+        except StopIteration:
+            log.info("couldn't fint play")
+            playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
+            rect = playerelement.getBoundingClientRect()
+            self.player_coord = {"x": (int(rect.left+rect.right/2)), "y": (int(rect.top+rect.bottom/2))}
+            self.m.click(button=1, n=1, **self.player_coord)
+
+    def enter_fullscreen(self):
+        if not self.player_coord:
+            while self.ie.busy:
+                xbmc.sleep(100)
+            playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
+            rect = playerelement.getBoundingClientRect()
+            self.player_coord = {"x": (int(rect.left+rect.right/2)), "y": (int(rect.top+rect.bottom/2))}
+
+        log.info("waitong for player ready for fullscreen")
+        for _ in range(10):
+            player_ready = next((elem for elem in self.ie.document.head.all.tags("script")
+                                 if "ProgressTracker" in elem.getAttribute("src")), False)
+            if player_ready:
+                break
+            xbmc.sleep(1000)
+        else:
+            log.info("couldnt find progressbar, don't know if player ready")
+
+        log.info("doube_clicking")
+        self.m.move(**self.player_coord)
+        xbmc.sleep(200)
+        self.m.click(n=2, **self.player_coord)
 
     @property
     def url(self):
