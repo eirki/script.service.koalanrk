@@ -4,15 +4,15 @@ from __future__ import unicode_literals
 from __future__ import division
 import re
 from datetime import (timedelta, datetime)
-import sys
 from collections import namedtuple
-import multiprocessing.dummy as threading
+from collections import deque
+import requests
+from multiprocessing.dummy import Process as Thread
 import xbmc
 
 from chromote import Chromote
-
 from lib import constants as const
-from lib.utils import (os_join, uni_join)
+from lib.utils import uni_join
 from lib.xbmcwrappers import (log, settings, rpc)
 if const.os == "win":
     from lib import win32hack
@@ -153,57 +153,57 @@ class InternetExplorer(object):
         return self.ie.LocationURL
 
 
-def browse():
-    pass
-
-
-def live(channel):
-    pass
-
-
-class Player(xbmc.Player):
-    def __init__(self):
-        xbmc.Player.__init__(self)
-        self.koalaplaying = False
-
-    def onPlayBackStarted(self):
+class Session(object):
+    def start(self):
+        # waits until preceding onplaybackended has finished if new item play in quick succession
+        log.info("start onPlayBackStarted")
         playingfile = getplayingvideofile()
-        if playingfile["file"].startswith(uni_join(const.libpath, "NRK")):
-            self.koalaplaying = True
-            self.remote = None
-            if settings["browser"] == "Internet Explorer":
-                self.browser = InternetExplorer()
-            elif settings["browser"] == "Chrome":
-                self.browser = Chrome()
-            if settings["remote"]:
-                self.remote = Remote()
-                self.remote.run(browser=self.browser, player=self)
+        if not playingfile["file"].startswith(uni_join(const.libpath, "NRK")):
+            return
+        self.koala_playing = True
+        self.remote = None
+        if settings["remote"]:
+            self.remote = Remote()
+            self.remote.run(player=self)
 
-            # (self.browser.press_play())
+        if settings["browser"] == "Internet Explorer":
+            self.browser = InternetExplorer()
+        elif settings["browser"] == "Chrome":
+            self.browser = Chrome()
+        self.browser.connect()
+        # self.browser.press_play()
+        # self.browser.enter_fullscreen()
 
-            if playingfile["type"] == "episode":
-                kodiid = playingfile["id"]
-                thread = threading.Thread(target=self.mark_watched, args=[kodiid])
-                thread.start()
+        # releases lock, startes url monitoring if watching episode
+        if playingfile["type"] == "episode":
+            log.info("starting monitoring")
+            thread = Thread(target=self.monitor_watched, args=[playingfile['id']])
+            thread.start()
+
+        log.info("finished onPlayBackStarted")
 
     def monitor_watched(self, startkodiid):
-        stored_episodes = get_stored_episodes(startkodiid)
+        starturlid, stored_episodes = get_episodes(startkodiid)
+        log.info(stored_episodes)
 
         last_stored_url = self.browser.url
-        current_urlid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", last_stored_url)
+        current_urlid = starturlid
         episode_watching = stored_episodes[current_urlid]
         started_watching_at = datetime.now()
-        while True:
+        while self.koala_playing:
             try:
                 current_url = self.browser.url
-            except:
+            except self.browser.errors:
                 break
 
             if current_url == last_stored_url:
                 xbmc.sleep(1000)
             else:
+                log.info("new url: %s" % current_url)
                 new_urlid, is_episode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", current_url)
                 if is_episode and new_urlid != episode_watching.urlid:
+                    log.info("is_episode")
+                    log.info(new_urlid)
                     mark_watched(episode_watching, started_watching_at)
 
                     episode_watching = stored_episodes[new_urlid]
@@ -211,6 +211,17 @@ class Player(xbmc.Player):
                 last_stored_url = current_url
 
         mark_watched(episode_watching, started_watching_at)
+
+    def end(self):
+        # waits until preceding onplaybackstarted has finished if playback quickly ended
+        log.info("start onPlayBackEnded")
+        if not self.koala_playing:
+            return
+        if self.remote:
+            self.remote.close()
+        self.koala_playing = False
+        log.info("finished onPlayBackEnded")
+
 
 class PlayerMonitor(xbmc.Player):
     def __init__(self):
@@ -232,6 +243,16 @@ class PlayerMonitor(xbmc.Player):
 
     def onPlayBackEnded(self):
         self.add_to_queue(self.session.end)
+
+
+
+
+
+def browse():
+    pass
+
+def live(channel):
+    pass
 
 if __name__ == "__main__":
     player_monitor = PlayerMonitor()
