@@ -72,11 +72,12 @@ def mark_watched(episode, started_watching_at):
 
 
 class Chrome(object):
-    def connect(self,):
+    def __init(self):
+        self.errors = requests.exceptions.ConnectionError
+
+    def connect(self):
         self.chrome = Chromote(host="localhost", port=9222)
         self.tab = self.chrome.tabs[0]
-        # if urlid not in self.driver.current_url:
-            # self.login()
 
     def login(self):
         log.info("logging in")
@@ -93,7 +94,7 @@ class Chrome(object):
 
     @property
     def url(self):
-        return self.tab.url
+        return self.chrome.tabs[0].url
 
 
 class InternetExplorer(object):
