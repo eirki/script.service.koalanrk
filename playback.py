@@ -174,12 +174,27 @@ class Player(xbmc.Player):
 
         mark_watched(episode_watching, started_watching_at)
 
+class PlayerMonitor(xbmc.Player):
+    def __init__(self):
+        self.queue = deque()
+        xbmc.Player.__init__(self)
+
+    def add_to_queue(self, func):
+        self.queue.append(func)
+        if self.queue[0] == func:
+            while self.queue:
+                try:
+                    self.queue[0]()
+                finally:
+                    self.queue.popleft()
+
+    def onPlayBackStarted(self):
+        self.session = Session()
+        self.add_to_queue(self.session.start)
+
     def onPlayBackEnded(self):
-        if self.koalaplaying:
-            self.koalaplaying = False
-            if self.remote:
-                self.remote.close()
+        self.add_to_queue(self.session.end)
 
 if __name__ == "__main__":
-    player = Player()
+    player_monitor = PlayerMonitor()
     xbmc.Monitor().waitForAbort()
