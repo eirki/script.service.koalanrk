@@ -81,13 +81,11 @@ class RemoteListener(PyKeyboardEvent):
         PyKeyboardEvent.stop(self)
 
 
-class Remote(PyKeyboardEvent):
+class Remote(object):
     Button = namedtuple("Button", "name func code char")
 
-    def __init__(self, capture=False, capture_some=False):
+    def __init__(self):
         self.mapping = self.load_mapping()
-        capture_some = [button.code for button in self.mapping] if capture_some else False
-        PyKeyboardEvent.__init__(self, capture=capture, capture_some=capture_some)
 
     def load_mapping(self):
         try:
@@ -128,10 +126,10 @@ class Remote(PyKeyboardEvent):
                 self.mapping[call] = selected_button._replace(code=newkeycode, char=newcharacter)
         self.store_mapping(self.mapping)
 
-    def run(self, browser):
+    def run(self, player):
         self.k = PyKeyboard()
         self.m = PyMouse()
-        self.browser = browser
+        self.player = player
         x, y = self.m.screen_size()
         self.corner_coors = {'x': x, 'y': y}
         self.wiggle_coors = {'x': x, 'y': y-10}
@@ -145,7 +143,6 @@ class Remote(PyKeyboardEvent):
     def playpause(self):
         log.info("Remote: playpause triggered")
 
-        self.browser.focus_player()
         self.m.move(**self.wiggle_coors)
         self.k.tap_key(self.k.space_key)
         self.m.move(**self.corner_coors)
@@ -160,7 +157,7 @@ class Remote(PyKeyboardEvent):
 
     def stop(self):
         log.info("Remote: stop triggered")
-        self.browser.close()
+        self.player.stop()
 
     def close(self):
         log.info("Closing remote keylistener")
