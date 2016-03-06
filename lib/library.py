@@ -440,7 +440,7 @@ def only_watchlist():
 def startup():
     unav_movies, unav_shows, added_movies, added_shows = check_watchlist()
     shows_to_update_add = []
-    if settings["check shows on startup"]:
+    if settings["shows on startup"]:
         prioritized = [show for show in Show.db_prioritized.all if show.urlid in Show.db.ids]
         nonprioritized = [show for show in Show.db.all if show.urlid not in Show.db_prioritized.ids]
         n = settings["n shows to update"]
