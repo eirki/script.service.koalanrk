@@ -42,6 +42,7 @@
   <setting label="Remove all shows and movies from library" action="RunScript(script.service.koalanrk, mode=library, action=remove_all)" type="action"  option="close"/>
   <setting label="Delete cookies" action="RunScript(script.service.koalanrk, mode=setting, action=deletecookies)" type="action" />
   <setting label="Refresh Settings" action="RunScript(script.service.koalanrk, mode=setting, action=refreshsettings)" type="action"  option="close" />
+  <setting label="Restart Playback Service" action="RunScript(script.service.koalanrk, mode=setting, action=restart_playback_service)" type="action"  option="close" />
   <setting label="Test action" action="RunScript(script.service.koalanrk, mode=setting, action=test)" type="action" option="close"/>
   <setting label="Run startup process" action="RunScript(script.service.koalanrk, mode=library, action=startup)" type="action"  option="close"/>
 </category>

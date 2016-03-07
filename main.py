@@ -42,6 +42,11 @@ def refresh_settings():
     xbmc.executebuiltin('Addon.OpenSettings(%s)' % const.addonid)
 
 
+def restart_playback_service():
+    rpc("Addons.SetAddonEnabled", addonid=const.addonid, enabled=False)
+    rpc("Addons.SetAddonEnabled", addonid=const.addonid, enabled=True)
+
+
 def prioritize_shows():
     library.Show.init_databases()
     sorted_shows = sorted(library.Show.db.all, key=attrgetter("title"))
@@ -107,7 +112,8 @@ def main(mode, action):
             "deletecookies": deletecookies,
             "test": test,
             "prioritize": prioritize_shows,
-            "open_settings": open_settings
+            "open_settings": open_settings,
+            "restart_playback_service": restart_playback_service
         }
         settingsactions[action]()
         return
@@ -149,7 +155,8 @@ def reopen_settings(action):
         "remove_all": [5, 1],
         "deletecookies": [5, 2],
         "refreshsettings": [5, 3],
-        "test": [5, 4],
+        "restart_playback_service": [5, 4],
+        "test": [5, 5],
         }
     if action in settings_order:
         open_settings(*settings_order[action])
