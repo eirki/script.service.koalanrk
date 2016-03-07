@@ -18,9 +18,7 @@ if const.os == "win":
     from lib import win32hack
     win32hack.run()
     from win32com.client import Dispatch
-    import pywintypes
     import win32gui
-
 from lib.remote import Remote
 
 
@@ -159,6 +157,7 @@ class Session(object):
         log.info("start onPlayBackStarted")
         playingfile = getplayingvideofile()
         if not playingfile["file"].startswith(uni_join(const.libpath, "NRK")):
+            self.koala_playing = False
             return
         self.koala_playing = True
         self.remote = None
