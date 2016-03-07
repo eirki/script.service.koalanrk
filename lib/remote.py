@@ -126,7 +126,7 @@ class Remote(object):
                 self.mapping[call] = selected_button._replace(code=newkeycode, char=newcharacter)
         self.store_mapping(self.mapping)
 
-    def run(self, player):
+    def run(self):
         self.k = PyKeyboard()
         self.m = PyMouse()
         self.player = player
@@ -157,7 +157,7 @@ class Remote(object):
 
     def stop(self):
         log.info("Remote: stop triggered")
-        self.player.stop()
+        xbmc.Player().stop()
 
     def close(self):
         log.info("Closing remote keylistener")

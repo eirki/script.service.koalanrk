@@ -164,7 +164,7 @@ class Session(object):
         self.remote = None
         if settings["remote"]:
             self.remote = Remote()
-            self.remote.run(player=self)
+            self.remote.run()
 
         if settings["browser"] == "Internet Explorer":
             self.browser = InternetExplorer()
