@@ -12,7 +12,7 @@ import xbmc
 
 from chromote import Chromote
 from lib import constants as const
-from lib.utils import uni_join
+from lib.utils import (uni_join, os_join)
 from lib.xbmcwrappers import (log, settings, rpc)
 if const.os == "win":
     from lib import win32hack
@@ -245,14 +245,9 @@ class PlayerMonitor(xbmc.Player):
         self.add_to_queue(self.session.end)
 
 
-
-
-
-def browse():
-    pass
-
 def live(channel):
-    pass
+    xbmc.Player().play(os_join(const.addonpath, "resources", "%s.htm" % channel))
+
 
 if __name__ == "__main__":
     player_monitor = PlayerMonitor()

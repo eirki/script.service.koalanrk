@@ -17,7 +17,7 @@ if const.os == "win":
     from lib import win32hack
     win32hack.wait()
 from lib.remote import Remote
-
+import playback
 
 def koalasetup():
     if not os.path.exists(const.userdatafolder):
@@ -93,24 +93,10 @@ def get_params(argv):
 
 # Execution
 def main(mode, action):
-    # if mode == "play":
-    #     urlid = params['urlid']
-    #     playback.play(urlid)
-    #     return
-
-    # if mode == "live":
-    #     playback.playlive()
-    #     return
-
-    # not implemented:
-    # if mode == "browse":
-        # playback.browse()
-        # return
-
     if action == "startup" and not settings["watchlist on startup"]:
         return
 
-    if action == "configureremote":
+    elif action == "configureremote":
         remote = Remote()
         remote.configure()
         return
@@ -124,6 +110,10 @@ def main(mode, action):
             "open_settings": open_settings
         }
         settingsactions[action]()
+        return
+
+    elif mode == "play":
+        playback.live(action)
         return
 
     elif mode == "library":
@@ -147,11 +137,6 @@ def main(mode, action):
 
 def reopen_settings(action):
     settings_order = {
-        "nrk1": [1, 1],
-        "nrk2": [1, 2],
-        "nrk3": [1, 3],
-        "nrksuper": [1, 4],
-        "browse": [1, 5],
         "watchlist": [2, 1],
         "update_single": [2, 2],
         "update_all": [2, 3],
@@ -176,6 +161,8 @@ if __name__ == '__main__':
         params = get_params(sys.argv)
         mode = params.get('mode', None)
         action = params.get('action', None)
+        log.info(mode)
+        log.info(action)
         main(mode, action)
     finally:
         reopen_settings(action)
