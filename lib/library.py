@@ -8,7 +8,6 @@ import re
 import traceback
 import json
 import xml.etree.ElementTree as ET
-import xbmcgui
 from operator import attrgetter
 
 from . utils import (os_join, uni_join, stringtofile)
@@ -478,7 +477,6 @@ def main(action):
 
     try:
         progress.create(heading="Updating %s" % const.provider, force=False if action == "startup" else True)
-        xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "true")
         action_func()
     except:
         raise
@@ -486,4 +484,3 @@ def main(action):
         progress.close()
         Movie.commit_databases()
         Show.commit_databases()
-        xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "false")

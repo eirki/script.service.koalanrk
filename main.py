@@ -131,6 +131,7 @@ def main(mode, action):
                                 line3="Continue?")
         if not run:
             return
+        xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "true")
         koalasetup()
         if not is_libpath_added():
             dialogs.ok(heading="Koala path not in video sources",
@@ -172,5 +173,6 @@ if __name__ == '__main__':
         log.info(action)
         main(mode, action)
     finally:
+        xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "false")
         reopen_settings(action)
         log.info("%s finished (in %s)" % (const.addonname, str(datetime.now() - starttime)))
