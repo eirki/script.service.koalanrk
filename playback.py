@@ -5,6 +5,7 @@ from __future__ import division
 import re
 from datetime import (timedelta, datetime)
 from collections import namedtuple
+import json
 import requests
 from multiprocessing.dummy import Process as Thread
 import xbmc
@@ -19,6 +20,7 @@ if const.os == "win":
     from win32com.client import Dispatch
     import win32gui
 from lib.remote import Remote
+from lib.PyUserInput.pymouse import PyMouse
 
 
 def getplayingvideofile():
@@ -69,29 +71,57 @@ def mark_watched(episode, started_watching_at):
 
 
 class Chrome(object):
-    def __init(self):
+    def __init__(self):
         self.errors = requests.exceptions.ConnectionError
 
     def connect(self):
         self.chrome = Chromote(host="localhost", port=9222)
         self.tab = self.chrome.tabs[0]
 
-    def login(self):
-        log.info("logging in")
-        self.driver.get("https://www.netflix.com/Login")
-        user = self.driver.find_element_by_id("email")
-        user.clear()
-        user.send_keys(settings["username"])
-        passw = self.driver.find_element_by_id("password")
-        passw.clear()
-        passw.send_keys(settings["password"])
-        btn = self.driver.find_element_by_id("login-form-contBtn")
-        btn.click()
-        self.driver.get(self.starturl)
-
     @property
     def url(self):
         return self.chrome.tabs[0].url
+
+    def _eval_js(self, exp):
+        result = json.loads(self.tab.evaluate('document.%s' % exp))
+        return result['result']['result']
+
+    def trigger_player(self):
+        log.info("triggering player")
+        for _ in range(10):
+            player_loaded = self._eval_js('getElementsByClassName("play-icon")[0]')['type'] != "undefined"
+            if player_loaded:
+                self._eval_js('getElementsByClassName("play-icon")[0].click()')
+                break
+            else:
+                xbmc.sleep(1000)
+        else:
+            raise "couldn't find play button!"
+
+    def enter_fullscreen(self):
+        player_left = self._eval_js('getElementById("playerelement").getBoundingClientRect()["left"]')['value']
+        player_width = self._eval_js('getElementById("playerelement").getBoundingClientRect()["width"]')['value']
+        player_top = self._eval_js('getElementById("playerelement").getBoundingClientRect()["top"]')['value']
+        player_height = self._eval_js('getElementById("playerelement").getBoundingClientRect()["height"]')['value']
+        player_coord = {"x": int(player_left+(player_width/2)),
+                        "y": int(player_top+(player_height/2))}
+        log.info(player_coord)
+
+        for _ in range(10):
+            playback_started = "ProgressTracker" in self._eval_js('getElementsByTagName("script")[0].getAttribute("src")')['value']
+            if playback_started:
+                log.info("playback started")
+                break
+            else:
+                xbmc.sleep(1000)
+        else:
+            log.info("couldnt find progressbar, not sure if playback started")
+
+        log.info("double clicking")
+        m = PyMouse()
+        m.move(**player_coord)
+        xbmc.sleep(200)
+        m.click(n=2, **player_coord)
 
 
 class InternetExplorer(object):
@@ -171,7 +201,6 @@ class Session(object):
         self.browser.trigger_player()
         self.browser.enter_fullscreen()
 
-        # releases lock, startes url monitoring if watching episode
         if playingfile["type"] == "episode":
             thread = Thread(target=self.monitor_watched, args=[playingfile['id']])
             thread.start()
@@ -208,6 +237,7 @@ class Session(object):
                 last_stored_url = current_url
 
         mark_watched(episode_watching, started_watching_at)
+        log.info("finished monitoring")
 
     def end(self):
         log.info("start onPlayBackEnded")
