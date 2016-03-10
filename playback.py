@@ -62,7 +62,6 @@ def mark_watched(episode, started_watching_at):
     finished_watching_at = datetime.now()
     watch_duration = finished_watching_at - started_watching_at
     if watch_duration.seconds / episode.runtime.seconds >= 0.9:
-    if watch_duration.seconds / episode.runtime.seconds >= 0:
         rpc("VideoLibrary.SetEpisodeDetails", episodeid=episode.kodiid,
             playcount=episode.playcount+1, lastplayed=finished_watching_at.strftime("%d-%m-%Y %H:%M:%S"))
         log.info("%s: Marked as watched" % episode.code)
