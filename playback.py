@@ -18,6 +18,7 @@ if const.os == "win":
     from lib import win32hack
     win32hack.run()
     from win32com.client import Dispatch
+    import pywintypes
     import win32gui
 from lib.remote import Remote
 from lib.PyUserInput.pymouse import PyMouse
@@ -125,15 +126,26 @@ class Chrome(object):
 
 
 class InternetExplorer(object):
-    def connect(self, url):
-        ShellWindowsCLSID = '{9BA05972-F6A8-11CF-A442-00A0C90A8F39}'
-        ShellWindows = Dispatch(ShellWindowsCLSID)
-        for shellwindow in ShellWindows:
-            if win32gui.GetClassName(shellwindow.HWND) == 'IEFrame':
-                self.ie = shellwindow
+    def __init__(self):
+        self.errors = pywintypes.com_error, AttributeError
+        self.m = PyMouse()
+
+    def connect(self):
+        for _ in range(10):
+            ShellWindowsCLSID = '{9BA05972-F6A8-11CF-A442-00A0C90A8F39}'
+            ShellWindows = Dispatch(ShellWindowsCLSID)
+            ie = next((shellwindow for shellwindow in ShellWindows if win32gui.GetClassName(shellwindow.HWND) == 'IEFrame'), None)
+            if ie:
+                self.ie = ie
                 break
+            else:
+                xbmc.sleep(1000)
         else:
             log.info("could not connect to Internet Explorer")
+
+    @property
+    def url(self):
+        return self.ie.LocationURL
 
     def trigger_player(self):
         log.info("triggering player")
@@ -162,22 +174,19 @@ class InternetExplorer(object):
 
         log.info("waitong for player ready for fullscreen")
         for _ in range(10):
-            player_ready = next((elem for elem in self.ie.document.head.all.tags("script")
-                                 if "ProgressTracker" in elem.getAttribute("src")), False)
-            if player_ready:
+            playback_started = next((elem for elem in self.ie.document.head.all.tags("script")
+                                     if "ProgressTracker" in elem.getAttribute("src")), False)
+            if playback_started:
                 break
             xbmc.sleep(1000)
         else:
-            log.info("couldnt find progressbar, don't know if player ready")
+            log.info("couldnt find progressbar, don't know if playback started")
 
-        log.info("doube_clicking")
+        log.info("double clicking")
+
         self.m.move(**self.player_coord)
         xbmc.sleep(200)
         self.m.click(n=2, **self.player_coord)
-
-    @property
-    def url(self):
-        return self.ie.LocationURL
 
 
 class Session(object):
