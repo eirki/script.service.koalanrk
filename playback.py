@@ -152,7 +152,6 @@ class InternetExplorer(object):
 
 class Session(object):
     def start(self):
-        # waits until preceding onplaybackended has finished if new item play in quick succession
         log.info("start onPlayBackStarted")
         playingfile = getplayingvideofile()
         if not playingfile["file"].startswith(uni_join(const.libpath, "NRK")):
@@ -169,18 +168,18 @@ class Session(object):
         elif settings["browser"] == "Chrome":
             self.browser = Chrome()
         self.browser.connect()
-        # self.browser.press_play()
-        # self.browser.enter_fullscreen()
+        self.browser.trigger_player()
+        self.browser.enter_fullscreen()
 
         # releases lock, startes url monitoring if watching episode
         if playingfile["type"] == "episode":
-            log.info("starting monitoring")
             thread = Thread(target=self.monitor_watched, args=[playingfile['id']])
             thread.start()
 
         log.info("finished onPlayBackStarted")
 
     def monitor_watched(self, startkodiid):
+        log.info("starting monitoring")
         starturlid, stored_episodes = get_episodes(startkodiid)
         log.info(stored_episodes)
 
@@ -211,7 +210,6 @@ class Session(object):
         mark_watched(episode_watching, started_watching_at)
 
     def end(self):
-        # waits until preceding onplaybackstarted has finished if playback quickly ended
         log.info("start onPlayBackEnded")
         if not self.koala_playing:
             return
@@ -248,5 +246,7 @@ def live(channel):
 
 
 if __name__ == "__main__":
+    log.info("launching playback service")
     player_monitor = PlayerMonitor()
     xbmc.Monitor().waitForAbort()
+    log.info("closing playback service")
