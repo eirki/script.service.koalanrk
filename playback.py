@@ -5,7 +5,6 @@ from __future__ import division
 import re
 from datetime import (timedelta, datetime)
 from collections import namedtuple
-from collections import deque
 import requests
 from multiprocessing.dummy import Process as Thread
 import xbmc
@@ -224,17 +223,17 @@ class Session(object):
 
 class PlayerMonitor(xbmc.Player):
     def __init__(self):
-        self.queue = deque()
+        self.queue = []
         xbmc.Player.__init__(self)
 
     def add_to_queue(self, func):
         self.queue.append(func)
-        if self.queue[0] == func:
+        if self.queue[0] is func:
             while self.queue:
                 try:
                     self.queue[0]()
                 finally:
-                    self.queue.popleft()
+                    self.queue.pop(0)
 
     def onPlayBackStarted(self):
         self.session = Session()
