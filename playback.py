@@ -147,15 +147,16 @@ class InternetExplorer(object):
 
     def trigger_player(self):
         log.info("triggering player")
-        while self.ie.busy:
-            xbmc.sleep(100)
-        try:
-            playicon = next(elem for elem in self.ie.document.body.all.tags("span") if elem.className == 'play-icon')
-            playicon.click()
-            log.info("clicked play")
-            rect = playicon.getBoundingClientRect()
-            self.player_coord = {"x": rect.left, "y": rect.top}
-        except StopIteration:
+        for _ in range(10):
+            playicon = next((elem for elem in self.ie.document.body.all.tags("span") if elem.className == 'play-icon'), None)
+            if playicon:
+                playicon.click()
+                rect = playicon.getBoundingClientRect()
+                self.player_coord = {"x": rect.left, "y": rect.top}
+                break
+            else:
+                xbmc.sleep(1000)
+        else:
             log.info("couldn't fint play")
             playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
             rect = playerelement.getBoundingClientRect()
