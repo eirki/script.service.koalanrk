@@ -37,11 +37,10 @@ def getplayingvideofile():
     return playingfile
 
 
-def get_episodes(startkodiid):
+def get_episodes(playingfile):
     Epinfo = namedtuple("Epinfo", "code kodiid playcount runtime")
-    playingfile = rpc("VideoLibrary.GetEpisodeDetails", episodeid=startkodiid,
-                      properties=["tvshowid", "season", "episode"])
-    tvshowid = playingfile["episodedetails"]["tvshowid"]
+    startkodiid = playingfile['id']
+    tvshowid = playingfile["tvshowid"]
     tvshow_dict = rpc("VideoLibrary.GetEpisodes", tvshowid=tvshowid, properties=[
                       "playcount", "season", "episode", "file", "runtime"])
     stored_episodes = {}
@@ -210,14 +209,14 @@ class Session(object):
         self.browser.enter_fullscreen()
 
         if playingfile["type"] == "episode":
-            thread = Thread(target=self.monitor_watched, args=[playingfile['id']])
+            thread = Thread(target=self.monitor_watched, args=[playingfile])
             thread.start()
 
         log.info("finished onPlayBackStarted")
 
-    def monitor_watched(self, startkodiid):
+    def monitor_watched(self, playingfile):
         log.info("starting monitoring")
-        starturlid, stored_episodes = get_episodes(startkodiid)
+        starturlid, stored_episodes = get_episodes(playingfile)
         log.info(stored_episodes)
 
         last_stored_url = self.browser.url
