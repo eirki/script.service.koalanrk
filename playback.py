@@ -191,7 +191,7 @@ class Session(object):
     def start(self):
         log.info("start onPlayBackStarted")
         playingfile = getplayingvideofile()
-        if not playingfile["file"].startswith(uni_join(const.libpath, "NRK")):
+        if not playingfile["file"].startswith(uni_join(const.libpath, const.provider)):
             self.koala_playing = False
             return
         self.koala_playing = True
