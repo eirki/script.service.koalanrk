@@ -26,12 +26,12 @@ from lib.PyUserInput.pymouse import PyMouse
 
 def getplayingvideofile():
     if xbmc.Player().isPlayingAudio():
-        log.info("Audio file playing")
+        # log.info("Audio file playing")
         playingfile = rpc("Player.GetItem", properties=["season", "episode", "tvshowid", "file"], playerid=0)
     if xbmc.Player().isPlayingVideo():
-        log.info("Video file playing")
+        # log.info("Video file playing")
         playingfile = rpc("Player.GetItem", properties=["season", "episode", "tvshowid", "file"], playerid=1)
-    log.info("Playing: %s" % playingfile["item"])
+    # log.info("Playing: %s" % playingfile["item"])
     if "item" in playingfile:
         playingfile = playingfile["item"]
     return playingfile
