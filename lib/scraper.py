@@ -86,48 +86,28 @@ def setup():
     reqs.is_setup = True
 
 
-def check_watchlist(stored_movies, stored_shows, all_ids):
+def getwatchlist():
     setup()
     watchlistpage = reqs.get("https://tv.nrk.no/mycontent")
     mediaitems = json.loads(watchlistpage.text.replace("\r\n", ""))
-    present_ids = set()
-    added_shows = []
-    added_movies = []
+    available_movies = {}
+    available_shows = {}
     for media in mediaitems['favorites']:
-        if not media["isAvailable"]:
-            continue
-            # media["isAvailable"] True for shows currently airing with no available episodes
+            # media["isAvailable"] True (mostly) for shows currently airing with no available episodes
             # media["program"]["usageRights"]["hasRightsNow"] false for some airing with no available episodes (bug?)
         mediatype = "show" if media["program"]["seriesId"] else "movie"
         if mediatype == "movie":
-            mediaid = "/program/%s/%s" % (media["program"]["myContentId"], media["program"]["programUrlMetadata"])
-            # mediaid = media["program"]["programUrlMetadata"]
-            # mediaid = media["program"]["myContentId"]
-            if mediaid not in all_ids:
-                mediatitle = media["program"]["mainTitle"]
-                added_movies.append(Mediatuple(mediaid, mediatitle))
-
+            if not media["isAvailable"]:
+                continue
+            urlid = "/program/%s/%s" % (media["program"]["myContentId"], media["program"]["programUrlMetadata"])
+            title = media["program"]["mainTitle"]
+            available_movies[urlid] = title
         elif mediatype == "show":
-            mediaid = media["program"]["seriesId"]
-            if mediaid not in all_ids:
-                mediatitle = media["program"]["seriesTitle"]
-                added_shows.append(Mediatuple(mediaid, mediatitle))
-        present_ids.add(mediaid)
-    unavailable_shows = []
-    unavailable_shows = []
-    for show in stored_shows:
-        if show.urlid not in present_ids:
-            unavailable_shows.append(show)
-    unavailable_movies = []
-    for movie in stored_movies:
-        if movie.urlid not in present_ids:
-            unavailable_movies.append(movie)
+            urlid = media["program"]["seriesId"]
+            title = media["program"]["seriesTitle"]
+            available_shows[urlid] = title
 
-    log.info("added_shows:\n %s" % added_shows)
-    log.info("unavailable_shows:\n %s" % unavailable_shows)
-    log.info("added_movies:\n %s" % added_movies)
-    log.info("unavailable_movies:\n %s" % unavailable_movies)
-    return unavailable_movies, unavailable_shows, added_movies, added_shows
+    return available_movies, available_shows
 
 
 def getepisodes(showid):

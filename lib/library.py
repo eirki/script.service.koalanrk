@@ -418,26 +418,33 @@ def readd_movie():
         Movie.db_excluded.remove(movie.urlid)
 
 
-def check_watchlist():
-    all_ids = set.union(Movie.db.ids, Movie.db_excluded.ids, Show.db.ids, Show.db_excluded.ids)
+def check_media_availability():
     progress.goto(10)
-    scraper.setup()
-    results = scraper.check_watchlist(stored_movies=Movie.db.all, stored_shows=Show.db.all, all_ids=all_ids)
-    unav_movies, unav_shows, added_movies, added_shows = results
-    unav_movies = [Movie(movie.urlid, movie.title) for movie in unav_movies]
-    unav_shows = [Show(show.urlid, show.title) for show in unav_shows]
-    added_movies = [Movie(movie.urlid, movie.title) for movie in added_movies]
-    added_shows = [Show(show.urlid, show.title) for show in added_shows]
+    available_movies, available_shows = scraper.getwatchlist()
+    unav_movies = [movie for movie in Movie.db.all if movie.urlid not in available_movies]
+    unav_shows = [show for show in Show.db.all if show.urlid not in available_shows]
+    added_movies = [Movie(urlid, title) for urlid, title in available_movies.items()
+                    if urlid not in set.union(Movie.db.ids, Movie.db_excluded.ids)]
+    added_shows = [Show(urlid, title) for urlid, title in available_shows.items()
+                   if urlid not in set.union(Show.db.ids, Show.db_excluded.ids)]
+    if added_shows:
+        log.info("added_shows:\n %s" % added_shows)
+    if unav_shows:
+        log.info("unavailable_shows:\n %s" % unav_shows)
+    if added_movies:
+        log.info("added_movies:\n %s" % added_movies)
+    if unav_movies:
+        log.info("unavailable_movies:\n %s" % unav_movies)
     return unav_movies, unav_shows, added_movies, added_shows
 
 
 def only_watchlist():
-    unav_movies, unav_shows, added_movies, added_shows = check_watchlist()
+    unav_movies, unav_shows, added_movies, added_shows = check_media_availability()
     execute(movies_to_remove=unav_movies, shows_to_remove=unav_shows, movies_to_add=added_movies, shows_to_update_add=added_shows)
 
 
 def startup():
-    unav_movies, unav_shows, added_movies, added_shows = check_watchlist()
+    unav_movies, unav_shows, added_movies, added_shows = check_media_availability()
     shows_to_update_add = []
     if settings["shows on startup"]:
         prioritized = [show for show in Show.db_prioritized.all if show.urlid in Show.db.ids]
