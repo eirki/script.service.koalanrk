@@ -18,6 +18,9 @@ from .xbmcwrappers import (rpc, log, monitor, settings, progress, dialogs)
 
 ###################
 class SharedMediaMethods(object):
+    def __repr__(self):
+        return self.title
+
     def load_playcount(self):
         jsonfilepath = os_join(self.path, self.jsonfilename)
         if os.path.exists(jsonfilepath):
@@ -271,6 +274,9 @@ class Episode(SharedMediaMethods):
         self.strmfilename = "%s %s.strm" % (stringtofile(self.showtitle), self.code)
         self.nfofilename = "%s %s.nfo" % (stringtofile(self.showtitle), self.code)
         self.jsonfilename = "%s %s.json" % (stringtofile(self.showtitle), self.code)
+
+    def __repr__(self):
+        return self.code
 
     def remove(self):
         super(Episode, self).save_playcount()
