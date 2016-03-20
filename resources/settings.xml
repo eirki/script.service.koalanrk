@@ -17,18 +17,19 @@
     <setting label="Readd movie to library" action="RunScript(script.service.koalanrk, mode=library, action=readd_movie)" type="action"  option="close"/>
 </category>
 
-<category label="Settings">
-  <setting label="Playback" type="lsep"/>
-    <setting label="Browser" id="browser" type="labelenum" values="Chrome|Internet Explorer" />
-    <setting label="Enable remote control" id="remote" type="bool" default="false" />
-    <setting label="Configure remote control" action="RunScript(script.service.koalanrk, mode=setting, action=configureremote)" type="action" enable="eq(-1,true)" option="close" subsetting="true"/>
-  <setting label="Startup" type="lsep"/>
-    <setting label="Use multithreading when updating library" id="multithreading" type="bool" default="true" />
-    <setting label="Check for added/removed movies, TV shows and episodes on startup" id="watchlist on startup" type="bool" default="true"/>
-    <setting label="Check stored TV shows for added/removed episodes on startup" id="shows on startup" type="bool" default="false" enable="eq(-1,true)"/>
-    <setting label="No. of TV shows to check" id="n shows to update" default="10"  option="int" range="0,1,20" type="slider"  enable="eq(-1,true) + eq(-2,true)"/>
-    <setting label="Prioritize shows (always checked in startup process)" action="RunScript(script.service.koalanrk, mode=library, action=prioritize)" type="action" option="close" enable="eq(-2,true) + eq(-3,true)"/>
-    <setting label="Show progress notification" id="startupnotification" type="bool" default="true" enable="eq(-4,true)"/>
+<category label="Playback">
+  <setting label="Browser" id="browser" type="labelenum" values="Chrome|Internet Explorer" />
+  <setting label="Enable remote control" id="remote" type="bool" default="false" />
+  <setting label="Configure remote control" action="RunScript(script.service.koalanrk, mode=setting, action=configureremote)" type="action" enable="eq(-1,true)" option="close" subsetting="true"/>
+</category>
+
+<category label="Startup">
+  <setting label="Use multithreading when updating library" id="multithreading" type="bool" default="true" />
+  <setting label="Check for added/removed movies, TV shows and episodes on startup" id="watchlist on startup" type="bool" default="true"/>
+  <setting label="Check stored TV shows for added/removed episodes on startup" id="shows on startup" type="bool" default="false" enable="eq(-1,true)"/>
+  <setting label="No. of TV shows to check" id="n shows to update" default="10"  option="int" range="0,1,20" type="slider"  enable="eq(-1,true) + eq(-2,true)"/>
+  <setting label="Prioritize shows (always checked in startup process)" action="RunScript(script.service.koalanrk, mode=setting, action=prioritize)" type="action" option="close" enable="eq(-2,true) + eq(-3,true)"/>
+  <setting label="Show progress notification" id="startupnotification" type="bool" default="true" enable="eq(-4,true)"/>
 </category>
 
 <category label="Setup">

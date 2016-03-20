@@ -362,7 +362,7 @@ def execute(movies_to_remove=(), shows_to_remove=(), movies_to_add=(), shows_to_
                 progress.goto(90)
                 pool.map(mapfuncs, step3)
 
-    progress.goto(99)
+    pool.close()
 
 
 def select_mediaitem(mediadb):

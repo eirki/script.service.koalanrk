@@ -43,8 +43,16 @@ def refresh_settings():
 
 
 def restart_playback_service():
-    rpc("Addons.SetAddonEnabled", addonid=const.addonid, enabled=False)
-    rpc("Addons.SetAddonEnabled", addonid=const.addonid, enabled=True)
+    import json
+    req_dict = {"jsonrpc": "2.0", "id": "1", "method": "Addons.SetAddonEnabled", "params": {"addonid": const.addonid, "enabled": False}}
+    req_dict2 = {"jsonrpc": "2.0", "id": "1", "method": "Addons.SetAddonEnabled", "params": {"addonid": const.addonid, "enabled": True}}
+    req_dict3 = json.dumps(req_dict) + json.dumps(req_dict2)
+    print req_dict3
+    # print json.dumps(req_dict3)
+    xbmc.executeJSONRPC(req_dict3)
+    # d = json.loads(response)
+    # rpc("Addons.SetAddonEnabled", addonid=const.addonid, enabled=False)
+    # rpc("Addons.SetAddonEnabled", addonid=const.addonid, enabled=True)
 
 
 def prioritize_shows():
@@ -66,7 +74,6 @@ def prioritize_shows():
             library.Show.db_prioritized.remove(show.urlid)
             titles[call] = show.title.replace("[Prioritized] ", "")
     library.Show.db_prioritized.savetofile()
-    # open_addonsettings(id1=2, id2=4)
 
 
 def deletecookies():
