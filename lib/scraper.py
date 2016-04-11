@@ -20,11 +20,17 @@ Mediatuple = namedtuple("Media", "urlid title")
 class RequestSession():
     def __init__(self):
         self.session = requests.Session()
+
+    def load_cookies(self):
         try:
             with open(os_join(const.userdatafolder, "cookies"), 'rb') as f:
                 self.session.cookies = pickle.load(f)
         except IOError:
             pass
+
+    def save_cookies(self):
+        with open(os_join(const.userdatafolder, "cookies"), 'wb') as f:
+            pickle.dump(self.session.cookies, f)
 
     def soup(self, resp):
         return BeautifulSoup(resp.text)
@@ -42,9 +48,6 @@ class RequestSession():
         req.soup = MethodType(self.soup, req)
         return req
 
-    def save_cookies(self):
-        with open(os_join(const.userdatafolder, "cookies"), 'wb') as f:
-            pickle.dump(self.session.cookies, f)
     def hiddenpost(self, url, **kwargs):
         log.info("LOADING: %s" % url)
         req = self.session.post(url, **kwargs)
@@ -90,8 +93,8 @@ def getwatchlist():
     available_movies = {}
     available_shows = {}
     for media in mediaitems['favorites']:
-            # media["isAvailable"] True (mostly) for shows currently airing with no available episodes
-            # media["program"]["usageRights"]["hasRightsNow"] false for some airing with no available episodes (bug?)
+        # media["isAvailable"] True (mostly) for shows currently airing with no available episodes
+        # media["program"]["usageRights"]["hasRightsNow"] false for some airing with no available episodes (bug?)
         mediatype = "show" if media["program"]["seriesId"] else "movie"
         if mediatype == "movie":
             if not media["isAvailable"]:
