@@ -79,13 +79,12 @@ class ProgressDialog(object):
     def __init__(self):
         self.active = False
 
-    def create(self, heading, force):
+    def create(self, heading):
         self.heading = heading
-        self.force = force
         self.level = 0
 
     def goto(self, level):
-        if (not self.active) and (settings["startupnotification"] or self.force):
+        if settings["startupnotification"] and not self.active:
             self.pDialog = xbmcgui.DialogProgressBG()
             self.pDialog.create(self.heading)
             self.active = True
@@ -97,7 +96,6 @@ class ProgressDialog(object):
     def close(self):
         if self.active:
             self.pDialog.close()
-progress = ProgressDialog()
 
 
 class ScanMonitor(xbmc.Monitor):
@@ -120,7 +118,6 @@ class ScanMonitor(xbmc.Monitor):
         while self.scanning:
             xbmc.sleep(100)
         log.debug("Library update complete")
-monitor = ScanMonitor()
 
 
 def rpc(method, multifilter=False, **kwargs):
@@ -133,11 +130,10 @@ def rpc(method, multifilter=False, **kwargs):
         req_dict = {"jsonrpc": "2.0", "id": "1", "method": method, "params": kwargs}
     else:
         req_dict = {"jsonrpc": "2.0", "id": "1", "method": method}
-    log.debug(req_dict)
     response = xbmc.executeJSONRPC(json.dumps(req_dict))
-    d = json.loads(response)
-    output = d.get("result")
-    return output
+    output = json.loads(response)
+    result = output.get("result")
+    return result
 
 
 class Log(object):
@@ -153,4 +149,3 @@ def open_settings(id1=1, id2=1):
     xbmc.executebuiltin('Addon.OpenSettings(%s)' % const.addonid)
     xbmc.executebuiltin('SetFocus(%i)' % (id1 - 1 + 100))
     xbmc.executebuiltin('SetFocus(%i)' % (id2 - 1 + 200))
-
