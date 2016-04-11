@@ -96,12 +96,12 @@ class Movie(SharedMediaMethods):
         movsubid = re.findall(r'/program/(.*?)/.*', self.urlid)[0]
         movinfodict = scraper.getinfodict(movsubid)
         root = ET.Element("movie")
-        ET.SubElement(root, "title").text = movinfodict["fullTitle"]
-        ET.SubElement(root, "plot").text = movinfodict["description"]
-        ET.SubElement(root, "thumb", aspect="poster").text = movinfodict['images']["webImages"][-1]["imageUrl"]
+        ET.SubElement(root, "title").text = self.title
+        ET.SubElement(root, "plot").text = movinfodict["plot"]
+        ET.SubElement(root, "thumb", aspect="poster").text = movinfodict["art"]
         fanart = ET.SubElement(root, "fanart")
-        ET.SubElement(fanart, "thumb").text = movinfodict['images']["webImages"][-1]["imageUrl"]
-        ET.SubElement(root, "runtime").text = re.sub(r"PT(\d+)M.*", r"\1", movinfodict["duration"])
+        ET.SubElement(fanart, "thumb").text = movinfodict["art"]
+        ET.SubElement(root, "runtime").text = movinfodict["runtime"]
         super(Movie, self).write_nfo(root)
 
     def remove(self):
@@ -214,15 +214,15 @@ class Show(SharedMediaMethods):
             episode.gen_nfo()
 
     def _gen_show_nfo(self):
-        plot, year, image, in_superuniverse = scraper.getshowinfo(self.urlid)
+        infodict = scraper.getshowinfo(self.urlid)
         root = ET.Element("tvshow")
         ET.SubElement(root, "title").text = self.title
-        ET.SubElement(root, "year").text = year
-        ET.SubElement(root, "plot").text = plot
-        ET.SubElement(root, "thumb", aspect="poster").text = image
+        ET.SubElement(root, "year").text = infodict["year"]
+        ET.SubElement(root, "plot").text = infodict["plot"]
+        ET.SubElement(root, "thumb", aspect="poster").text = infodict["poster"]
         fanart = ET.SubElement(root, "fanart")
-        ET.SubElement(fanart, "thumb").text = image
-        if in_superuniverse:
+        ET.SubElement(fanart, "thumb").text = infodict["fanart"]
+        if infodict["in_superuniverse"]:
             ET.SubElement(root, "genre").text = "Children"
         super(Show, self).write_nfo(root)
 
@@ -298,15 +298,15 @@ class Episode(SharedMediaMethods):
         super(Episode, self).delete_strm()
         super(Episode, self).write_strm()
         episodesubid = re.findall(r'/serie/.*?/(.*?)/.*', self.urlid)[0]
-        epinfodict = scraper.getinfodict(episodesubid)
+        infodict = scraper.getinfodict(episodesubid)
         root = ET.Element("episodedetails")
-        ET.SubElement(root, "title").text = epinfodict["fullTitle"]
+        ET.SubElement(root, "title").text = infodict["title"]
         ET.SubElement(root, "showtitle").text = self.showtitle
-        ET.SubElement(root, "season").text = str(self.seasonnr)
-        ET.SubElement(root, "episode").text = str(self.episodenr)
-        ET.SubElement(root, "plot").text = epinfodict["description"]
-        ET.SubElement(root, "thumb").text = epinfodict['images']["webImages"][-1]["imageUrl"]
-        ET.SubElement(root, "runtime").text = re.sub(r"PT(\d+)M.*", r"\1", epinfodict["duration"])
+        ET.SubElement(root, "season").text = unicode(self.seasonnr)
+        ET.SubElement(root, "episode").text = unicode(self.episodenr)
+        ET.SubElement(root, "plot").text = infodict["plot"]
+        ET.SubElement(root, "thumb").text = infodict['art']
+        ET.SubElement(root, "runtime").text = infodict["runtime"]
         super(Episode, self).write_nfo(root)
 
 

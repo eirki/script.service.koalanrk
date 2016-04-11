@@ -144,15 +144,23 @@ def getepisodes(showid):
 
 
 def getinfodict(mediaid):
-    infodict = reqs.get("http://v8.psapi.nrk.no/mediaelement/%s" % mediaid).json()
+    raw_infodict = reqs.get("http://v8.psapi.nrk.no/mediaelement/%s" % mediaid).json()
+    infodict = {
+        "title": raw_infodict["fullTitle"],
+        "plot": raw_infodict["description"],
+        "art": raw_infodict['images']["webImages"][-1]["imageUrl"],
+        "runtime": re.sub(r"PT(\d+)M.*", r"\1", raw_infodict["duration"]),
+        }
     return infodict
 
 
 def getshowinfo(showid):
     showpage = reqs.get("http://tv.nrk.no/serie/%s/" % showid).soup()
     plot_heading = showpage.find("h3", text="Seriebeskrivelse")
-    plot = plot_heading.next_sibling.next_sibling.text if plot_heading else ""
-    year = showpage.find("dt", text="Produksjonsår:").next_sibling.next_sibling.text
-    image = showpage.find(id="playerelement")["data-posterimage"]
-    in_superuniverse = "isInSuperUniverse: true" in showpage.text
-    return plot, year, image, in_superuniverse
+    infodict = {
+        "year": showpage.find("dt", text="Produksjonsår:").next_sibling.next_sibling.text,
+        "image": showpage.find(id="playerelement")["data-posterimage"],
+        "in_superuniverse": "isInSuperUniverse: true" in showpage.text,
+        "plot": plot_heading.next_sibling.next_sibling.text if plot_heading else ""
+    }
+    return infodict
