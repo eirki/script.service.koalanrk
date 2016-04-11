@@ -10,7 +10,7 @@ https://developer.chrome.com/devtools/docs/protocol/1.1/index
 
 import json
 import requests
-import websocket
+from lib import websocket
 from requests.exceptions import ConnectionError
 
 version = "0.1.2"
