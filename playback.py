@@ -2,15 +2,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from __future__ import division
-import re
 from datetime import (timedelta, datetime)
 from collections import namedtuple
 import json
 import requests
+import re
 from multiprocessing.dummy import Process as Thread
+import socket
+from lib import websocket
 import xbmc
 
-from chromote import Chromote
+from lib.chromote import Chromote
 from lib import constants as const
 from lib.utils import (uni_join, os_join)
 from lib.xbmcwrappers import (log, settings, rpc)
@@ -27,7 +29,7 @@ from lib.PyUserInput.pymouse import PyMouse
 
 class Chrome(object):
     def __init__(self):
-        self.errors = requests.exceptions.ConnectionError
+        self.errors = (requests.exceptions.ConnectionError, socket.error, websocket.WebSocketBadStatusException, AttributeError)
         self.k = PyKeyboard()
 
     def _eval_js(self, exp):
@@ -187,9 +189,9 @@ class Session(object):
         log.info("finished onPlayBackStarted")
 
     def end(self):
-        log.info("start onPlayBackEnded")
         if not self.koala_playing:
             return
+        log.info("start onPlayBackEnded")
         if self.remote:
             self.remote.close()
         self.koala_playing = False
@@ -218,7 +220,7 @@ class Session(object):
                 raise Exception("playback cancelled")
             xbmc.sleep(1000)
 
-    def get_episodes(playingfile):
+    def get_episodes(self, playingfile):
         Epinfo = namedtuple("Epinfo", "code kodiid playcount runtime")
         startkodiid = playingfile['id']
         tvshowid = playingfile["tvshowid"]
@@ -236,7 +238,6 @@ class Session(object):
             if kodiid == startkodiid:
                 starturlid = urlid
         return starturlid, stored_episodes
-
 
     def monitor_watched(self, playingfile):
         log.info("starting monitoring")
@@ -259,8 +260,6 @@ class Session(object):
                 log.info("new url: %s" % current_url)
                 new_urlid, is_episode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", current_url)
                 if is_episode and new_urlid != episode_watching.urlid:
-                    log.info("is_episode")
-                    log.info(new_urlid)
                     self.mark_watched(episode_watching, started_watching_at)
 
                     episode_watching = stored_episodes[new_urlid]
@@ -270,7 +269,7 @@ class Session(object):
         self.mark_watched(episode_watching, started_watching_at)
         log.info("finished monitoring")
 
-    def mark_watched(episode, started_watching_at):
+    def mark_watched(self, episode, started_watching_at):
         finished_watching_at = datetime.now()
         watch_duration = finished_watching_at - started_watching_at
         if watch_duration.seconds / episode.runtime.seconds >= 0.9:
