@@ -31,7 +31,7 @@ def koalasetup():
 def is_libpath_added():
     sources = rpc("Files.GetSources", media="video")
     for source in sources.get('sources', []):
-        if source['file'].startswith(const.libpath):
+        if source['file'].startswith(uni_join(const.libpath, const.provider)):
             return True
     return False
 
@@ -53,27 +53,6 @@ def restart_playback_service():
     # d = json.loads(response)
     # rpc("Addons.SetAddonEnabled", addonid=const.addonid, enabled=False)
     # rpc("Addons.SetAddonEnabled", addonid=const.addonid, enabled=True)
-
-
-def prioritize_shows():
-    library.Show.init_databases()
-    sorted_shows = sorted(library.Show.db.all, key=attrgetter("title"))
-    titles = [media.title for media in sorted_shows]
-    for i, show in enumerate(sorted_shows):
-        if show.urlid in library.Show.db_prioritized.ids:
-            titles[i] = "[Prioritized] %s" % show.title
-    while True:
-        call = dialogs.select('Select prioritized shows', titles)
-        if call == -1:
-            break
-        show = sorted_shows[call]
-        if show.urlid not in library.Show.db_prioritized.ids:
-            library.Show.db_prioritized.upsert(show.urlid, show.title)
-            titles[call] = "[Prioritized] %s" % show.title
-        else:
-            library.Show.db_prioritized.remove(show.urlid)
-            titles[call] = show.title.replace("[Prioritized] ", "")
-    library.Show.db_prioritized.savetofile()
 
 
 def deletecookies():
