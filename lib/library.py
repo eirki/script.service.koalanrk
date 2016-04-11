@@ -69,10 +69,10 @@ class Movie(SharedMediaMethods):
         cls.db.savetofile()
         cls.db_excluded.savetofile()
 
-    def __init__(self, movieid, movietitle):
+    def __init__(self, urlid, title):
         self.mediatype = "movie"
-        self.urlid = movieid
-        self.title = movietitle
+        self.urlid = urlid
+        self.title = title
         self.path = uni_join(const.libpath, "%s movies" % const.provider)
         self.strmfilename = "%s.strm" % stringtofile(self.title)
         self.nfofilename = "%s.nfo" % stringtofile(self.title)
@@ -153,10 +153,10 @@ class Show(SharedMediaMethods):
         cls.db_excluded.savetofile()
         cls.db_prioritized.savetofile()
 
-    def __init__(self, showid, showtitle):
+    def __init__(self, urlid, title):
         self.mediatype = "show"
-        self.urlid = showid
-        self.title = showtitle
+        self.urlid = urlid
+        self.title = title
         self.path = uni_join(const.libpath, "%s shows" % const.provider, stringtofile(self.title))
         self.nfofilename = "tvshow.nfo"
 
