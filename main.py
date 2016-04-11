@@ -5,7 +5,6 @@ from __future__ import unicode_literals
 from datetime import datetime
 import sys
 import os
-from operator import attrgetter
 import xbmc
 import xbmcgui
 
@@ -15,9 +14,10 @@ from lib.utils import (os_join, uni_join)
 from lib.xbmcwrappers import (settings, rpc, log, dialogs, open_settings)
 if const.os == "win":
     from lib import win32hack
-    win32hack.wait()
-from lib.remote import Remote
+    win32hack.run()
 import playback
+from lib.remote import Remote
+
 
 def koalasetup():
     if not os.path.exists(const.userdatafolder):
