@@ -85,7 +85,7 @@ def setup():
 
 def getwatchlist():
     setup()
-    watchlistpage = reqs.get("https://tv.nrk.no/mycontent")
+    watchlistpage = reqs.get("https://tv.nrk.no/mycontent", timeout=10)
     mediaitems = json.loads(watchlistpage.text.replace("\r\n", ""))
     available_movies = {}
     available_shows = {}
