@@ -52,7 +52,6 @@ class RequestSession():
         log.info("LOADING: %s" % url)
         req = self.session.post(url, **kwargs)
         req.soup = MethodType(self.soup, req)
-        req.feed = MethodType(self.feed, req)
         return req
 
 reqs = RequestSession()
@@ -159,7 +158,7 @@ def getshowinfo(showid):
     plot_heading = showpage.find("h3", text="Seriebeskrivelse")
     infodict = {
         "year": showpage.find("dt", text="Produksjonsår:").next_sibling.next_sibling.text,
-        "image": showpage.find(id="playerelement")["data-posterimage"],
+        "art": showpage.find(id="playerelement")["data-posterimage"],
         "in_superuniverse": "isInSuperUniverse: true" in showpage.text,
         "plot": plot_heading.next_sibling.next_sibling.text if plot_heading else ""
     }
