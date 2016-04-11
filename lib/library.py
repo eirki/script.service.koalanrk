@@ -19,7 +19,7 @@ from .xbmcwrappers import (rpc, log, monitor, settings, progress, dialogs)
 ###################
 class SharedMediaMethods(object):
     def __repr__(self):
-        return self.title
+        return repr(self.title)
 
     def load_playcount(self):
         jsonfilepath = os_join(self.path, self.jsonfilename)
