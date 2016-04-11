@@ -126,7 +126,8 @@ class Remote(object):
                 self.mapping[call] = selected_button._replace(code=newkeycode, char=newcharacter)
         self.store_mapping(self.mapping)
 
-    def run(self):
+    def run(self, browser):
+        self.browser = browser
         self.k = PyKeyboard()
         self.m = PyMouse()
         x, y = self.m.screen_size()
@@ -156,6 +157,10 @@ class Remote(object):
 
     def stop(self):
         log.info("Remote: stop triggered")
+        try:
+            self.browser.close()
+        except self.browser.errors:
+            pass
         xbmc.Player().stop()
 
     def close(self):
