@@ -20,7 +20,6 @@ Mediatuple = namedtuple("Media", "urlid title")
 class RequestSession():
     def __init__(self):
         self.session = requests.Session()
-        self.is_setup = False
         try:
             with open(os_join(const.userdatafolder, "cookies"), 'rb') as f:
                 self.session.cookies = pickle.load(f)
@@ -73,24 +72,15 @@ def login(loginpage):
         }
     loginpage2 = reqs.hiddenpost(loginpage.url, data=payload, allow_redirects=True)
     return loginpage2
-    # if loginpage3.find(id="page-LOGIN"):
-        # log.debug(loginpage.text)
-        # raise Exception("Login attempt failed")
 
 
 def setup():
-    if reqs.is_setup:
-        return
-    print "checking login status"
     loginpage = reqs.get("https://tv.nrk.no/logginn", verify=False)
-    print loginpage.soup().find('title').text
     if loginpage.soup().find('title').text == "Innlogging":
         loginpage = login(loginpage)
     url = loginpage.soup().find("form")["action"]
     payload = {t['name']: t.get('value') for t in loginpage.soup().find_all('input', attrs={'type': 'hidden'})}
     reqs.post(url, data=payload)
-    reqs.save_cookies()
-    reqs.is_setup = True
 
 
 def getwatchlist():
