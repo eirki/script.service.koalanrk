@@ -46,6 +46,13 @@ class RequestSession():
     def save_cookies(self):
         with open(os_join(const.userdatafolder, "cookies"), 'wb') as f:
             pickle.dump(self.session.cookies, f)
+    def hiddenpost(self, url, **kwargs):
+        log.info("LOADING: %s" % url)
+        req = self.session.post(url, **kwargs)
+        req.soup = MethodType(self.soup, req)
+        req.feed = MethodType(self.feed, req)
+        return req
+
 reqs = RequestSession()
 
 
@@ -64,7 +71,7 @@ def login(loginpage):
         "userName": username,
         "password": passw,
         }
-    loginpage2 = reqs.post(loginpage.url, data=payload, allow_redirects=True)
+    loginpage2 = reqs.hiddenpost(loginpage.url, data=payload, allow_redirects=True)
     return loginpage2
     # if loginpage3.find(id="page-LOGIN"):
         # log.debug(loginpage.text)
