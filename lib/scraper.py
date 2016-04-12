@@ -37,20 +37,20 @@ class RequestSession():
 
     def get(self, url, **kwargs):
         log.info("LOADING: %s" % url)
-        req = self.session.get(url, **kwargs)
+        req = self.session.get(url, timeout=10, **kwargs)
         req.soup = MethodType(self.soup, req)
         return req
 
     def post(self, url, **kwargs):
         log.info("LOADING: %s" % url)
         log.debug("Payload: %s" % kwargs)
-        req = self.session.post(url, **kwargs)
+        req = self.session.post(url, timeout=10, **kwargs)
         req.soup = MethodType(self.soup, req)
         return req
 
     def hiddenpost(self, url, **kwargs):
         log.info("LOADING: %s" % url)
-        req = self.session.post(url, **kwargs)
+        req = self.session.post(url, timeout=10, **kwargs)
         req.soup = MethodType(self.soup, req)
         return req
 
@@ -87,7 +87,7 @@ def setup():
 
 def getwatchlist():
     setup()
-    watchlistpage = reqs.get("https://tv.nrk.no/mycontent", timeout=10)
+    watchlistpage = reqs.get("https://tv.nrk.no/mycontent")
     mediaitems = json.loads(watchlistpage.text.replace("\r\n", ""))
     available_movies = {}
     available_shows = {}
