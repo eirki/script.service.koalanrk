@@ -5,6 +5,8 @@
     <setting label="Watch NRK3" action="RunScript(script.service.koalanrk, mode=play, action=nrk3)" type="action" option="close"/>
     <setting label="Watch NRK Super" action="RunScript(script.service.koalanrk, mode=play, action=nrksuper)" type="action" option="close"/>
     <setting label="Browse tv.nrk.no" action="RunScript(script.service.koalanrk, mode=play, action=browse)" type="action"  option="close"/>
+    <setting label="Watch Fantorangen Barne-TV (today's)" action="RunScript(script.service.koalanrk, mode=play, action=fantorangen)" type="action" option="close"/>
+    <setting label="Watch Barne-TV (today's)" action="RunScript(script.service.koalanrk, mode=play, action=barnetv)" type="action" option="close"/>
 </category>
 
 <category label="Update">

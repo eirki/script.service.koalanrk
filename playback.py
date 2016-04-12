@@ -175,7 +175,14 @@ class InternetExplorer(object):
 class Session(object):
     def start(self):
         playingfile = self.getplayingvideofile()
-        if not playingfile["file"].startswith(uni_join(const.libpath, const.provider)):
+        if not (playingfile["file"].startswith(uni_join(const.libpath, const.provider)) or
+                playingfile["file"] in [uni_join(const.addonpath, "resources", "NRK1.htm"),
+                                        uni_join(const.addonpath, "resources", "NRK2.htm"),
+                                        uni_join(const.addonpath, "resources", "NRK3.htm"),
+                                        uni_join(const.addonpath, "resources", "NRK Super.htm"),
+                                        uni_join(const.addonpath, "resources", "NRK nett-TV.htm"),
+                                        uni_join(const.addonpath, "resources", "Fantorangen BarneTV.htm"),
+                                        uni_join(const.addonpath, "resources", "BarneTV.htm")]):
             self.koala_playing = False
             return
         log.info("start onPlayBackStarted")
@@ -192,8 +199,12 @@ class Session(object):
             self.remote.run(browser=self.browser)
 
         self.browser.connect()
-        self.browser.trigger_player()
-        self.browser.enter_fullscreen()
+
+        if playingfile["type"] in ["episode", "movie"]:
+            self.browser.trigger_player()
+
+        if "NRK nett-TV.htm" not in playingfile["file"]:
+            self.browser.enter_fullscreen()
 
         if playingfile["type"] == "episode":
             thread = Thread(target=self.monitor_watched, args=[playingfile])
@@ -317,7 +328,16 @@ class PlayerMonitor(xbmc.Player):
 
 
 def live(channel):
-    xbmc.Player().play(os_join(const.addonpath, "resources", "%s.htm" % channel))
+    filenames = {
+        "nrk1": "NRK1.htm",
+        "nrk2": "NRK2.htm",
+        "nrk3": "NRK3.htm",
+        "nrksuper": "NRK Super.htm",
+        "browse": "NRK nett-TV.htm",
+        "fantorangen": "Fantorangen BarneTV.htm",
+        "barnetv": "BarneTV.htm",
+    }
+    xbmc.Player().play(os_join(const.addonpath, "resources", filenames[channel]))
 
 
 if __name__ == "__main__":

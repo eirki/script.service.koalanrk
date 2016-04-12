@@ -93,7 +93,6 @@ class Remote(object):
                 stored = json.load(j)
         except IOError:
             stored = {}
-        log.info(stored)
         no_keys = {"code": None, "char": None}
         mapping = [
             self.Button(name="Play",    func=self.playpause, **stored.get("Play",    no_keys)),
@@ -102,7 +101,6 @@ class Remote(object):
             self.Button(name="Forward", func=self.forward,   **stored.get("Forward", no_keys)),
             self.Button(name="Rewind",  func=self.rewind,    **stored.get("Rewind",  no_keys)),
         ]
-        log.info("mapping: %s" % {button.name: button.char for button in mapping})
         return mapping
 
     def store_mapping(self, mapping):
