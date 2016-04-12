@@ -11,11 +11,10 @@ import xbmcgui
 
 from lib import constants as const
 from lib import library
-from lib.utils import (os_join, uni_join)
+from lib.utils import (os_join, uni_join, win32hack)
 from lib.xbmcwrappers import (settings, rpc, log, dialogs, open_settings)
 if const.os == "win":
-    from lib import win32hack
-    win32hack.run()
+    win32hack()
 import playback
 from lib.remote import Remote
 
