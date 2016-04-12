@@ -7,6 +7,7 @@ from collections import namedtuple
 import json
 import requests
 import re
+import sys
 from multiprocessing.dummy import Process as Thread
 import socket
 from lib import websocket
@@ -220,7 +221,7 @@ class Session(object):
     def ie_active(self):
         for _ in range(30):
             cur_hwnd = win32gui.GetForegroundWindow()
-            win_title = win32gui.GetWindowText(cur_hwnd)
+            win_title = win32gui.GetWindowText(cur_hwnd).decode(sys.getfilesystemencoding())
             if "explorer" in win_title.lower():
                 log.info("ie active")
                 return True
