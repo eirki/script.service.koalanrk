@@ -17,7 +17,7 @@ sys.path.extend([os_join(const.addonpath, "lib", "win32"),
 
 def daemon_service():
     xbmcgui.Window(10000).setProperty("win32 importer hack running", "true")
-    log.info("win32 importer hack service running in background, from %s" % const.addonid)
+    log.info("Running win32 importer hack service, from %s" % const.addonid)
     from win32com.client import Dispatch
     import pywintypes
     import win32gui
@@ -31,3 +31,8 @@ def run():
     daemon = Thread(target=daemon_service)
     daemon.daemon = True
     daemon.start()
+
+
+def wait():
+    while xbmcgui.Window(10000).getProperty("win32 importer hack running") != "true":
+        xbmc.sleep(100)

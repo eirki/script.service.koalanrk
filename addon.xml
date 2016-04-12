@@ -13,12 +13,12 @@
   </extension>
   <extension
     point="xbmc.service"
-    library="main.py"
+    library="playback.py"
     start="login">
   </extension>
   <extension
     point="xbmc.service"
-    library="playback.py"
+    library="main.py"
     start="login">
   </extension>
   <extension point="xbmc.addon.metadata">
