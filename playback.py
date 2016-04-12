@@ -18,7 +18,7 @@ from lib.utils import (uni_join, os_join)
 from lib.xbmcwrappers import (log, settings, rpc)
 if const.os == "win":
     from lib import win32hack
-    win32hack.run()
+    win32hack.wait()
     from win32com.client import Dispatch
     import pywintypes
     import win32gui

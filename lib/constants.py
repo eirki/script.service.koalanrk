@@ -11,6 +11,7 @@ provider = "NRK"
 addonname = "Koala %s" % provider
 addonpath = xbmc.translatePath(addon.getAddonInfo('path')).decode("utf-8")
 userdatafolder = xbmc.translatePath("special://profile/addon_data/%s" % addonid).decode("utf-8")
+masterprofilefolder = xbmc.translatePath("special://masterprofile").decode("utf-8")
 if addon.getSetting("usecustomLibPath"):
     libpath = xbmc.translatePath(addon.getSetting("LibPath")).decode("utf-8")
 else:
