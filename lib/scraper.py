@@ -17,7 +17,7 @@ from .xbmcwrappers import (log, settings)
 
 Mediatuple = namedtuple("Media", "urlid title")
 
-class RequestSession():
+class RequestSession(object):
     def __init__(self):
         self.session = requests.Session()
 
@@ -142,8 +142,8 @@ def getepisodes(showid):
     return episodes
 
 
-def getinfodict(mediaid):
-    raw_infodict = reqs.get("http://v8.psapi.nrk.no/mediaelement/%s" % mediaid).json()
+def getinfodict(urlid):
+    raw_infodict = reqs.get("http://v8.psapi.nrk.no/mediaelement/%s" % urlid).json()
     infodict = {
         "title": raw_infodict["fullTitle"],
         "plot": raw_infodict["description"],

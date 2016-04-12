@@ -13,13 +13,13 @@ import socket
 from lib import websocket
 import xbmc
 
-from lib.chromote import Chromote
 from lib import constants as const
 from lib.utils import (uni_join, os_join)
 from lib.xbmcwrappers import (log, settings, rpc)
+from lib.chromote import Chromote
 if const.os == "win":
     from lib import win32hack
-    win32hack.wait()
+    win32hack.run()
     from win32com.client import Dispatch
     import pywintypes
     import win32gui
@@ -50,6 +50,7 @@ class Chrome(object):
     def connect(self):
         self.chrome = Chromote(host="localhost", port=9222)
         self.tab = self.chrome.tabs[0]
+        self.k.tap_key(self.k.tab_key)
 
     def close(self):
         if self.focused:
@@ -68,6 +69,7 @@ class Chrome(object):
                 xbmc.sleep(1000)
         else:
             log.info("couldn't fint play")
+
         player_left = self._eval_js('getElementById("playerelement").getBoundingClientRect()["left"]')['value']
         player_width = self._eval_js('getElementById("playerelement").getBoundingClientRect()["width"]')['value']
         player_top = self._eval_js('getElementById("playerelement").getBoundingClientRect()["top"]')['value']
@@ -241,8 +243,10 @@ class Session(object):
                 log.info("chrome active")
                 return False
             elif "kodi" in win_title.lower() and not xbmc.Player().isPlaying():
-                raise Exception("playback cancelled")
+                log.info("playback cancelled")
             xbmc.sleep(1000)
+        else:
+            raise Exception("could not find player")
 
     def get_episodes(self, playingfile):
         Epinfo = namedtuple("Epinfo", "code kodiid playcount runtime")
