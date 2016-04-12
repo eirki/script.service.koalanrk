@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 from datetime import datetime
 import sys
 import os
+import unittest
 import xbmc
 import xbmcgui
 
@@ -53,6 +54,11 @@ def deletecookies():
         os.remove(cookiefile)
 
 
+def testsuite():
+    suite = unittest.TestLoader().discover(start_dir='tests')
+    unittest.TextTestRunner().run(suite)
+
+
 def test():
     print const.addonid
 
@@ -74,7 +80,6 @@ def get_params(argv):
     return params
 
 
-# Execution
 def main(mode, action):
     if action == "startup" and not settings["watchlist on startup"]:
         return
@@ -89,7 +94,7 @@ def main(mode, action):
             "refreshsettings": refresh_settings,
             "deletecookies": deletecookies,
             "test": test,
-            "prioritize": prioritize_shows,
+            "testsuite": testsuite,
             "open_settings": open_settings,
             "restart_playback_service": restart_playback_service
         }
@@ -122,23 +127,25 @@ def main(mode, action):
 
 def reopen_settings(action):
     settings_order = {
-        "watchlist": [2, 1],
-        "update_single": [2, 2],
-        "update_all": [2, 3],
-        "exclude_show": [2, 4],
-        "readd_show": [2, 5],
-        "exclude_movie": [2, 6],
-        "readd_movie": [2, 7],
-        "configureremote": [3, 4],
-        "prioritize": [3, 10],
-        "remove_all": [5, 1],
-        "deletecookies": [5, 2],
-        "refreshsettings": [5, 3],
-        "restart_playback_service": [5, 4],
-        "test": [5, 5],
+        "watchlist":       [2, 1],
+        "update_single":   [2, 2],
+        "update_all":      [2, 3],
+        "exclude_show":    [2, 4],
+        "readd_show":      [2, 5],
+        "exclude_movie":   [2, 6],
+        "readd_movie":     [2, 7],
+        "prioritize":      [3, 5],
+        "configureremote": [4, 5],
+        "testsuite":       [5, 1],
+        "remove_all":      [5, 2],
+        "deletecookies":   [5, 3],
+        "refreshsettings": [5, 4],
+        "restart_playback_service": [5, 5],
+        "test":            [5, 6],
         }
-    if action in settings_order:
-        open_settings(*settings_order[action])
+    settinglocation = settings_order.get(action)
+    if settinglocation:
+        open_settings(*settinglocation)
 
 if __name__ == '__main__':
     try:
