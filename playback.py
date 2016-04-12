@@ -108,6 +108,7 @@ class InternetExplorer(object):
     def __init__(self):
         self.errors = pywintypes.com_error, AttributeError
         self.m = PyMouse()
+        self.player_coord = None
 
     @property
     def url(self):
@@ -147,9 +148,9 @@ class InternetExplorer(object):
             self.m.click(button=1, n=1, **self.player_coord)
 
     def enter_fullscreen(self):
+        while self.ie.busy:
+            xbmc.sleep(100)
         if not self.player_coord:
-            while self.ie.busy:
-                xbmc.sleep(100)
             playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
             rect = playerelement.getBoundingClientRect()
             self.player_coord = {"x": (int(rect.left+rect.right/2)), "y": (int(rect.top+rect.bottom/2))}
