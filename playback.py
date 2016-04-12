@@ -31,6 +31,8 @@ class Chrome(object):
     def __init__(self):
         self.errors = (requests.exceptions.ConnectionError, socket.error, websocket.WebSocketBadStatusException, AttributeError)
         self.k = PyKeyboard()
+        self.m = PyMouse()
+        self.player_coord = None
 
     def _eval_js(self, exp):
         result = json.loads(self.tab.evaluate('document.%s' % exp))
@@ -64,16 +66,26 @@ class Chrome(object):
             else:
                 xbmc.sleep(1000)
         else:
-            raise "couldn't find play button!"
-
-    def enter_fullscreen(self):
+            log.info("couldn't fint play")
         player_left = self._eval_js('getElementById("playerelement").getBoundingClientRect()["left"]')['value']
         player_width = self._eval_js('getElementById("playerelement").getBoundingClientRect()["width"]')['value']
         player_top = self._eval_js('getElementById("playerelement").getBoundingClientRect()["top"]')['value']
         player_height = self._eval_js('getElementById("playerelement").getBoundingClientRect()["height"]')['value']
-        player_coord = {"x": int(player_left+(player_width/2)),
-                        "y": int(player_top+(player_height/2))}
-        log.info(player_coord)
+        self.player_coord = {"x": int(player_left+(player_width/2)),
+                             "y": int(player_top+(player_height/2))}
+        self.m.move(**self.player_coord)
+        xbmc.sleep(200)
+        self.m.click(n=1, **self.player_coord)
+
+    def enter_fullscreen(self):
+        if not self.player_coord:
+            player_left = self._eval_js('getElementById("playerelement").getBoundingClientRect()["left"]')['value']
+            player_width = self._eval_js('getElementById("playerelement").getBoundingClientRect()["width"]')['value']
+            player_top = self._eval_js('getElementById("playerelement").getBoundingClientRect()["top"]')['value']
+            player_height = self._eval_js('getElementById("playerelement").getBoundingClientRect()["height"]')['value']
+            self.player_coord = {"x": int(player_left+(player_width/2)),
+                                 "y": int(player_top+(player_height/2))}
+        log.info(self.player_coord)
 
         for _ in range(10):
             playback_started = "ProgressTracker" in self._eval_js('getElementsByTagName("script")[0].getAttribute("src")')['value']
@@ -86,10 +98,9 @@ class Chrome(object):
             log.info("couldnt find progressbar, not sure if playback started")
 
         log.info("double clicking")
-        m = PyMouse()
-        m.move(**player_coord)
+        self.m.move(**self.player_coord)
         xbmc.sleep(200)
-        m.click(n=2, **player_coord)
+        self.m.click(n=2, **self.player_coord)
 
 
 class InternetExplorer(object):
