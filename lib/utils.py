@@ -75,11 +75,14 @@ uni_join = os.path.join
 
 
 def win32hack():
-    xbmc.executebuiltin("RunScript(%s, %s)" % (os_join(const.addonpath, "win32hack.py"), uni_join(const.addonpath, "lib", "win32")))
-    while xbmcgui.Window(10000).getProperty("win32 importer hack running") != "true":
-        xbmc.sleep(100)
     sys.path.extend([os_join(const.addonpath, "lib", "win32"),
                      os_join(const.addonpath, "lib", "win32", "win32"),
                      os_join(const.addonpath, "lib", "win32", "win32", "lib"),
                      os_join(const.addonpath, "lib", "win32", "pypiwin32-219.data", "scripts"),
                      os_join(const.addonpath, "lib", "win32", "Pythonwin")])
+    if xbmcgui.Window(10000).getProperty("win32 importer hack running") == "true":
+        return
+    xbmc.executebuiltin("RunScript(%s, %s)" % (os_join(const.addonpath, "win32hack.py"),
+                                               uni_join(const.addonpath, "lib", "win32")))
+    while xbmcgui.Window(10000).getProperty("win32 importer hack running") != "true":
+        xbmc.sleep(100)
