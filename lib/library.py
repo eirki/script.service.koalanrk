@@ -253,10 +253,13 @@ class Show(SharedMediaMethods):
             nonadded_episodes = self._check_eps_added(new_episodes)
             if nonadded_episodes:
                 self._gen_nfos(nonadded_episodes)
-                log.info("NFOs created, waiting for second lib update: %s" % self.title)
+                log.info("NFOs created, waiting for second lib update: %s, %s" %
+                         (self.title, sorted(nonadded_episodes, key=attrgetter('code'))))
                 yield
 
             self._load_eps_playcount(new_episodes)
+            log.info("Added episodes: %s, %s" % (self.title, sorted(new_episodes, key=attrgetter('code'))))
+
         Show.db.upsert(self.urlid, self.title)
         log.info("Finished updating show: %s" % self.title)
 
@@ -294,7 +297,6 @@ class Episode(SharedMediaMethods):
         else:
             self.kodiid = koala_stored_episodes[self.code].kodiid
             self.nonadded = False
-            log.info("Episode added: %s %s" % (self.showtitle, self.code))
 
     def gen_nfo(self):
         super(Episode, self).delete_htm()
