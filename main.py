@@ -80,7 +80,7 @@ def get_params(argv):
 
 
 def main(mode, action):
-    if action == "startup" and not settings["watchlist on startup"]:
+    if action == "startup" and not (settings["watchlist on startup"] or settings["shows on startup"]):
         return
 
     elif action == "configureremote":
@@ -133,8 +133,8 @@ def reopen_settings(action):
         "readd_show":      [2, 5],
         "exclude_movie":   [2, 6],
         "readd_movie":     [2, 7],
-        "prioritize":      [3, 5],
-        "configureremote": [4, 5],
+        "prioritize":      [3, 4],
+        "configureremote": [4, 8],
         "testsuite":       [5, 1],
         "remove_all":      [5, 2],
         "deletecookies":   [5, 3],
