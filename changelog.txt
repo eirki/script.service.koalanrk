@@ -1,3 +1,6 @@
+0.3
+Python based remote control/browser control
+
 0.2
 Enable multithreading
 Now stores some data in nfo for nonscraped shows and movies
