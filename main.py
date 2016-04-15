@@ -79,16 +79,11 @@ def get_params(argv):
     return params
 
 
-def main(mode, action):
-    if action == "startup" and not (settings["watchlist on startup"] or settings["shows on startup"]):
-        return
-
-    elif action == "configureremote":
+def setting_mode(action):
+    if action == "configureremote":
         remote = Remote()
         remote.configure()
-        return
-
-    elif mode == "setting":
+    else:
         settingsactions = {
             "refreshsettings": refresh_settings,
             "deletecookies": deletecookies,
@@ -98,65 +93,75 @@ def main(mode, action):
             "restart_playback_service": restart_playback_service
         }
         settingsactions[action]()
-        return
 
-    elif mode == "play":
-        playback.live(action)
-        return
 
-    elif mode == "library":
-        run = True
-        if xbmcgui.Window(10000).getProperty("%s running" % const.addonname) == "true":
-            run = dialogs.yesno(heading="Running",
-                                line1="Koala is running. ",
-                                line2="Running multiple instances cause instablity.",
-                                line3="Continue?")
+def play_mode(action):
+    playback.live(action)
+
+
+def library_mode(action):
+    if action == "startup" and not (settings["watchlist on startup"] or settings["shows on startup"] or
+                                    settings["prioritized on startup"]):
+        return
+    if xbmcgui.Window(10000).getProperty("%s running" % const.addonname) == "true":
+        if action == "startup":
+            return
+        run = dialogs.yesno(heading="Running", line1="Koala is running. ",
+                            line2="Running multiple instances cause instablity.", line3="Continue?")
         if not run:
             return
+    koalasetup()
+    if not is_libpath_added():
+        dialogs.ok(heading="Koala path not in video sources",
+                   line1="Koala library paths have not been added to Kodi video sources:",
+                   line2=uni_join(const.libpath, "%s shows" % const.provider),
+                   line3=uni_join(const.libpath, "%s movies" % const.provider))
+        return
+    try:
         xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "true")
-        koalasetup()
-        if not is_libpath_added():
-            dialogs.ok(heading="Koala path not in video sources",
-                       line1="Koala library paths have not been added to Kodi video sources:",
-                       line2=uni_join(const.libpath, "%s shows" % const.provider),
-                       line3=uni_join(const.libpath, "%s movies" % const.provider))
-            return
         library.main(action)
+    finally:
+        xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "false")
 
 
-def reopen_settings(action):
-    settings_order = {
-        "watchlist":       [2, 1],
-        "update_single":   [2, 2],
-        "update_all":      [2, 3],
-        "exclude_show":    [2, 4],
-        "readd_show":      [2, 5],
-        "exclude_movie":   [2, 6],
-        "readd_movie":     [2, 7],
-        "prioritize":      [3, 4],
-        "configureremote": [4, 8],
-        "testsuite":       [5, 1],
-        "remove_all":      [5, 2],
-        "deletecookies":   [5, 3],
-        "refreshsettings": [5, 4],
-        "restart_playback_service": [5, 5],
-        "test":            [5, 6],
-        }
-    settinglocation = settings_order.get(action)
-    if settinglocation:
-        open_settings(*settinglocation)
-
-if __name__ == '__main__':
+def main(mode, action):
     try:
         starttime = datetime.now()
         log.info("Starting %s" % const.addonname)
+        modes = {
+            "setting": setting_mode,
+            "play": play_mode,
+            "library": library_mode,
+        }
+        selected_mode = modes[mode]
+        selected_mode(action)
+    finally:
+        log.info("%s finished (in %s)" % (const.addonname, str(datetime.now() - starttime)))
+        settings_order = {
+            "watchlist":       [2, 1],
+            "update_single":   [2, 2],
+            "update_all":      [2, 3],
+            "exclude_show":    [2, 4],
+            "readd_show":      [2, 5],
+            "exclude_movie":   [2, 6],
+            "readd_movie":     [2, 7],
+            "prioritize":      [3, 4],
+            "configureremote": [4, 8],
+            "testsuite":       [5, 1],
+            "remove_all":      [5, 2],
+            "deletecookies":   [5, 3],
+            "refreshsettings": [5, 4],
+            "restart_playback_service": [5, 5],
+            "test":            [5, 6],
+            "startup_debug":   [5, 7],
+            }
+        settinglocation = settings_order.get(action)
+        if settinglocation:
+            open_settings(*settinglocation)
+
+
+if __name__ == '__main__':
         params = get_params(sys.argv)
         mode = params.get('mode', None)
         action = params.get('action', None)
-        log.info(mode)
-        log.info(action)
         main(mode, action)
-    finally:
-        xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "false")
-        reopen_settings(action)
-        log.info("%s finished (in %s)" % (const.addonname, str(datetime.now() - starttime)))
