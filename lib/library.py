@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import multiprocessing.dummy as threading
 import os
 import re
+from functools import partial
 import traceback
 import types
 import json
@@ -493,14 +494,16 @@ def watchlist():
     execute(getwatchlist=True)
 
 
-def startup():
+def startup_and_schedule(action):
     shows_to_update_add = []
-    if settings["shows on startup"]:
+    if settings["shows on %s" % action]:
         prioritized = [show for show in Show.db_prioritized.all if show.urlid in Show.db.ids]
         nonprioritized = [show for show in Show.db.all if show.urlid not in Show.db_prioritized.ids]
-        n = settings["n shows to update"]
-        shows_to_update_add = prioritized + nonprioritized[:n]
-    execute(getwatchlist=settings["watchlist on startup"], to_update_add=shows_to_update_add)
+        if not settings["all shows on %s" % action]:
+            n = settings["n shows on %s" % action]
+            nonprioritized = nonprioritized[:n]
+        shows_to_update_add = prioritized + nonprioritized
+    execute(getwatchlist=settings["watchlist on %s" % action], to_update_add=shows_to_update_add)
 
 
 def main(action):
@@ -517,6 +520,8 @@ def main(action):
         dialogs.ok(heading="No movies", line1="No movies seem to have been added")
         return
 
+    startup = partial(startup_and_schedule, action="startup")
+    schedule = partial(startup_and_schedule, action="schedule")
     library_actions = {
         "prioritize": prioritize,
         "update_all": update_all,
@@ -527,7 +532,10 @@ def main(action):
         "readd_show": readd_show,
         "readd_movie": readd_movie,
         "watchlist": watchlist,
-        "startup": startup
+        "startup": startup,
+        "schedule": schedule,
+        "startup_debug": startup,
+        "schedule_debug": schedule,
         }
     action_func = library_actions[action]
     try:

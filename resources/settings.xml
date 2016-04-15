@@ -20,10 +20,22 @@
 </category>
 
 <category label="Startup">
-  <setting label="Check for added/removed movies, TV shows and episodes on startup" id="watchlist on startup" type="bool" default="true"/>
-  <setting label="Check stored TV shows for added/removed episodes on startup" id="shows on startup" type="bool" default="false"/>
-  <setting label="No. of TV shows to check" id="n shows to update" default="10"  option="int" range="0,1,20" type="slider"  enable="eq(-1,true)"/>
-  <setting label="Prioritized shows (always checked in startup process)" action="RunScript(script.service.koalanrk, mode=library, action=prioritize)" type="action" option="close" enable="eq(-2,true)"/>
+  <setting label="Enable library updates on startup" id="enable startup" type="bool" default="true"/>
+  <setting label="Check for added/removed movies, TV shows and episodes" id="watchlist on startup" type="bool" default="true" enable="eq(-1,true)"/>
+  <setting label="Check stored TV shows for added/removed episodes" id="shows on startup" type="bool" default="false" enable="eq(-2,true)"/>
+  <setting label="Check all shows TV shows" id="all shows on startup" type="bool" default="false" subsetting="true" visible="eq(-3,true)" enable="eq(-1,true)"/>
+  <setting label="No. of TV shows to check" id="n shows on startup" default="10"  option="int" range="0,1,20" type="slider"  subsetting="true" visible="eq(-4,true)" enable="eq(-2,true) + eq(-1,false)"/>
+  <setting label="Prioritized shows (checked every startup)" action="RunScript(script.service.koalanrk, mode=library, action=prioritize)" type="action" option="close" subsetting="true" visible="eq(-5,true)" enable="eq(-3,true) + eq(-2,false)" />
+</category>
+
+<category label="Schedule">
+  <setting label="Enable scheduled library updates" id="enable schedule" type="bool" default="true"/>
+  <setting label="Update frequency" id="schedule frequency"   option="int" range="0,15,120" type="slider" default="60" enable="eq(-1,true)"/>
+  <setting label="Check for added/removed movies, TV shows and episodes" id="watchlist on schedule" type="bool" default="true" enable="eq(-2,true)"/>
+  <setting label="Check stored TV shows for added/removed episodes" id="shows on schedule" type="bool" default="false" enable="eq(-3,true)"/>
+  <setting label="Check all shows TV shows" id="all shows on schedule" type="bool" default="false" subsetting="true" visible="eq(-4,true)" enable="eq(-1,true)"/>
+  <setting label="No. of TV shows to check" id="n shows on schedule" default="10"  option="int" range="0,1,20" type="slider"  subsetting="true" visible="eq(-5,true)" enable="eq(-2,true) + eq(-1,false)"/>
+  <setting label="Prioritized shows (always checked)" action="RunScript(script.service.koalanrk, mode=library, action=prioritize)" type="action" option="close" subsetting="true" visible="eq(-6,true)" enable="eq(-3,true) + eq(-2,false)" />
 </category>
 
 <category label="Setup">
@@ -44,7 +56,8 @@
   <setting label="Refresh Settings" action="RunScript(script.service.koalanrk, mode=setting, action=refreshsettings)" type="action"  option="close" />
   <setting label="Restart Playback Service" action="RunScript(script.service.koalanrk, mode=setting, action=restart_playback_service)" type="action"  option="close" />
   <setting label="Test action" action="RunScript(script.service.koalanrk, mode=setting, action=test)" type="action" option="close"/>
-  <setting label="Run startup process" action="RunScript(script.service.koalanrk, mode=library, action=startup)" type="action"  option="close"/>
+  <setting label="Run startup process" action="RunScript(script.service.koalanrk, mode=library, action=startup_debug)" type="action"  option="close"/>
+  <setting label="Run scheduled update process" action="RunScript(script.service.koalanrk, mode=library, action=schedule_debug)" type="action"  option="close"/>
 </category>
 
 </settings>

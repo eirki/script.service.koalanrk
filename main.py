@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from datetime import datetime
+import datetime as dt
 import sys
 import os
 import unittest
@@ -83,16 +83,16 @@ def setting_mode(action):
     if action == "configureremote":
         remote = Remote()
         remote.configure()
-    else:
-        settingsactions = {
-            "refreshsettings": refresh_settings,
-            "deletecookies": deletecookies,
-            "test": test,
-            "testsuite": testsuite,
-            "open_settings": open_settings,
-            "restart_playback_service": restart_playback_service
-        }
-        settingsactions[action]()
+        return
+    settingsactions = {
+        "refreshsettings": refresh_settings,
+        "deletecookies": deletecookies,
+        "test": test,
+        "testsuite": testsuite,
+        "open_settings": open_settings,
+        "restart_playback_service": restart_playback_service
+    }
+    settingsactions[action]()
 
 
 def play_mode(action):
@@ -100,11 +100,12 @@ def play_mode(action):
 
 
 def library_mode(action):
-    if action == "startup" and not (settings["watchlist on startup"] or settings["shows on startup"] or
-                                    settings["prioritized on startup"]):
+    if action == "startup" and not settings["enable startup"]:
+        return
+    elif action == "schedule" and not settings["enable schedule"]:
         return
     if xbmcgui.Window(10000).getProperty("%s running" % const.addonname) == "true":
-        if action == "startup":
+        if action in ["startup", "schedule"]:
             return
         run = dialogs.yesno(heading="Running", line1="Koala is running. ",
                             line2="Running multiple instances cause instablity.", line3="Continue?")
@@ -126,7 +127,7 @@ def library_mode(action):
 
 def main(mode, action):
     try:
-        starttime = datetime.now()
+        starttime = dt.datetime.now()
         log.info("Starting %s" % const.addonname)
         modes = {
             "setting": setting_mode,
@@ -136,8 +137,15 @@ def main(mode, action):
         selected_mode = modes[mode]
         selected_mode(action)
     finally:
-        log.info("%s finished (in %s)" % (const.addonname, str(datetime.now() - starttime)))
+        log.info("%s finished (in %s)" % (const.addonname, str(dt.datetime.now() - starttime)))
         settings_order = {
+            "nrk1":            [1, 1],
+            "nrk2":            [1, 2],
+            "nrk3":            [1, 3],
+            "nrksuper":        [1, 4],
+            "browse":          [1, 5],
+            "fantorangen":     [1, 6],
+            "barnetv":         [1, 7],
             "watchlist":       [2, 1],
             "update_single":   [2, 2],
             "update_all":      [2, 3],
@@ -145,19 +153,55 @@ def main(mode, action):
             "readd_show":      [2, 5],
             "exclude_movie":   [2, 6],
             "readd_movie":     [2, 7],
-            "prioritize":      [3, 4],
-            "configureremote": [4, 8],
-            "testsuite":       [5, 1],
-            "remove_all":      [5, 2],
-            "deletecookies":   [5, 3],
-            "refreshsettings": [5, 4],
-            "restart_playback_service": [5, 5],
-            "test":            [5, 6],
-            "startup_debug":   [5, 7],
+            # "prioritize":      [3, 4],
+            "configureremote": [5, 8],
+            "testsuite":       [6, 1],
+            "remove_all":      [6, 2],
+            "deletecookies":   [6, 3],
+            "refreshsettings": [6, 4],
+            "restart_playback_service": [6, 5],
+            "test":            [6, 6],
+            "startup_debug":   [6, 7],
+            "schedule_debug":  [6, 8],
             }
         settinglocation = settings_order.get(action)
         if settinglocation:
             open_settings(*settinglocation)
+        elif action == "startup":
+            schedule_wait()
+
+
+def minutes_to_next_rounded_update_time():
+    frequency_secs = settings["schedule frequency"] * 60
+    frequency = dt.timedelta(seconds=frequency_secs)
+    now = dt.datetime.now()
+    time_since_hour = dt.timedelta(minutes=now.minute, seconds=now.second)
+    scheduled_next_unrounded = frequency + time_since_hour
+    scheduled_next = (scheduled_next_unrounded.seconds // frequency_secs) * frequency_secs
+    till_scheduled_next = scheduled_next - time_since_hour.seconds
+    return till_scheduled_next
+
+
+def schedule_wait():
+    timeout = minutes_to_next_rounded_update_time()
+    log.info("Starting update scheduler, next update at %s" %
+             (dt.datetime.now() + dt.timedelta(seconds=timeout)).strftime("%H:%M"))
+    while True:
+        abort = xbmc.Monitor().waitForAbort(timeout)
+        if abort:
+            log.info("Closing update scheduler")
+            break
+        timeout = settings["schedule frequency"] * 60
+        scheduler_enabled = settings["enable schedule"]
+        player_active = rpc("Player.GetActivePlayers")
+        koala_active = xbmcgui.Window(10000).getProperty("%s running" % const.addonname) == "true"
+
+        if player_active or koala_active or not scheduler_enabled:
+            continue
+        log.info("Starting scheduled update")
+        library_mode(action="schedule")
+        log.info("Finished scheduled update next update at %s" %
+                 (dt.datetime.now() + dt.timedelta(seconds=timeout)).strftime("%H:%M"))
 
 
 if __name__ == '__main__':
