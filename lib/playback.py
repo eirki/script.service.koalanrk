@@ -13,18 +13,18 @@ import socket
 from lib import websocket
 import xbmc
 
-from lib import constants as const
-from lib.utils import (uni_join, os_join, win32hack)
-from lib.xbmcwrappers import (log, settings, rpc)
-from lib.chromote import Chromote
+from . import constants as const
+from .utils import (uni_join, os_join, win32hack)
+from .xbmcwrappers import (log, settings, rpc)
+from .chromote import Chromote
 if const.os == "win":
-    win32hack()
+    # win32hack()
     from win32com.client import Dispatch
     import pywintypes
     import win32gui
-from lib.remote import Remote
-from lib.PyUserInput.pykeyboard import PyKeyboard
-from lib.PyUserInput.pymouse import PyMouse
+from .remote import Remote
+from .PyUserInput.pykeyboard import PyKeyboard
+from .PyUserInput.pymouse import PyMouse
 
 
 class Chrome(object):
@@ -175,7 +175,9 @@ class InternetExplorer(object):
 
 class Session(object):
     def start(self):
+        log.info("start onPlayBackStarted")
         playingfile = self.getplayingvideofile()
+        log.info(playingfile)
         if not (playingfile["file"].startswith(uni_join(const.libpath, const.provider)) or
                 playingfile["file"] in [uni_join(const.addonpath, "resources", "NRK1.htm"),
                                         uni_join(const.addonpath, "resources", "NRK2.htm"),
@@ -308,8 +310,9 @@ class Session(object):
                      (episode.code, episode.runtime.seconds, watch_duration.seconds))
 
 
-class PlayerMonitor(xbmc.Player):
+class PlaybackService(xbmc.Player):
     def __init__(self):
+        log.info("launching playback service")
         self.queue = []
         xbmc.Player.__init__(self)
 
@@ -341,10 +344,3 @@ def live(channel):
         "barnetv": "BarneTV.htm",
     }
     xbmc.Player().play(os_join(const.addonpath, "resources", filenames[channel]))
-
-
-if __name__ == "__main__":
-    log.info("launching playback service")
-    player_monitor = PlayerMonitor()
-    xbmc.Monitor().waitForAbort()
-    log.info("closing playback service")

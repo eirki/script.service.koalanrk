@@ -15,7 +15,7 @@ from lib.utils import (os_join, uni_join, win32hack)
 from lib.xbmcwrappers import (settings, rpc, log, dialogs, open_settings)
 if const.os == "win":
     win32hack()
-import playback
+from lib import playback
 from lib.remote import Remote
 
 
@@ -64,7 +64,7 @@ def test():
 
 def get_params(argv):
     if argv == ['']:
-        params = {"mode": "library", "action": "startup"}
+        params = {"mode": "service"}
     elif argv == ["main.py"]:
         params = {"mode": "setting", "action": "open_settings"}
     else:
@@ -125,6 +125,49 @@ def library_mode(action):
         xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "false")
 
 
+def minutes_to_next_rounded_update_time():
+    frequency_secs = settings["schedule frequency"] * 60
+    frequency = dt.timedelta(seconds=frequency_secs)
+    now = dt.datetime.now()
+    time_since_hour = dt.timedelta(minutes=now.minute, seconds=now.second)
+    scheduled_next_unrounded = frequency + time_since_hour
+    scheduled_next = (scheduled_next_unrounded.seconds // frequency_secs) * frequency_secs
+    till_scheduled_next = scheduled_next - time_since_hour.seconds
+    return till_scheduled_next
+
+
+def reopen_settings(action):
+    settings_order = {
+        "nrk1":            [1, 1],
+        "nrk2":            [1, 2],
+        "nrk3":            [1, 3],
+        "nrksuper":        [1, 4],
+        "browse":          [1, 5],
+        "fantorangen":     [1, 6],
+        "barnetv":         [1, 7],
+        "watchlist":       [2, 1],
+        "update_single":   [2, 2],
+        "update_all":      [2, 3],
+        "exclude_show":    [2, 4],
+        "readd_show":      [2, 5],
+        "exclude_movie":   [2, 6],
+        "readd_movie":     [2, 7],
+        # "prioritize":      [3, 4],
+        "configureremote": [5, 8],
+        "testsuite":       [6, 1],
+        "remove_all":      [6, 2],
+        "deletecookies":   [6, 3],
+        "refreshsettings": [6, 4],
+        "restart_playback_service": [6, 5],
+        "test":            [6, 6],
+        "startup_debug":   [6, 7],
+        "schedule_debug":  [6, 8],
+        }
+    settinglocation = settings_order.get(action)
+    if settinglocation:
+        open_settings(*settinglocation)
+
+
 def main(mode, action):
     try:
         starttime = dt.datetime.now()
@@ -138,74 +181,39 @@ def main(mode, action):
         selected_mode(action)
     finally:
         log.info("%s finished (in %s)" % (const.addonname, str(dt.datetime.now() - starttime)))
-        settings_order = {
-            "nrk1":            [1, 1],
-            "nrk2":            [1, 2],
-            "nrk3":            [1, 3],
-            "nrksuper":        [1, 4],
-            "browse":          [1, 5],
-            "fantorangen":     [1, 6],
-            "barnetv":         [1, 7],
-            "watchlist":       [2, 1],
-            "update_single":   [2, 2],
-            "update_all":      [2, 3],
-            "exclude_show":    [2, 4],
-            "readd_show":      [2, 5],
-            "exclude_movie":   [2, 6],
-            "readd_movie":     [2, 7],
-            # "prioritize":      [3, 4],
-            "configureremote": [5, 8],
-            "testsuite":       [6, 1],
-            "remove_all":      [6, 2],
-            "deletecookies":   [6, 3],
-            "refreshsettings": [6, 4],
-            "restart_playback_service": [6, 5],
-            "test":            [6, 6],
-            "startup_debug":   [6, 7],
-            "schedule_debug":  [6, 8],
-            }
-        settinglocation = settings_order.get(action)
-        if settinglocation:
-            open_settings(*settinglocation)
-        elif action == "startup":
-            schedule_wait()
+        reopen_settings(action)
 
 
-def minutes_to_next_rounded_update_time():
-    frequency_secs = settings["schedule frequency"] * 60
-    frequency = dt.timedelta(seconds=frequency_secs)
-    now = dt.datetime.now()
-    time_since_hour = dt.timedelta(minutes=now.minute, seconds=now.second)
-    scheduled_next_unrounded = frequency + time_since_hour
-    scheduled_next = (scheduled_next_unrounded.seconds // frequency_secs) * frequency_secs
-    till_scheduled_next = scheduled_next - time_since_hour.seconds
-    return till_scheduled_next
+def service():
+    playback.PlaybackService()
+    xbmc.executebuiltin("RunScript(script.service.koalanrk, mode=library, action=startup)")
 
-
-def schedule_wait():
     timeout = minutes_to_next_rounded_update_time()
     log.info("Starting update scheduler, next update at %s" %
              (dt.datetime.now() + dt.timedelta(seconds=timeout)).strftime("%H:%M"))
     while True:
         abort = xbmc.Monitor().waitForAbort(timeout)
         if abort:
-            log.info("Closing update scheduler")
+            log.info("Closing background service")
             break
         timeout = settings["schedule frequency"] * 60
+
         scheduler_enabled = settings["enable schedule"]
         player_active = rpc("Player.GetActivePlayers")
         koala_active = xbmcgui.Window(10000).getProperty("%s running" % const.addonname) == "true"
-
         if player_active or koala_active or not scheduler_enabled:
             continue
-        log.info("Starting scheduled update")
-        library_mode(action="schedule")
-        log.info("Finished scheduled update next update at %s" %
+
+        log.info("Starting scheduled update next update at %s" %
                  (dt.datetime.now() + dt.timedelta(seconds=timeout)).strftime("%H:%M"))
+        xbmc.executebuiltin("RunScript(script.service.koalanrk, mode=library, action=schedule)")
 
 
 if __name__ == '__main__':
-        params = get_params(sys.argv)
-        mode = params.get('mode', None)
-        action = params.get('action', None)
+    params = get_params(sys.argv)
+    mode = params['mode']
+    action = params.get('action', None)
+    if mode == "service":
+        service()
+    else:
         main(mode, action)
