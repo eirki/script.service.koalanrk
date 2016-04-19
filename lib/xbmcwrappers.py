@@ -26,11 +26,7 @@ class SettingsAsDict(dict):
         const.addon.setSetting(key, val)
 
     def __getitem__(self, key):
-        if key in self:
-            val = dict.__getitem__(self, key)
-        else:
-            val = self.getsetting(key)
-        dict.__setitem__(self, key, val)
+        val = self.getsetting(key)
         return val
 
     def __setitem__(self, key, val):
