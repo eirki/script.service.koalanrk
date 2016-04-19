@@ -11,13 +11,8 @@ import xbmcgui
 
 from lib import constants as const
 from lib import library
-from lib.utils import (os_join, uni_join, win32hack)
-from lib.xbmcwrappers import (settings, rpc, log, dialogs, open_settings)
-if const.os == "win":
-    win32hack()
-from lib import playback
-from lib.remote import Remote
-
+from lib.utils import (os_join, uni_join, )
+from lib.xbmcwrappers import (rpc, log, dialogs, open_settings, settings)
 
 def koalasetup():
     if not os.path.exists(const.userdatafolder):
@@ -80,6 +75,7 @@ def get_params(argv):
 
 def setting_mode(action):
     if action == "configureremote":
+        from lib.remote import Remote
         remote = Remote()
         remote.configure()
         return
@@ -95,6 +91,7 @@ def setting_mode(action):
 
 
 def play_mode(action):
+    from lib import playback
     playback.live(action)
 
 

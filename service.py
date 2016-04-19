@@ -10,8 +10,8 @@ import xbmcgui
 from lib import constants as const
 from lib.xbmcwrappers import (settings, rpc, log)
 if const.os == "win":
-    from lib import kodi_pywin32_manager
-    kodi_pywin32_manager.run_importer_daemon()
+    from lib import win32hack
+    win32hack.run_importer_daemon()
 from lib import playback
 
 

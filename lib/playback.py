@@ -14,11 +14,12 @@ from lib import websocket
 import xbmc
 
 from . import constants as const
-from .utils import (uni_join, os_join, win32hack)
+from .utils import (uni_join, os_join)
 from .xbmcwrappers import (log, settings, rpc)
 from .chromote import Chromote
 if const.os == "win":
-    # win32hack()
+    from lib import win32hack
+    win32hack.add_to_syspath()
     from win32com.client import Dispatch
     import pywintypes
     import win32gui
