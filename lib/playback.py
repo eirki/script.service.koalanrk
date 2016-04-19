@@ -310,7 +310,7 @@ class Session(object):
                      (episode.code, episode.runtime.seconds, watch_duration.seconds))
 
 
-class PlaybackService(xbmc.Player):
+class Monitor(xbmc.Player):
     def __init__(self):
         log.info("launching playback service")
         self.queue = []

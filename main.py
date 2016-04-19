@@ -63,19 +63,18 @@ def test():
 
 
 def get_params(argv):
-    if argv == ['']:
-        params = {"mode": "service"}
-    elif argv == ["main.py"]:
+    params = {}
+    if argv in (["main.py"], ['']):
+        # if addon-icon clicked or addon selected in program addons list
         params = {"mode": "setting", "action": "open_settings"}
     else:
-        params = {}
-        if argv[0] == "main.py":
-            arg_pairs = argv[1:]
-        elif argv[0] == "plugin://%s/" % const.addonid:
-            arg_pairs = argv[2][1:].split("&")
+        # if action triggered from settings/service
+        arg_pairs = argv[1:]
         for arg_pair in arg_pairs:
             arg, val = arg_pair.split('=')
             params[arg] = val
+    if not params:
+        raise Exception("Unknown sys argv: %s" % argv)
     return params
 
 
@@ -100,10 +99,6 @@ def play_mode(action):
 
 
 def library_mode(action):
-    if action == "startup" and not settings["enable startup"]:
-        return
-    elif action == "schedule" and not settings["enable schedule"]:
-        return
     if xbmcgui.Window(10000).getProperty("%s running" % const.addonname) == "true":
         if action in ["startup", "schedule"]:
             return
@@ -123,17 +118,6 @@ def library_mode(action):
         library.main(action)
     finally:
         xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "false")
-
-
-def minutes_to_next_rounded_update_time():
-    frequency_secs = settings["schedule frequency"] * 60
-    frequency = dt.timedelta(seconds=frequency_secs)
-    now = dt.datetime.now()
-    time_since_hour = dt.timedelta(minutes=now.minute, seconds=now.second)
-    scheduled_next_unrounded = frequency + time_since_hour
-    scheduled_next = (scheduled_next_unrounded.seconds // frequency_secs) * frequency_secs
-    till_scheduled_next = scheduled_next - time_since_hour.seconds
-    return till_scheduled_next
 
 
 def reopen_settings(action):
@@ -184,36 +168,8 @@ def main(mode, action):
         reopen_settings(action)
 
 
-def service():
-    playback.PlaybackService()
-    xbmc.executebuiltin("RunScript(script.service.koalanrk, mode=library, action=startup)")
-
-    timeout = minutes_to_next_rounded_update_time()
-    log.info("Starting update scheduler, next update at %s" %
-             (dt.datetime.now() + dt.timedelta(seconds=timeout)).strftime("%H:%M"))
-    while True:
-        abort = xbmc.Monitor().waitForAbort(timeout)
-        if abort:
-            log.info("Closing background service")
-            break
-        timeout = settings["schedule frequency"] * 60
-
-        scheduler_enabled = settings["enable schedule"]
-        player_active = rpc("Player.GetActivePlayers")
-        koala_active = xbmcgui.Window(10000).getProperty("%s running" % const.addonname) == "true"
-        if player_active or koala_active or not scheduler_enabled:
-            continue
-
-        log.info("Starting scheduled update next update at %s" %
-                 (dt.datetime.now() + dt.timedelta(seconds=timeout)).strftime("%H:%M"))
-        xbmc.executebuiltin("RunScript(script.service.koalanrk, mode=library, action=schedule)")
-
-
 if __name__ == '__main__':
     params = get_params(sys.argv)
     mode = params['mode']
     action = params.get('action', None)
-    if mode == "service":
-        service()
-    else:
-        main(mode, action)
+    main(mode, action)
