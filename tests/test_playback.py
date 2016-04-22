@@ -4,9 +4,9 @@ import xml.etree.ElementTree as ET
 import subprocess
 import xbmc
 
-import playback
 from lib import constants as const
 from lib.utils import os_join
+from lib import playback
 from lib import remote
 
 
@@ -43,7 +43,7 @@ class ChromeTests(unittest.TestCase):
         xbmc.sleep(1000)
         self.browser.close()
 
-    def test_playpause(self):
+    def test_playpause_chrome(self):
         self.browser.connect()
         self.browser.trigger_player()
         xbmc.sleep(10000)
@@ -53,19 +53,36 @@ class ChromeTests(unittest.TestCase):
         xbmc.sleep(2000)
 
 
+class InternetExplorerTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.playerfile, cls.playerargs = read_external_player_config(player="InternetExplorer")
 
-# class InternetExplorer(unittest.TestCase):
-#     def test_connect_internet_explorer(self):
-#         pass
+    def setUp(self):
+        self.playerprocess = subprocess.Popen([self.playerfile, os_join(const.addonpath, "resources", "Example episode.htm")] +
+                                              self.playerargs)
+        self.browser = playback.InternetExplorer()
+        self.remote = remote.Remote()
+        self.remote.run(browser=self.browser)
 
-#     def test_close_internet_explorer(self):
-#         pass
+    def tearDown(self):
+        self.remote.close()
+        self.playerprocess.terminate()
 
-#     def test_pause(self):
-#         pass
+    def test_connect_close_internet_explorer(self):
+        self.browser.connect()
+        xbmc.sleep(1000)
+        self.browser.close()
 
-#     def test_unpause(self):
-#         pass
+    def test_playpause_internet_explorer(self):
+        self.browser.connect()
+        self.browser.trigger_player()
+        xbmc.sleep(10000)
+        self.remote.playpause()
+        xbmc.sleep(1000)
+        self.remote.playpause()
+        xbmc.sleep(2000)
+
 
 
 # class Session(unittest.TestCase):
