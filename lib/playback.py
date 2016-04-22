@@ -18,8 +18,6 @@ from .utils import (uni_join, os_join)
 from .xbmcwrappers import (log, settings, rpc)
 from .chromote import Chromote
 if const.os == "win":
-    from lib import win32hack
-    win32hack.add_to_syspath()
     from win32com.client import Dispatch
     import pywintypes
     import win32gui

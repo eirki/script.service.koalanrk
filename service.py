@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-print 12345
 
 import datetime as dt
 import xbmc
@@ -9,9 +8,9 @@ import xbmcgui
 
 from lib import constants as const
 from lib.xbmcwrappers import (settings, rpc, log)
+from lib.utils import pywin32setup
 if const.os == "win":
-    from lib import win32hack
-    win32hack.run_importer_daemon()
+    pywin32setup()
 from lib import playback
 
 
@@ -49,7 +48,7 @@ def run_schedule():
 
 
 if __name__ == '__main__':
-    playback.Monitor()
+    monitor = playback.Monitor()
     if settings["enable startup"]:
         xbmc.executebuiltin("RunScript(script.service.koalanrk, mode=library, action=startup)")
     run_schedule()

@@ -10,9 +10,6 @@ import xbmcgui
 from . import constants as const
 from .utils import os_join
 from .xbmcwrappers import (log, dialogs)
-if const.os == "win":
-    from lib import win32hack
-    win32hack.add_to_syspath()
 from .PyUserInput.pykeyboard import PyKeyboardEvent, PyKeyboard
 from .PyUserInput.pymouse import PyMouse
 
