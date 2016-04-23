@@ -313,11 +313,12 @@ class Session(object):
             else:
                 log.info("new url: %s" % current_url)
                 new_urlid, is_episode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", current_url)
-                if is_episode and new_urlid != episode_watching.urlid:
+                if is_episode and new_urlid != current_urlid:
                     self.mark_watched(episode_watching, started_watching_at)
 
                     episode_watching = stored_episodes[new_urlid]
                     started_watching_at = datetime.now()
+                    current_urlid = new_urlid
                 last_stored_url = current_url
 
         self.mark_watched(episode_watching, started_watching_at)
