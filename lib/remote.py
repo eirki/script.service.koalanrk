@@ -142,10 +142,8 @@ class Remote(object):
 
     def playpause(self):
         log.info("Remote: playpause triggered")
-
-        self.m.move(**self.wiggle_coors)
+        self.k.tap_key(self.k.up_key)
         self.k.tap_key(self.k.space_key)
-        self.m.move(**self.corner_coors)
 
     def forward(self):
         log.info("Remote: forward triggered")
