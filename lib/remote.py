@@ -100,6 +100,8 @@ class Remote(object):
             self.Button(name="Stop",    func=self.stop,      **stored.get("Stop",    no_keys)),
             self.Button(name="Forward", func=self.forward,   **stored.get("Forward", no_keys)),
             self.Button(name="Rewind",  func=self.rewind,    **stored.get("Rewind",  no_keys)),
+            self.Button(name="Toogle fullscreen",  func=self.toggle_fullscreen,
+                        **stored.get("Toogle fullscreen",  no_keys)),
         ]
         return mapping
 
@@ -152,6 +154,9 @@ class Remote(object):
     def rewind(self):
         log.info("Remote: rewind triggered")
         self.k.tap_key(self.k.left_key)
+
+    def toggle_fullscreen(self):
+        self.browser.toggle_fullscreen()
 
     def stop(self):
         log.info("Remote: stop triggered")

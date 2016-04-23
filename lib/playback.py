@@ -78,6 +78,16 @@ class Chrome(object):
         xbmc.sleep(200)
         self.m.click(n=1, **self.player_coord)
 
+    def toggle_fullscreen(self):
+        if self.player_coord:
+            self.m.move(**self.player_coord)
+            xbmc.sleep(200)
+            self.m.click(n=2, **self.player_coord)
+        else:
+            x_dim, y_dim = self.m.screen_size()
+            self.m.click(x_dim / 2, y_dim / 2, n=2)
+        self.m.move(0, 0)
+
     def enter_fullscreen(self):
         if not self.player_coord:
             player_left = self._eval_js('getElementById("playerelement").getBoundingClientRect()["left"]')['value']
@@ -146,6 +156,16 @@ class InternetExplorer(object):
             rect = playerelement.getBoundingClientRect()
             self.player_coord = {"x": (int(rect.left+rect.right/2)), "y": (int(rect.top+rect.bottom/2))}
             self.m.click(button=1, n=1, **self.player_coord)
+
+    def toggle_fullscreen(self):
+        if self.player_coord:
+            self.m.move(**self.player_coord)
+            xbmc.sleep(200)
+            self.m.click(n=2, **self.player_coord)
+        else:
+            x_dim, y_dim = self.m.screen_size()
+            self.m.click(x_dim / 2, y_dim / 2, n=2)
+        self.m.move(0, 0)
 
     def enter_fullscreen(self):
         while self.ie.busy:
