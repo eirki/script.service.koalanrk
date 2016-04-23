@@ -32,6 +32,9 @@ class Chrome(object):
         self.k = PyKeyboard()
         self.m = PyMouse()
         self.player_coord = None
+        x, y = self.m.screen_size()
+        self.corner_coord = {'x': x, 'y': y}
+        self.middle_coord = {"x": x / 2, "y": y / 2}
 
     def _eval_js(self, exp):
         result = json.loads(self.tab.evaluate('document.%s' % exp))
@@ -72,8 +75,8 @@ class Chrome(object):
         player_width = self._eval_js('getElementById("playerelement").getBoundingClientRect()["width"]')['value']
         player_top = self._eval_js('getElementById("playerelement").getBoundingClientRect()["top"]')['value']
         player_height = self._eval_js('getElementById("playerelement").getBoundingClientRect()["height"]')['value']
-        self.player_coord = {"x": int(player_left+(player_width/2)),
-                             "y": int(player_top+(player_height/2))}
+        self.player_coord = {"x": int(player_left + (player_width / 2)),
+                             "y": int(player_top + (player_height / 2))}
         self.m.move(**self.player_coord)
         xbmc.sleep(200)
         self.m.click(n=1, **self.player_coord)
@@ -84,9 +87,8 @@ class Chrome(object):
             xbmc.sleep(200)
             self.m.click(n=2, **self.player_coord)
         else:
-            x_dim, y_dim = self.m.screen_size()
-            self.m.click(x_dim / 2, y_dim / 2, n=2)
-        self.m.move(0, 0)
+            self.m.click(n=2, **self.middle_coord)
+        self.m.move(**self.corner_coord)
 
     def enter_fullscreen(self):
         if not self.player_coord:
@@ -94,8 +96,8 @@ class Chrome(object):
             player_width = self._eval_js('getElementById("playerelement").getBoundingClientRect()["width"]')['value']
             player_top = self._eval_js('getElementById("playerelement").getBoundingClientRect()["top"]')['value']
             player_height = self._eval_js('getElementById("playerelement").getBoundingClientRect()["height"]')['value']
-            self.player_coord = {"x": int(player_left+(player_width/2)),
-                                 "y": int(player_top+(player_height/2))}
+            self.player_coord = {"x": int(player_left + (player_width / 2)),
+                                 "y": int(player_top + (player_height / 2))}
         log.info(self.player_coord)
 
         for _ in range(10):
@@ -112,6 +114,7 @@ class Chrome(object):
         self.m.move(**self.player_coord)
         xbmc.sleep(200)
         self.m.click(n=2, **self.player_coord)
+        self.m.move(**self.corner_coord)
 
 
 class InternetExplorer(object):
@@ -119,6 +122,9 @@ class InternetExplorer(object):
         self.errors = pywintypes.com_error, AttributeError
         self.m = PyMouse()
         self.player_coord = None
+        x, y = self.m.screen_size()
+        self.corner_coord = {'x': x, 'y': y}
+        self.middle_coord = {"x": x / 2, "y": y / 2}
 
     @property
     def url(self):
@@ -163,9 +169,8 @@ class InternetExplorer(object):
             xbmc.sleep(200)
             self.m.click(n=2, **self.player_coord)
         else:
-            x_dim, y_dim = self.m.screen_size()
-            self.m.click(x_dim / 2, y_dim / 2, n=2)
-        self.m.move(0, 0)
+            self.m.click(n=2, **self.middle_coord)
+        self.m.move(**self.corner_coord)
 
     def enter_fullscreen(self):
         while self.ie.busy:
@@ -190,6 +195,7 @@ class InternetExplorer(object):
         self.m.move(**self.player_coord)
         xbmc.sleep(200)
         self.m.click(n=2, **self.player_coord)
+        self.m.move(**self.corner_coord)
 
 
 class Session(object):
