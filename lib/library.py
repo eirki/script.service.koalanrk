@@ -119,6 +119,8 @@ class Movie(SharedMediaMethods):
             super(Movie, self).remove_from_lib()
             super(Movie, self).delete_htm()
         Movie.db.remove(self.urlid)
+        if settings["added_notifications"]:
+            dialogs.notification(heading="%s movie removed:" % const.provider, message=self.title)
         log.info("Finished removing movie: %s" % self.title)
 
     def update_add(self):
@@ -139,6 +141,8 @@ class Movie(SharedMediaMethods):
                 return
         self.kodiid = dbinfo['movieid']
         super(Movie, self).load_playcount()
+        if settings["added_notifications"]:
+            dialogs.notification(heading="%s movie added:" % const.provider, message=self.title)
         log.info("Finished adding movie: %s" % self.title)
         Movie.db.upsert(self.urlid, self.title)
 
@@ -259,6 +263,14 @@ class Show(SharedMediaMethods):
                 yield
 
             self._load_eps_playcount(new_episodes)
+            if settings["added_notifications"]:
+                if len(new_episodes) == 1:
+                    message = "Added episode: %s" % new_episodes[0].code
+                elif len(new_episodes) <= 3:
+                    message = "Added episodes: %s" % ", ".join(sorted([ep.code for ep in new_episodes]))
+                else:
+                    message = "Added %s episodes" % len(new_episodes)
+                dialogs.notification(heading="%s updated:" % self.title, message=message)
             log.info("Added episodes: %s, %s" % (self.title, sorted(new_episodes, key=attrgetter('code'))))
 
         Show.db.upsert(self.urlid, self.title)

@@ -51,7 +51,7 @@ class Dialogs(object):
 
     @wrap_unicode
     def notification(self, heading, message, icon=None, time=None, sound=None):
-        return self.dialog.notification(heading, message, icon, time, sound)
+        return self.dialog.notification(heading, message)
 
     @wrap_unicode
     def numeric(self, type, heading, default=None):
