@@ -525,11 +525,17 @@ def main(action):
     if action == "remove_all" and not (Show.db.all or Movie.db.all):
         dialogs.ok(heading="No media", line1="No media seems to have been added")
         return
-    elif action in ["prioritize", "exclude_show", "readd_show", "update_single", "update_all"] and not Show.db.all:
+    elif action in ["prioritize", "exclude_show", "update_single", "update_all"] and not Show.db.all:
         dialogs.ok(heading="No shows", line1="No shows seem to have been added")
         return
-    elif action in ["exclude_movie", "readd_movie"] and not Movie.db.all:
+    elif action == "readd_show" and not Show.db_excluded.all:
+        dialogs.ok(heading="No excluded shows", line1="No shows seem to have been excluded")
+        return
+    elif action == "exclude_movie" and not Movie.db.all:
         dialogs.ok(heading="No movies", line1="No movies seem to have been added")
+        return
+    elif action == "readd_movie" and not Movie.db_excluded.all:
+        dialogs.ok(heading="No excluded movies", line1="No movies seem to have been excluded")
         return
 
     startup = partial(startup_and_schedule, action="startup")
