@@ -50,6 +50,7 @@ class Dialogs(object):
         return self.dialog.input(heading, default, type, option, autoclose)
 
     @wrap_unicode
+    def notification(self, heading, message, icon=os_join(const.addonpath, "resources", "notification.png"), time=None, sound=None):
         return self.dialog.notification(heading, message, icon)
 
     @wrap_unicode
