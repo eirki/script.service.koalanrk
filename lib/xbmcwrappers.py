@@ -5,7 +5,7 @@ import json
 import xbmc
 import xbmcgui
 
-from .utils import (wrap_unicode, byteify)
+from .utils import (wrap_unicode, byteify, os_join)
 from . import constants as const
 
 
@@ -50,8 +50,7 @@ class Dialogs(object):
         return self.dialog.input(heading, default, type, option, autoclose)
 
     @wrap_unicode
-    def notification(self, heading, message, icon=None, time=None, sound=None):
-        return self.dialog.notification(heading, message)
+        return self.dialog.notification(heading, message, icon)
 
     @wrap_unicode
     def numeric(self, type, heading, default=None):

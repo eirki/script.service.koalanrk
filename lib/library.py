@@ -270,7 +270,6 @@ class Show(SharedMediaMethods):
                     message = "Added episodes: %s" % ", ".join(sorted([ep.code for ep in new_episodes]))
                 else:
                     message = "Added %s episodes" % len(new_episodes)
-                dialogs.notification(heading="%s updated:" % self.title, message=message)
             log.info("Added episodes: %s, %s" % (self.title, sorted(new_episodes, key=attrgetter('code'))))
 
         Show.db.upsert(self.urlid, self.title)
