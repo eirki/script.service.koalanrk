@@ -42,7 +42,7 @@ def refresh_settings():
     xbmc.executebuiltin('Addon.OpenSettings(%s)' % const.addonid)
 
 
-def restart_playback_service():
+def restart_service():
     rpc("Addons.SetAddonEnabled", addonid=const.addonid, enabled=False)
     rpc("Addons.SetAddonEnabled", addonid=const.addonid, enabled=True)
 
@@ -89,7 +89,7 @@ def setting_mode(action):
         "test": test,
         "testsuite": testsuite,
         "open_settings": open_settings,
-        "restart_playback_service": restart_playback_service
+        "restart_service": restart_service
     }
     settingsactions[action]()
 
@@ -136,13 +136,13 @@ def reopen_settings(action):
         "readd_show":      [2, 5],
         "exclude_movie":   [2, 6],
         "readd_movie":     [2, 7],
-        # "prioritize":      [3, 4],
+        "prioritize":      [3, 4],
         "configureremote": [5, 8],
         "testsuite":       [6, 1],
         "remove_all":      [6, 2],
         "deletecookies":   [6, 3],
         "refreshsettings": [6, 4],
-        "restart_playback_service": [6, 5],
+        "restart_service": [6, 5],
         "test":            [6, 6],
         "startup_debug":   [6, 7],
         "schedule_debug":  [6, 8],

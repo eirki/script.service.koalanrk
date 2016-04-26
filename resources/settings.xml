@@ -43,11 +43,11 @@
   <setting label="Password" id="password"  type="text" option="hidden"/>
   <setting label="Use Custom Library Path" default="false" id="usecustomLibPath" type="bool" />
   <setting label="Library Path" default="special://profile/addon_data/script.service.koalanrk/Library" enable="eq(-1,true)" id="LibPath" option="writeable" type="folder" />
+  <setting label="Enable remote control" id="remote" type="bool" default="false" />
+  <setting label="Configure remote control" action="RunScript(script.service.koalanrk, mode=setting, action=configureremote)" type="action" enable="eq(-1,true)" option="close" subsetting="true"/>
   <setting label="Use multithreading when updating library" id="multithreading" type="bool" default="true" />
   <setting label="Show progress notification when updating library" id="startupnotification" type="bool" default="true"/>
   <setting label="Show notification on additions to library" id="added_notifications" type="bool" default="true"/>
-  <setting label="Enable remote control" id="remote" type="bool" default="false" />
-  <setting label="Configure remote control" action="RunScript(script.service.koalanrk, mode=setting, action=configureremote)" type="action" enable="eq(-1,true)" option="close" subsetting="true"/>
 </category>
 
 <category label="Debug">
@@ -55,7 +55,7 @@
   <setting label="Remove all shows and movies from library" action="RunScript(script.service.koalanrk, mode=library, action=remove_all)" type="action"  option="close"/>
   <setting label="Delete cookies" action="RunScript(script.service.koalanrk, mode=setting, action=deletecookies)" type="action" />
   <setting label="Refresh Settings" action="RunScript(script.service.koalanrk, mode=setting, action=refreshsettings)" type="action"  option="close" />
-  <setting label="Restart Playback Service" action="RunScript(script.service.koalanrk, mode=setting, action=restart_playback_service)" type="action"  option="close" />
+  <setting label="Restart Service" action="RunScript(script.service.koalanrk, mode=setting, action=restart_service)" type="action"  option="close" />
   <setting label="Test action" action="RunScript(script.service.koalanrk, mode=setting, action=test)" type="action" option="close"/>
   <setting label="Run startup process" action="RunScript(script.service.koalanrk, mode=library, action=startup_debug)" type="action"  option="close"/>
   <setting label="Run scheduled update process" action="RunScript(script.service.koalanrk, mode=library, action=schedule_debug)" type="action"  option="close"/>
