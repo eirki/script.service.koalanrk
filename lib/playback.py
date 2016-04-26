@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from __future__ import division
-from datetime import (timedelta, datetime)
+
+import datetime as dt
 from collections import namedtuple
 import json
 import requests
@@ -160,7 +161,7 @@ class InternetExplorer(object):
             log.info("couldn't fint play")
             playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
             rect = playerelement.getBoundingClientRect()
-            self.player_coord = {"x": (int(rect.left+rect.right/2)), "y": (int(rect.top+rect.bottom/2))}
+            self.player_coord = {"x": (int(rect.left + rect.right / 2)), "y": (int(rect.top + rect.bottom / 2))}
             self.m.click(button=1, n=1, **self.player_coord)
 
     def toggle_fullscreen(self):
@@ -178,7 +179,7 @@ class InternetExplorer(object):
         if not self.player_coord:
             playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
             rect = playerelement.getBoundingClientRect()
-            self.player_coord = {"x": (int(rect.left+rect.right/2)), "y": (int(rect.top+rect.bottom/2))}
+            self.player_coord = {"x": (int(rect.left + rect.right / 2)), "y": (int(rect.top + rect.bottom / 2))}
 
         log.info("waitong for player ready for fullscreen")
         for _ in range(10):
@@ -285,7 +286,7 @@ class Session(object):
             epcode = 'S%02dE%02d' % (episode['season'], episode['episode'])
             kodiid = episode['episodeid']
             playcount = episode['playcount']
-            runtime = timedelta(seconds=episode['runtime'])
+            runtime = dt.timedelta(seconds=episode['runtime'])
             with open(episode['file'], 'r') as txt:
                 urlid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", txt.read())
             stored_episodes[urlid] = Epinfo(epcode, kodiid, playcount, runtime)
@@ -301,7 +302,7 @@ class Session(object):
         last_stored_url = self.browser.url
         current_urlid = starturlid
         episode_watching = stored_episodes[current_urlid]
-        started_watching_at = datetime.now()
+        started_watching_at = dt.datetime.now()
         while self.koala_playing:
             try:
                 current_url = self.browser.url
@@ -317,7 +318,7 @@ class Session(object):
                     self.mark_watched(episode_watching, started_watching_at)
 
                     episode_watching = stored_episodes[new_urlid]
-                    started_watching_at = datetime.now()
+                    started_watching_at = dt.datetime.now()
                     current_urlid = new_urlid
                 last_stored_url = current_url
 
@@ -325,7 +326,7 @@ class Session(object):
         log.info("finished monitoring")
 
     def mark_watched(self, episode, started_watching_at):
-        finished_watching_at = datetime.now()
+        finished_watching_at = dt.datetime.now()
         watch_duration = finished_watching_at - started_watching_at
         if watch_duration.seconds / episode.runtime.seconds >= 0.9:
             rpc("VideoLibrary.SetEpisodeDetails", episodeid=episode.kodiid,

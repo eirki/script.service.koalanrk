@@ -132,7 +132,7 @@ class Remote(object):
         self.m = PyMouse()
         x, y = self.m.screen_size()
         self.corner_coors = {'x': x, 'y': y}
-        self.wiggle_coors = {'x': x, 'y': y-10}
+        self.wiggle_coors = {'x': x, 'y': y - 10}
         funcmap = {button.code: button.func for button in self.mapping if button.code}
         self.listener = PlaybackListener(funcmap)
         self.listener.run()
