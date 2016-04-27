@@ -18,13 +18,13 @@ from . import constants as const
 from .utils import (uni_join, os_join)
 from .xbmcwrappers import (log, settings, rpc)
 from .chromote import Chromote
+from .remote import Remote
+from .PyUserInput.pykeyboard import PyKeyboard
+from .PyUserInput.pymouse import PyMouse
 if const.os == "win":
     from win32com.client import Dispatch
     import pywintypes
     import win32gui
-from .remote import Remote
-from .PyUserInput.pykeyboard import PyKeyboard
-from .PyUserInput.pymouse import PyMouse
 
 
 class Chrome(object):
@@ -201,9 +201,7 @@ class InternetExplorer(object):
 
 class Session(object):
     def start(self):
-        log.info("start onPlayBackStarted")
         playingfile = self.getplayingvideofile()
-        log.info(playingfile)
         if not (playingfile["file"].startswith(uni_join(const.libpath, const.provider)) or
                 playingfile["file"] in [uni_join(const.addonpath, "resources", "NRK1.htm"),
                                         uni_join(const.addonpath, "resources", "NRK2.htm"),

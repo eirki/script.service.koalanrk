@@ -554,8 +554,9 @@ def main(action):
         "schedule": schedule,
         "startup_debug": startup,
         "schedule_debug": schedule,
-        }
+    }
     action_func = library_actions[action]
+
     try:
         action_func()
     except:
