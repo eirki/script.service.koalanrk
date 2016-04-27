@@ -150,10 +150,9 @@ class PyKeyboardEventMeta(Thread):
     for key in modifier_bits.keys():
         modifiers[key] = False
 
-    def __init__(self, capture=False):
+    def __init__(self):
         Thread.__init__(self)
         self.daemon = True
-        self.capture = capture
         self.state = True
         self.configure_keys()
 

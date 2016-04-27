@@ -226,10 +226,10 @@ class PyKeyboardEvent(PyKeyboardEventMeta):
     The PyKeyboardEvent implementation for Windows Systems. This allows one
     to listen for keyboard input.
     """
-    def __init__(self, diagnostic=False, capture=False, capture_some=None):
+    def __init__(self, diagnostic=False, capture=False, capture_codes=None):
         self.diagnostic = diagnostic
         self.capture = capture
-        self.capture_some = set(capture_some) if capture_some else []
+        self.capture_codes = set(capture_codes) if capture_codes else set()
 
         from lib import pyHook
 
@@ -263,7 +263,7 @@ class PyKeyboardEvent(PyKeyboardEventMeta):
         else:
             self._tap(event)
         #This is needed according to the pyHook tutorials 'http://sourceforge.net/apps/mediawiki/pyhook/index.php?title=PyHook_Tutorial'
-        if (self.capture or self.keycode in self.capture_some) and self.press_bool:
+        if (self.capture or self.keycode in self.capture_codes) and self.press_bool:
             return False
         else:
             return True
