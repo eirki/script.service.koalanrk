@@ -11,16 +11,17 @@ import re
 import sys
 from multiprocessing.dummy import Process as Thread
 import socket
-from lib import websocket
 import xbmc
+
+import websocket
+from chromote import Chromote
+from pykeyboard import PyKeyboard
+from pymouse import PyMouse
 
 from . import constants as const
 from .utils import (uni_join, os_join)
 from .xbmcwrappers import (log, settings, rpc)
-from .chromote import Chromote
 from .remote import Remote
-from .PyUserInput.pykeyboard import PyKeyboard
-from .PyUserInput.pymouse import PyMouse
 if const.os == "win":
     from win32com.client import Dispatch
     import pywintypes

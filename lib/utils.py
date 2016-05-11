@@ -5,8 +5,6 @@ from __future__ import division
 from __future__ import absolute_import
 from functools import wraps
 import os
-import sys
-import imp
 
 from . import constants as const
 
@@ -71,13 +69,3 @@ def os_join(*args):
         return path.encode("utf-8")
 
 uni_join = os.path.join
-
-
-def pywin32setup():
-    sys.path.extend([os_join(const.addonpath, "lib", "win32"),
-                     os_join(const.addonpath, "lib", "win32", "win32"),
-                     os_join(const.addonpath, "lib", "win32", "win32", "lib"),
-                     os_join(const.addonpath, "lib", "win32", "pypiwin32-219.data", "scripts"),
-                     os_join(const.addonpath, "lib", "win32", "Pythonwin")])
-    imp.load_dynamic("pythoncom", os_join(const.addonpath, "lib", "win32", "pywin32_system32", "pythoncom27.dll"))
-

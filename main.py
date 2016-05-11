@@ -11,10 +11,10 @@ import xbmcgui
 
 from lib import constants as const
 from lib import library
-from lib.utils import (os_join, uni_join, pywin32setup)
+from lib.utils import (os_join, uni_join)
 from lib.xbmcwrappers import (rpc, log, dialogs, open_settings)
 if const.os == "win":
-    pywin32setup()
+    import pywin32setup
 from lib import playback
 from lib.remote import Remote
 
@@ -136,8 +136,8 @@ def reopen_settings(action):
         "readd_show":      [2, 5],
         "exclude_movie":   [2, 6],
         "readd_movie":     [2, 7],
-        "prioritize":      [3, 4],
-        "configureremote": [5, 8],
+        "prioritize":      [3, 6],
+        "configureremote": [5, 6],
         "testsuite":       [6, 1],
         "remove_all":      [6, 2],
         "deletecookies":   [6, 3],

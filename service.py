@@ -8,9 +8,8 @@ import xbmcgui
 
 from lib import constants as const
 from lib.xbmcwrappers import (settings, rpc, log)
-from lib.utils import pywin32setup
 if const.os == "win":
-    pywin32setup()
+    import pywin32setup
 from lib import playback
 
 

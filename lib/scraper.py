@@ -1,19 +1,19 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-from __future__ import absolute_import
-from bs4 import BeautifulSoup
+import re
 import json
+from bs4 import BeautifulSoup
 import pickle
 import requests
 from types import MethodType
 from HTMLParser import HTMLParser
-import re
 from collections import namedtuple
 
 from .utils import os_join
 from . import constants as const
 from .xbmcwrappers import (log, settings)
+
 
 Mediatuple = namedtuple("Media", "urlid title")
 

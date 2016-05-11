@@ -7,12 +7,12 @@ from collections import namedtuple
 import xbmc
 import xbmcgui
 
+from pykeyboard import (PyKeyboardEvent, PyKeyboard)
+from pymouse import PyMouse
+
 from . import constants as const
 from .utils import os_join
 from .xbmcwrappers import (log, dialogs)
-from .PyUserInput.pykeyboard import PyKeyboardEvent, PyKeyboard
-from .PyUserInput.pymouse import PyMouse
-
 
 class ConfigurationDialog(xbmcgui.WindowXMLDialog):
     def __new__(cls):
@@ -65,7 +65,7 @@ class PlaybackListener(PyKeyboardEvent):
     def __init__(self, funcmap):
         self.funcmap = funcmap
         mapped_codes = self.funcmap.values()
-        PyKeyboardEvent.__init__(self, capture_some=mapped_codes)
+        PyKeyboardEvent.__init__(self, capture_codes=mapped_codes)
 
     def run(self):
         """stays open until stop()"""
