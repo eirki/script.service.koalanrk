@@ -5,6 +5,8 @@ from __future__ import unicode_literals
 import datetime as dt
 import sys
 import os
+from functools import partial
+from collections import OrderedDict
 import unittest
 import xbmc
 import xbmcgui
@@ -12,7 +14,7 @@ import xbmcgui
 from lib import constants as const
 from lib import library
 from lib.utils import (os_join, uni_join)
-from lib.xbmcwrappers import (rpc, log, dialogs, open_settings)
+from lib.xbmcwrappers import (rpc, log, dialogs)
 if const.os == "win":
     import pywin32setup
 from lib import playback
@@ -59,14 +61,14 @@ def testsuite():
 
 
 def test():
-    print const.addonid
+    pass
 
 
 def get_params(argv):
     params = {}
     if argv in (["main.py"], ['']):
         # if addon-icon clicked or addon selected in program addons list
-        params = {"mode": "setting", "action": "open_settings"}
+        params = {"mode": "main_start"}
     else:
         # if action triggered from settings/service
         arg_pairs = argv[1:]
@@ -78,27 +80,19 @@ def get_params(argv):
     return params
 
 
-def setting_mode(action):
+def setup_mode(action):
     if action == "configureremote":
         remote = Remote()
         remote.configure()
-        return
-    settingsactions = {
-        "refreshsettings": refresh_settings,
-        "deletecookies": deletecookies,
-        "test": test,
-        "testsuite": testsuite,
-        "open_settings": open_settings,
-        "restart_service": restart_service
-    }
-    settingsactions[action]()
+    elif action == "prioritize":
+        library.main(action="prioritize")
 
 
-def play_mode(action):
+def watch_mode(action):
     playback.live(action)
 
 
-def library_mode(action):
+def update_mode(action):
     if xbmcgui.Window(10000).getProperty("%s running" % const.addonname) == "true":
         if action in ["startup", "schedule"]:
             return
@@ -120,52 +114,96 @@ def library_mode(action):
         xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "false")
 
 
-def reopen_settings(action):
-    settings_order = {
-        "nrk1":            [1, 1],
-        "nrk2":            [1, 2],
-        "nrk3":            [1, 3],
-        "nrksuper":        [1, 4],
-        "browse":          [1, 5],
-        "fantorangen":     [1, 6],
-        "barnetv":         [1, 7],
-        "watchlist":       [2, 1],
-        "update_single":   [2, 2],
-        "update_all":      [2, 3],
-        "exclude_show":    [2, 4],
-        "readd_show":      [2, 5],
-        "exclude_movie":   [2, 6],
-        "readd_movie":     [2, 7],
-        "prioritize":      [3, 6],
-        "configureremote": [5, 6],
-        "testsuite":       [6, 1],
-        "remove_all":      [6, 2],
-        "deletecookies":   [6, 3],
-        "refreshsettings": [6, 4],
-        "restart_service": [6, 5],
-        "test":            [6, 6],
-        "startup_debug":   [6, 7],
-        "schedule_debug":  [6, 8],
-        }
-    settinglocation = settings_order.get(action)
-    if settinglocation:
-        open_settings(*settinglocation)
+def debug_mode(action):
+    startup_debug = partial(update_mode, action="startup_debug")
+    schedule_debug = partial(update_mode, action="schedule_debug")
+    debugactions = {
+        "refreshsettings": refresh_settings,
+        "deletecookies": deletecookies,
+        "test": test,
+        "testsuite": testsuite,
+        "open_settings": open_settings,
+        "restart_service": restart_service,
+        "startup_debug": startup_debug,
+        "schedule_debug": schedule_debug,
+    }
+    debugactions[action]()
+
+
+def open_settings(mode, action):
+    settings = OrderedDict((
+        ("setup", [
+            "",
+            "",
+            "",
+            "",
+            "",
+            "configureremote",
+            "",
+            "prioritize",
+        ]),
+        ("watch", [
+            "browse",
+            "nrk1",
+            "nrk2",
+            "nrk3",
+            "nrksuper",
+            "fantorangen",
+            "barnetv",
+        ]),
+        ("update", [
+            "watchlist",
+            "update_single",
+            "update_all",
+            "exclude_show",
+            "readd_show",
+            "exclude_movie",
+            "readd_movie",
+            "remove_all",
+        ]),
+        ("startup", []),
+        ("schedule", []),
+        ("debug", [
+            "testsuite",
+            "deletecookies",
+            "refreshsettings",
+            "restart_service",
+            "test",
+            "startup_debug",
+            "schedule_debug",
+        ]),
+    ))
+
+    try:
+        mode_loc = settings.keys().index(mode)
+        action_loc = settings[mode].index(action)
+    except ValueError:
+        return
+
+    xbmc.executebuiltin('Addon.OpenSettings(%s)' % const.addonid)
+    xbmc.executebuiltin('SetFocus(%i)' % (mode_loc + 100))
+    xbmc.executebuiltin('SetFocus(%i)' % (action_loc + 200))
 
 
 def main(mode, action):
     try:
         starttime = dt.datetime.now()
         log.info("Starting %s" % const.addonname)
+        if mode == "main_start":
+            mode = "watch"
+            action = "browse"
+            return
         modes = {
-            "setting": setting_mode,
-            "play": play_mode,
-            "library": library_mode,
+            "setup": setup_mode,
+            "update": update_mode,
+            "watch": watch_mode,
+            "debug": debug_mode,
         }
         selected_mode = modes[mode]
         selected_mode(action)
     finally:
         log.info("%s finished (in %s)" % (const.addonname, str(dt.datetime.now() - starttime)))
-        reopen_settings(action)
+        open_settings(mode, action)
 
 
 if __name__ == '__main__':
