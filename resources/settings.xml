@@ -7,7 +7,7 @@
   <setting label="Enable remote control" id="remote" type="bool" default="false" />
   <setting label="Configure remote control" action="RunScript(script.service.koalanrk, mode=setup, action=configureremote)" type="action" enable="eq(-1,true)" option="close" subsetting="true"/>
   <setting label="Use multithreading when updating library" id="multithreading" type="bool" default="true" />
-  <setting label="Prioritized shows (always checked on koala library update)" action="RunScript(script.service.koalanrk, mode=setup, action=prioritize)" type="action" option="close" subsetting="true" enable="eq(-3,true) + eq(-2,false)" />
+  <setting label="Prioritized shows (always checked on koala library update)" action="RunScript(script.service.koalanrk, mode=setup, action=prioritize)" type="action" option="close" />
     <setting label="Show progress notification when updating library" id="startupnotification" type="bool" default="true"/>
   <setting label="Show notification on additions to library" id="added_notifications" type="bool" default="true"/>
 </category>
