@@ -41,15 +41,10 @@ class RequestSession(object):
         req.soup = MethodType(self.soup, req)
         return req
 
-    def post(self, url, **kwargs):
+    def post(self, url, hidden=False, **kwargs):
         log.info("LOADING: %s" % url)
-        log.debug("Payload: %s" % kwargs)
-        req = self.session.post(url, timeout=10, **kwargs)
-        req.soup = MethodType(self.soup, req)
-        return req
-
-    def hiddenpost(self, url, **kwargs):
-        log.info("LOADING: %s" % url)
+        if kwargs and not hidden:
+            log.info("Payload: %s" % kwargs)
         req = self.session.post(url, timeout=10, **kwargs)
         req.soup = MethodType(self.soup, req)
         return req
@@ -71,8 +66,8 @@ def login(loginpage):
         scrdata["apiAntiForgery"]["name"]: scrdata["apiAntiForgery"]["value"],
         "userName": username,
         "password": passw,
-        }
-    loginpage2 = reqs.hiddenpost(loginpage.url, data=payload, allow_redirects=True)
+    }
+    loginpage2 = reqs.post(loginpage.url, data=payload, allow_redirects=True, hidden=True)
     return loginpage2
 
 
