@@ -35,7 +35,7 @@ class Chrome(object):
         self.player_coord = None
         x, y = self.m.screen_size()
         self.corner_coord = {'x': x, 'y': y}
-        self.middle_coord = {"x": x / 2, "y": y / 2}
+        self.middle_coord = {"x": x // 2, "y": y // 2}
 
     def _eval_js(self, exp):
         result = json.loads(self.tab.evaluate('document.%s' % exp))
@@ -125,7 +125,7 @@ class InternetExplorer(object):
         self.player_coord = None
         x, y = self.m.screen_size()
         self.corner_coord = {'x': x, 'y': y}
-        self.middle_coord = {"x": x / 2, "y": y / 2}
+        self.middle_coord = {"x": x // 2, "y": y // 2}
 
     @property
     def url(self):
