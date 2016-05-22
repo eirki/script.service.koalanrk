@@ -27,8 +27,8 @@ class ChromeTests(unittest.TestCase):
         cls.playerfile, cls.playerargs = read_external_player_config(player="Chrome")
 
     def setUp(self):
-        self.playerprocess = subprocess.Popen([self.playerfile, os_join(const.addonpath, "resources", "Example episode.htm")] +
-                                              self.playerargs)
+        self.playerargs.append(os_join(const.addonpath, "resources", "Example episode.htm"))
+        self.playerprocess = subprocess.Popen([self.playerfile] + self.playerargs)
         self.browser = playback.Chrome()
         self.remote = remote.Remote()
         self.remote.run(browser=self.browser)
@@ -59,8 +59,8 @@ class InternetExplorerTests(unittest.TestCase):
         cls.playerfile, cls.playerargs = read_external_player_config(player="InternetExplorer")
 
     def setUp(self):
-        self.playerprocess = subprocess.Popen([self.playerfile, os_join(const.addonpath, "resources", "Example episode.htm")] +
-                                              self.playerargs)
+        self.playerargs.append(os_join(const.addonpath, "resources", "Example episode.htm"))
+        self.playerprocess = subprocess.Popen([self.playerfile] + self.playerargs)
         self.browser = playback.InternetExplorer()
         self.remote = remote.Remote()
         self.remote.run(browser=self.browser)
