@@ -17,6 +17,7 @@ from .xbmcwrappers import (log, settings)
 
 Mediatuple = namedtuple("Media", "urlid title")
 
+
 class RequestSession(object):
     def __init__(self):
         self.session = requests.Session()
@@ -37,7 +38,7 @@ class RequestSession(object):
 
     def get(self, url, **kwargs):
         log.info("LOADING: %s" % url)
-        req = self.session.get(url, timeout=10, **kwargs)
+        req = self.session.get(url, timeout=30, **kwargs)
         req.soup = MethodType(self.soup, req)
         return req
 
@@ -45,7 +46,7 @@ class RequestSession(object):
         log.info("LOADING: %s" % url)
         if kwargs and not hidden:
             log.info("Payload: %s" % kwargs)
-        req = self.session.post(url, timeout=10, **kwargs)
+        req = self.session.post(url, timeout=30, **kwargs)
         req.soup = MethodType(self.soup, req)
         return req
 
@@ -153,8 +154,13 @@ def getshowinfo(showid):
     plot_heading = showpage.find("h3", text="Seriebeskrivelse")
     infodict = {
         "year": showpage.find("dt", text="Produksjonsår:").next_sibling.next_sibling.text,
-        "art": showpage.find(id="playerelement")["data-posterimage"],
         "in_superuniverse": "isInSuperUniverse: true" in showpage.text,
         "plot": plot_heading.next_sibling.next_sibling.text if plot_heading else ""
     }
+    try:
+        infodict["art"] = showpage.find(class_="play-icon-action").img["src"]
+    except KeyError:
+        log.info("Note: New nfo image location invalid")
+        infodict["art"] = showpage.find(id="playerelement")["data-posterimage"]
+
     return infodict
