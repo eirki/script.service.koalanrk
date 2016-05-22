@@ -1,3 +1,9 @@
+0.4
+Removed bundled libraries
+Implement scheduled library updates
+Implement nofifications when movies or episodes added
+Bugfixes
+
 0.3
 Python based remote control/browser control
 
