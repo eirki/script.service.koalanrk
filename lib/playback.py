@@ -76,8 +76,8 @@ class Chrome(object):
         player_width = self._eval_js('getElementById("playerelement").getBoundingClientRect()["width"]')['value']
         player_top = self._eval_js('getElementById("playerelement").getBoundingClientRect()["top"]')['value']
         player_height = self._eval_js('getElementById("playerelement").getBoundingClientRect()["height"]')['value']
-        self.player_coord = {"x": int(player_left + (player_width / 2)),
-                             "y": int(player_top + (player_height / 2))}
+        self.player_coord = {"x": player_left + (player_width // 2),
+                             "y": player_top + (player_height // 2)}
         self.m.move(**self.player_coord)
         xbmc.sleep(200)
         self.m.click(n=1, **self.player_coord)
@@ -97,8 +97,8 @@ class Chrome(object):
             player_width = self._eval_js('getElementById("playerelement").getBoundingClientRect()["width"]')['value']
             player_top = self._eval_js('getElementById("playerelement").getBoundingClientRect()["top"]')['value']
             player_height = self._eval_js('getElementById("playerelement").getBoundingClientRect()["height"]')['value']
-            self.player_coord = {"x": int(player_left + (player_width / 2)),
-                                 "y": int(player_top + (player_height / 2))}
+            self.player_coord = {"x": player_left + (player_width // 2),
+                                 "y": player_top + (player_height // 2)}
         log.info(self.player_coord)
 
         for _ in range(10):
@@ -164,7 +164,7 @@ class InternetExplorer(object):
             try:
                 playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
                 rect = playerelement.getBoundingClientRect()
-                self.player_coord = {"x": (int(rect.left + rect.right / 2)), "y": (int(rect.top + rect.bottom / 2))}
+                self.player_coord = {"x": (rect.left + rect.right // 2), "y": (rect.top + rect.bottom // 2)}
                 self.m.click(button=1, n=1, **self.player_coord)
             except StopIteration:
                 log.info("couldn't find playerelement")
@@ -186,7 +186,7 @@ class InternetExplorer(object):
             try:
                 playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement1")
                 rect = playerelement.getBoundingClientRect()
-                self.player_coord = {"x": (int(rect.left + rect.right / 2)), "y": (int(rect.top + rect.bottom / 2))}
+                self.player_coord = {"x": (rect.left + rect.right // 2), "y": (rect.top + rect.bottom // 2)}
             except StopIteration:
                 log.info("couldn't find playerelement")
                 self.player_coord = self.middle_coord
