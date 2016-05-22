@@ -154,6 +154,7 @@ class Remote(object):
         self.k.tap_key(self.k.left_key)
 
     def toggle_fullscreen(self):
+        log.info("Remote: toggle fullscreen triggered")
         self.browser.toggle_fullscreen()
 
     def stop(self):
