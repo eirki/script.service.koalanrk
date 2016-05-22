@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-from __future__ import division
+from __future__ import (unicode_literals, division)
 
 import datetime as dt
 from collections import namedtuple
@@ -148,6 +147,8 @@ class InternetExplorer(object):
         self.ie.quit()
 
     def trigger_player(self):
+        while self.ie.busy:
+            xbmc.sleep(100)
         log.info("triggering player")
         for _ in range(10):
             playicon = next((elem for elem in self.ie.document.body.all.tags("span") if elem.className == 'play-icon'), None)
@@ -160,10 +161,14 @@ class InternetExplorer(object):
                 xbmc.sleep(1000)
         else:
             log.info("couldn't fint play")
-            playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
-            rect = playerelement.getBoundingClientRect()
-            self.player_coord = {"x": (int(rect.left + rect.right / 2)), "y": (int(rect.top + rect.bottom / 2))}
-            self.m.click(button=1, n=1, **self.player_coord)
+            try:
+                playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
+                rect = playerelement.getBoundingClientRect()
+                self.player_coord = {"x": (int(rect.left + rect.right / 2)), "y": (int(rect.top + rect.bottom / 2))}
+                self.m.click(button=1, n=1, **self.player_coord)
+            except StopIteration:
+                log.info("couldn't find playerelement")
+                self.m.click(button=1, n=1, **self.middle_coord)
 
     def toggle_fullscreen(self):
         if self.player_coord:
@@ -178,9 +183,13 @@ class InternetExplorer(object):
         while self.ie.busy:
             xbmc.sleep(100)
         if not self.player_coord:
-            playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
-            rect = playerelement.getBoundingClientRect()
-            self.player_coord = {"x": (int(rect.left + rect.right / 2)), "y": (int(rect.top + rect.bottom / 2))}
+            try:
+                playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement1")
+                rect = playerelement.getBoundingClientRect()
+                self.player_coord = {"x": (int(rect.left + rect.right / 2)), "y": (int(rect.top + rect.bottom / 2))}
+            except StopIteration:
+                log.info("couldn't find playerelement")
+                self.player_coord = self.middle_coord
 
         log.info("waitong for player ready for fullscreen")
         for _ in range(10):
@@ -201,6 +210,9 @@ class InternetExplorer(object):
 
 
 class Session(object):
+    def __init__(self):
+        self.koala_playing = False
+
     def start(self):
         playingfile = self.getplayingvideofile()
         if not (playingfile["file"].startswith(uni_join(const.libpath, const.provider)) or
@@ -211,7 +223,6 @@ class Session(object):
                                         uni_join(const.addonpath, "resources", "NRK nett-TV.htm"),
                                         uni_join(const.addonpath, "resources", "Fantorangen BarneTV.htm"),
                                         uni_join(const.addonpath, "resources", "BarneTV.htm")]):
-            self.koala_playing = False
             return
         log.info("start onPlayBackStarted")
         self.koala_playing = True
