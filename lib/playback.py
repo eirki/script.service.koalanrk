@@ -27,9 +27,11 @@ if const.os == "win":
     import win32gui
 
 
-class Chrome(object):
+class Browser(object):
     def __init__(self):
-        self.errors = (requests.exceptions.ConnectionError, socket.error, websocket.WebSocketBadStatusException, AttributeError)
+        self.errors = (requests.exceptions.ConnectionError, socket.error,
+                       websocket.WebSocketBadStatusException, AttributeError, IndexError)
+        self.ieadapter = None
         self.k = PyKeyboard()
         self.m = PyMouse()
         self.player_coord = None
@@ -50,9 +52,24 @@ class Chrome(object):
         return self._eval_js('hasFocus()')['value']
 
     def connect(self):
-        self.chrome = Chromote(host="localhost", port=9222)
-        self.tab = self.chrome.tabs[0]
-        self.k.tap_key(self.k.tab_key)
+        try:
+            self.browser = Chromote(host="localhost", port=9222)
+            self.browsertype = "chrome"
+        except requests.exceptions.ConnectionError:
+            adapterpath = os_join(const.homefolder, "addons", "script.module.chromote", "resources",
+                                  "IEDiagnosticsAdapter", "IEDiagnosticsAdapter.exe")
+            self.ieadapter = subprocess.Popen(adapterpath, shell=True)
+            self.browser = Chromote(host="localhost", port=9222)
+            self.browsertype = "ie"
+
+        while True:
+            for n, tab in enumerate(self.browser.tabs):
+                log.info(tab.url)
+                if tab.url != "about:blank" and "file://" not in tab.url:
+                    self.tab = tab
+                    self.tab_n = n
+                    log.info("connected to %s" % self.browsertype)
+                    return
 
     def close(self):
         if self.focused:
@@ -118,97 +135,6 @@ class Chrome(object):
         self.m.move(**self.corner_coord)
 
 
-class InternetExplorer(object):
-    def __init__(self):
-        self.errors = pywintypes.com_error, AttributeError
-        self.m = PyMouse()
-        self.player_coord = None
-        x, y = self.m.screen_size()
-        self.corner_coord = {'x': x, 'y': y}
-        self.middle_coord = {"x": x // 2, "y": y // 2}
-
-    @property
-    def url(self):
-        return self.ie.LocationURL
-
-    def connect(self):
-        xbmc.sleep(3000)
-        for _ in range(30):
-            iehandle = win32gui.GetForegroundWindow()
-            shell = Dispatch("Shell.Application")
-            for win in shell.Windows():
-                if win.hwnd == iehandle:
-                    self.ie = win
-                    return
-            xbmc.sleep(100)
-        log.info("could not connect to Internet Explorer")
-
-    def close(self):
-        self.ie.quit()
-
-    def trigger_player(self):
-        while self.ie.busy:
-            xbmc.sleep(100)
-        log.info("triggering player")
-        for _ in range(10):
-            playicon = next((elem for elem in self.ie.document.body.all.tags("span") if elem.className == 'play-icon'), None)
-            if playicon:
-                playicon.click()
-                rect = playicon.getBoundingClientRect()
-                self.player_coord = {"x": rect.left, "y": rect.top}
-                break
-            else:
-                xbmc.sleep(1000)
-        else:
-            log.info("couldn't fint play")
-            try:
-                playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement")
-                rect = playerelement.getBoundingClientRect()
-                self.player_coord = {"x": (rect.left + rect.right // 2), "y": (rect.top + rect.bottom // 2)}
-                self.m.click(button=1, n=1, **self.player_coord)
-            except StopIteration:
-                log.info("couldn't find playerelement")
-                self.m.click(button=1, n=1, **self.middle_coord)
-
-    def toggle_fullscreen(self):
-        if self.player_coord:
-            self.m.move(**self.player_coord)
-            xbmc.sleep(200)
-            self.m.click(n=2, **self.player_coord)
-        else:
-            self.m.click(n=2, **self.middle_coord)
-        self.m.move(**self.corner_coord)
-
-    def enter_fullscreen(self):
-        while self.ie.busy:
-            xbmc.sleep(100)
-        if not self.player_coord:
-            try:
-                playerelement = next(elem for elem in self.ie.document.body.all.tags("div") if elem.id == "playerelement1")
-                rect = playerelement.getBoundingClientRect()
-                self.player_coord = {"x": (rect.left + rect.right // 2), "y": (rect.top + rect.bottom // 2)}
-            except StopIteration:
-                log.info("couldn't find playerelement")
-                self.player_coord = self.middle_coord
-
-        log.info("waitong for player ready for fullscreen")
-        for _ in range(10):
-            try:
-                next((elem for elem in self.ie.document.head.all.tags("script") if "ProgressTracker" in elem.getAttribute("src")))
-                break
-            except StopIteration:
-                xbmc.sleep(1000)
-        else:
-            log.info("couldnt find progressbar, don't know if playback started")
-
-        log.info("double clicking")
-
-        self.m.move(**self.player_coord)
-        xbmc.sleep(200)
-        self.m.click(n=2, **self.player_coord)
-        self.m.move(**self.corner_coord)
-
-
 class Session(object):
     def __init__(self):
         self.koala_playing = False
@@ -227,10 +153,7 @@ class Session(object):
         log.info("start onPlayBackStarted")
         self.koala_playing = True
 
-        if const.os == "win" and self.ie_active():
-            self.browser = InternetExplorer()
-        else:
-            self.browser = Chrome()
+        self.browser = Browser()
 
         self.remote = None
         if settings["remote"]:
@@ -268,22 +191,6 @@ class Session(object):
         playingfile = rpc("Player.GetItem", playerid=playerid,
                           properties=["season", "episode", "tvshowid", "file", "playcount", "runtime"])
         return playingfile["item"]
-
-    def ie_active(self):
-        for _ in range(30):
-            cur_hwnd = win32gui.GetForegroundWindow()
-            win_title = win32gui.GetWindowText(cur_hwnd).decode(sys.getfilesystemencoding())
-            if "explorer" in win_title.lower():
-                log.info("ie active")
-                return True
-            elif "chrome" in win_title.lower():
-                log.info("chrome active")
-                return False
-            elif "kodi" in win_title.lower() and not xbmc.Player().isPlaying():
-                log.info("playback cancelled")
-            xbmc.sleep(1000)
-        else:
-            raise Exception("could not find player")
 
     def get_episodes(self, playingfile):
         Epinfo = namedtuple("Epinfo", "code kodiid playcount runtime")
