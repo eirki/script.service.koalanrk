@@ -77,17 +77,6 @@ class Browser(object):
             self.k.tap_key("w")
             self.k.release_key(self.k.control_key)
 
-    def trigger_player(self):
-        log.info("triggering player")
-        for _ in range(10):
-            player_loaded = self._eval_js('getElementsByClassName("play-icon")[0]')['type'] != "undefined"
-            if player_loaded:
-                self._eval_js('getElementsByClassName("play-icon")[0].click()')
-                break
-            else:
-                xbmc.sleep(1000)
-        else:
-            log.info("couldn't fint play")
 
         player_left = self._eval_js('getElementById("playerelement").getBoundingClientRect()["left"]')['value']
         player_width = self._eval_js('getElementById("playerelement").getBoundingClientRect()["width"]')['value']
