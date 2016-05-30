@@ -7,7 +7,7 @@ from collections import namedtuple
 import json
 import requests
 import re
-import sys
+import subprocess
 from multiprocessing.dummy import Process as Thread
 import socket
 import xbmc
@@ -21,10 +21,6 @@ from . import constants as const
 from .utils import (uni_join, os_join)
 from .xbmcwrappers import (log, settings, rpc)
 from .remote import Remote
-if const.os == "win":
-    from win32com.client import Dispatch
-    import pywintypes
-    import win32gui
 
 
 class Browser(object):
@@ -41,15 +37,11 @@ class Browser(object):
 
     def _eval_js(self, exp):
         result = json.loads(self.tab.evaluate('document.%s' % exp))
-        return result['result']['result']
-
-    @property
-    def url(self):
-        return self.chrome.tabs[0].url
-
-    @property
-    def focused(self):
-        return self._eval_js('hasFocus()')['value']
+        try:
+            return result['result']['result']
+        except KeyError:
+            log.info(result)
+            raise
 
     def connect(self):
         try:
@@ -72,21 +64,12 @@ class Browser(object):
                     return
 
     def close(self):
-        if self.focused:
-            self.k.press_key(self.k.control_key)
-            self.k.tap_key("w")
-            self.k.release_key(self.k.control_key)
+        if self.ieadapter:
+            self.ieadapter.terminate()
 
-
-        player_left = self._eval_js('getElementById("playerelement").getBoundingClientRect()["left"]')['value']
-        player_width = self._eval_js('getElementById("playerelement").getBoundingClientRect()["width"]')['value']
-        player_top = self._eval_js('getElementById("playerelement").getBoundingClientRect()["top"]')['value']
-        player_height = self._eval_js('getElementById("playerelement").getBoundingClientRect()["height"]')['value']
-        self.player_coord = {"x": player_left + (player_width // 2),
-                             "y": player_top + (player_height // 2)}
-        self.m.move(**self.player_coord)
-        xbmc.sleep(200)
-        self.m.click(n=1, **self.player_coord)
+    @property
+    def url(self):
+        return self._eval_js("URL")["value"]
 
     def toggle_fullscreen(self):
         if self.player_coord:
@@ -98,13 +81,12 @@ class Browser(object):
         self.m.move(**self.corner_coord)
 
     def enter_fullscreen(self):
-        if not self.player_coord:
-            player_left = self._eval_js('getElementById("playerelement").getBoundingClientRect()["left"]')['value']
-            player_width = self._eval_js('getElementById("playerelement").getBoundingClientRect()["width"]')['value']
-            player_top = self._eval_js('getElementById("playerelement").getBoundingClientRect()["top"]')['value']
-            player_height = self._eval_js('getElementById("playerelement").getBoundingClientRect()["height"]')['value']
-            self.player_coord = {"x": player_left + (player_width // 2),
-                                 "y": player_top + (player_height // 2)}
+        player_left = self._eval_js('getElementById("playerelement").getBoundingClientRect()["left"]')['value']
+        player_width = self._eval_js('getElementById("playerelement").getBoundingClientRect()["width"]')['value']
+        player_top = self._eval_js('getElementById("playerelement").getBoundingClientRect()["top"]')['value']
+        player_height = self._eval_js('getElementById("playerelement").getBoundingClientRect()["height"]')['value']
+        self.player_coord = {"x": int(player_left + (player_width / 2)),
+                             "y": int(player_top + (player_height / 2))}
         log.info(self.player_coord)
 
         for _ in range(10):
@@ -150,9 +132,6 @@ class Session(object):
             self.remote.run(browser=self.browser)
 
         self.browser.connect()
-
-        if playingfile["type"] in ["episode", "movie"]:
-            self.browser.trigger_player()
 
         if "NRK nett-TV.htm" not in playingfile["file"]:
             self.browser.enter_fullscreen()
