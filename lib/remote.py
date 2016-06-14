@@ -128,11 +128,6 @@ class Remote(object):
 
     def run(self, browser):
         self.browser = browser
-        self.k = PyKeyboard()
-        self.m = PyMouse()
-        x, y = self.m.screen_size()
-        self.corner_coors = {'x': x, 'y': y}
-        self.wiggle_coors = {'x': x, 'y': y - 10}
         funcmap = {button.code: button.func for button in self.mapping if button.code}
         self.listener = PlaybackListener(funcmap)
         self.listener.run()
@@ -142,28 +137,23 @@ class Remote(object):
 
     def playpause(self):
         log.info("Remote: playpause triggered")
-        self.k.tap_key(self.k.up_key)
-        self.k.tap_key(self.k.space_key)
+        self.player.playpause()
 
     def forward(self):
         log.info("Remote: forward triggered")
-        self.k.tap_key(self.k.right_key)
+        self.player.forward()
 
     def rewind(self):
         log.info("Remote: rewind triggered")
-        self.k.tap_key(self.k.left_key)
+        self.player.rewind()
 
     def toggle_fullscreen(self):
         log.info("Remote: toggle fullscreen triggered")
-        self.browser.toggle_fullscreen()
+        self.player.toggle_fullscreen()
 
     def stop(self):
         log.info("Remote: stop triggered")
-        try:
-            self.browser.close()
-        except self.browser.errors:
-            pass
-        xbmc.Player().stop()
+        self.player.stop()
 
     def close(self):
         log.info("Closing remote keylistener")

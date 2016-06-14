@@ -23,7 +23,7 @@ from .xbmcwrappers import (log, settings, rpc)
 from .remote import Remote
 
 
-class Browser(object):
+class Player(object):
     def __init__(self):
         self.errors = (requests.exceptions.ConnectionError, socket.error,
                        websocket.WebSocketBadStatusException, AttributeError, IndexError)
@@ -124,14 +124,14 @@ class Session(object):
         log.info("start onPlayBackStarted")
         self.koala_playing = True
 
-        self.browser = Browser()
+        self.player = Player()
 
         self.remote = None
         if settings["remote"]:
             self.remote = Remote()
-            self.remote.run(browser=self.browser)
+            self.remote.run(player=self.player)
 
-        self.browser.connect()
+        self.player.connect()
 
         if "NRK nett-TV.htm" not in playingfile["file"]:
             self.browser.enter_fullscreen()
