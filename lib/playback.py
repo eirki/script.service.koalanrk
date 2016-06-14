@@ -4,12 +4,11 @@ from __future__ import (unicode_literals, division)
 
 import datetime as dt
 from collections import namedtuple
-import json
 import requests
 import re
-import subprocess
 from multiprocessing.dummy import Process as Thread
 import socket
+import subprocess
 import xbmc
 
 import websocket
@@ -103,6 +102,18 @@ class Player(object):
         self.m.click(n=2, **coord)
         self.m.move(**self.corner_coord)
 
+    def stop(self):
+        log.info("Remote: stop triggered")
+        try:
+            self.close()
+        except self.exceptions:
+            pass
+        if self.ieadapter:
+            self.ieadapter.terminate()
+            self.ieadapter = None
+            log.info("closed ieadapter")
+        xbmc.Player().stop()
+
 
 class Session(object):
     def __init__(self):
@@ -140,10 +151,13 @@ class Session(object):
         if not self.koala_playing:
             return
         log.info("start onPlayBackEnded")
-        if self.remote:
-            self.remote.close()
-        self.koala_playing = False
-        log.info("finished onPlayBackEnded")
+        try:
+            if self.remote:
+                self.remote.close()
+            self.player.close()
+        finally:
+            self.koala_playing = False
+            log.info("finished onPlayBackEnded")
 
     def getplayingvideofile(self):
         active_player = rpc("Player.GetActivePlayers")[0]['playerid']
@@ -201,7 +215,7 @@ class Session(object):
         watch_duration = finished_watching_at - started_watching_at
         if watch_duration.seconds / episode.runtime.seconds >= 0.9:
             rpc("VideoLibrary.SetEpisodeDetails", episodeid=episode.kodiid,
-                playcount=episode.playcount+1, lastplayed=finished_watching_at.strftime("%d-%m-%Y %H:%M:%S"))
+                playcount=episode.playcount + 1, lastplayed=finished_watching_at.strftime("%d-%m-%Y %H:%M:%S"))
             log.info("%s: Marked as watched" % episode.code)
         else:
             log.info("%s: Skipped, only partially watched (%s vs. %s)" %
