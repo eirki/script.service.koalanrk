@@ -35,14 +35,6 @@ class Player(object):
         self.corner_coord = {'x': x, 'y': y}
         self.middle_coord = {"x": x // 2, "y": y // 2}
 
-    def _eval_js(self, exp):
-        result = json.loads(self.tab.evaluate('document.%s' % exp))
-        try:
-            return result['result']['result']
-        except KeyError:
-            log.info(result)
-            raise
-
     def connect(self):
         try:
             self.browser = Chromote(host="localhost", port=9222)
@@ -67,9 +59,6 @@ class Player(object):
         if self.ieadapter:
             self.ieadapter.terminate()
 
-    @property
-    def url(self):
-        return self._eval_js("URL")["value"]
 
     def playpause(self):
         self.k.tap_key(self.k.up_key)
