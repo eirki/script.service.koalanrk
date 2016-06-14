@@ -55,13 +55,13 @@ class Player(object):
             self.browsertype = "ie"
 
         while True:
-            for n, tab in enumerate(self.browser.tabs):
-                log.info(tab.url)
-                if tab.url != "about:blank" and "file://" not in tab.url:
-                    self.tab = tab
-                    self.tab_n = n
-                    log.info("connected to %s" % self.browsertype)
-                    return
+            try:
+                self.tab = next(tab for tab in self.browser.tabs if tab.url != "about:blank" and "file://" not in tab.url)
+                break
+            except StopIteration:
+                xbmc.sleep(50)
+        self.tab.connect_websocket()
+        log.info("websocket connected: %s" % self.tab.url)
 
     def close(self):
         if self.ieadapter:
