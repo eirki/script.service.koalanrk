@@ -73,6 +73,18 @@ class Player(object):
         while "ProgressTracker" not in self.tab.get_element_by_tag_name("script")["src"]:
             xbmc.sleep(200)
 
+    def wait_for_url_change(self):
+        stored_url = self.tab.url
+        while True:
+            try:
+                current_url = self.tab.url
+                if current_url != stored_url:
+                    return current_url
+                else:
+                    xbmc.sleep(1000)
+            except self.exceptions:
+                # browser closed
+                return None
 
     def playpause(self):
         self.k.tap_key(self.k.up_key)
@@ -163,28 +175,23 @@ class Session(object):
         starturlid, stored_episodes = self.get_episodes(playingfile)
         log.info(stored_episodes)
 
-        last_stored_url = self.browser.url
         current_urlid = starturlid
         episode_watching = stored_episodes[current_urlid]
         started_watching_at = dt.datetime.now()
         while self.koala_playing:
-            try:
-                current_url = self.browser.url
-            except self.browser.errors:
-                break
+            url = self.player.listen_for_URL_change()
+            if url is None:
+                continue
+            log.info("new url: %s" % url)
+            new_urlid, is_episode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", url)
+            if is_episode and new_urlid != current_urlid:
+                self.mark_watched(episode_watching, started_watching_at)
 
-            if current_url == last_stored_url:
-                xbmc.sleep(1000)
-            else:
-                log.info("new url: %s" % current_url)
-                new_urlid, is_episode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", current_url)
-                if is_episode and new_urlid != current_urlid:
-                    self.mark_watched(episode_watching, started_watching_at)
-
-                    episode_watching = stored_episodes[new_urlid]
-                    started_watching_at = dt.datetime.now()
-                    current_urlid = new_urlid
-                last_stored_url = current_url
+                episode_watching = stored_episodes[new_urlid]
+                started_watching_at = dt.datetime.now()
+                current_urlid = new_urlid
+                self.player.wait_player_start()
+                self.player.toggle_fullscreen()
 
         self.mark_watched(episode_watching, started_watching_at)
         log.info("finished monitoring")
