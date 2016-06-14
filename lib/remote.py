@@ -126,8 +126,8 @@ class Remote(object):
                 self.mapping[call] = selected_button._replace(code=newkeycode, char=newcharacter)
         self.store_mapping(self.mapping)
 
-    def run(self, browser):
-        self.browser = browser
+    def run(self, player):
+        self.player = player
         funcmap = {button.code: button.func for button in self.mapping if button.code}
         self.listener = PlaybackListener(funcmap)
         self.listener.run()

@@ -71,14 +71,9 @@ class Player(object):
     def url(self):
         return self._eval_js("URL")["value"]
 
-    def toggle_fullscreen(self):
-        if self.player_coord:
-            self.m.move(**self.player_coord)
-            xbmc.sleep(200)
-            self.m.click(n=2, **self.player_coord)
-        else:
-            self.m.click(n=2, **self.middle_coord)
-        self.m.move(**self.corner_coord)
+    def playpause(self):
+        self.k.tap_key(self.k.up_key)
+        self.k.tap_key(self.k.space_key)
 
     def enter_fullscreen(self):
         player_left = self._eval_js('getElementById("playerelement").getBoundingClientRect()["left"]')['value']
@@ -98,11 +93,17 @@ class Player(object):
                 xbmc.sleep(1000)
         else:
             log.info("couldnt find progressbar, not sure if playback started")
+    def forward(self):
+        self.k.tap_key(self.k.right_key)
 
-        log.info("double clicking")
-        self.m.move(**self.player_coord)
+    def rewind(self):
+        self.k.tap_key(self.k.left_key)
+
+    def toggle_fullscreen(self):
+        coord = self.player_coord if self.player_coord else self.middle_coord
+        self.m.move(**coord)
         xbmc.sleep(200)
-        self.m.click(n=2, **self.player_coord)
+        self.m.click(n=2, **coord)
         self.m.move(**self.corner_coord)
 
 
