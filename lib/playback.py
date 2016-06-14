@@ -25,8 +25,9 @@ from .remote import Remote
 
 class Player(object):
     def __init__(self):
-        self.errors = (requests.exceptions.ConnectionError, socket.error,
-                       websocket.WebSocketBadStatusException, AttributeError, IndexError)
+        self.exceptions = (requests.exceptions.ConnectionError, socket.error,
+                           websocket.WebSocketBadStatusException)
+        self.tab = None
         self.ieadapter = None
         self.k = PyKeyboard()
         self.m = PyMouse()
@@ -45,6 +46,7 @@ class Player(object):
             self.ieadapter = subprocess.Popen(adapterpath, shell=True)
             self.browser = Chromote(host="localhost", port=9222)
             self.browsertype = "ie"
+        log.info("connected to %s: %s" % (self.browsertype, self.browser))
 
         while True:
             try:
@@ -56,32 +58,26 @@ class Player(object):
         log.info("websocket connected: %s" % self.tab.url)
 
     def close(self):
-        if self.ieadapter:
-            self.ieadapter.terminate()
+        if self.tab:
+            focused = self.tab.evaluate('document.hasFocus()')['result']['result']['value']
+            if focused:
+                self.k.press_keys([self.k.control_key, "w"])
+            self.tab.close_websocket()
+
+    def get_player_coord(self):
+        rect = self.tab.get_element_by_id("playerelement").rect
+        self.player_coord = {"x": int((rect["left"] + rect["right"]) / 2),
+                             "y": int((rect["top"] + rect["bottom"]) / 2)}
+
+    def wait_player_start(self):
+        while "ProgressTracker" not in self.tab.get_element_by_tag_name("script")["src"]:
+            xbmc.sleep(200)
 
 
     def playpause(self):
         self.k.tap_key(self.k.up_key)
         self.k.tap_key(self.k.space_key)
 
-    def enter_fullscreen(self):
-        player_left = self._eval_js('getElementById("playerelement").getBoundingClientRect()["left"]')['value']
-        player_width = self._eval_js('getElementById("playerelement").getBoundingClientRect()["width"]')['value']
-        player_top = self._eval_js('getElementById("playerelement").getBoundingClientRect()["top"]')['value']
-        player_height = self._eval_js('getElementById("playerelement").getBoundingClientRect()["height"]')['value']
-        self.player_coord = {"x": int(player_left + (player_width / 2)),
-                             "y": int(player_top + (player_height / 2))}
-        log.info(self.player_coord)
-
-        for _ in range(10):
-            playback_started = "ProgressTracker" in self._eval_js('getElementsByTagName("script")[0].getAttribute("src")')['value']
-            if playback_started:
-                log.info("playback started")
-                break
-            else:
-                xbmc.sleep(1000)
-        else:
-            log.info("couldnt find progressbar, not sure if playback started")
     def forward(self):
         self.k.tap_key(self.k.right_key)
 
@@ -103,13 +99,7 @@ class Session(object):
     def start(self):
         playingfile = self.getplayingvideofile()
         if not (playingfile["file"].startswith(uni_join(const.libpath, const.provider)) or
-                playingfile["file"] in [uni_join(const.addonpath, "resources", "NRK1.htm"),
-                                        uni_join(const.addonpath, "resources", "NRK2.htm"),
-                                        uni_join(const.addonpath, "resources", "NRK3.htm"),
-                                        uni_join(const.addonpath, "resources", "NRK Super.htm"),
-                                        uni_join(const.addonpath, "resources", "NRK nett-TV.htm"),
-                                        uni_join(const.addonpath, "resources", "Fantorangen BarneTV.htm"),
-                                        uni_join(const.addonpath, "resources", "BarneTV.htm")]):
+                uni_join(const.addonpath, "resources") in playingfile["file"]):
             return
         log.info("start onPlayBackStarted")
         self.koala_playing = True
@@ -124,7 +114,9 @@ class Session(object):
         self.player.connect()
 
         if "NRK nett-TV.htm" not in playingfile["file"]:
-            self.browser.enter_fullscreen()
+            self.player.get_player_coord()
+            self.player.wait_player_start()
+            self.player.toggle_fullscreen()
 
         if playingfile["type"] == "episode":
             thread = Thread(target=self.monitor_watched, args=[playingfile])
@@ -142,11 +134,8 @@ class Session(object):
         log.info("finished onPlayBackEnded")
 
     def getplayingvideofile(self):
-        if xbmc.Player().isPlayingAudio():
-            playerid = 0
-        elif xbmc.Player().isPlayingVideo():
-            playerid = 1
-        playingfile = rpc("Player.GetItem", playerid=playerid,
+        active_player = rpc("Player.GetActivePlayers")[0]['playerid']
+        playingfile = rpc("Player.GetItem", playerid=active_player,
                           properties=["season", "episode", "tvshowid", "file", "playcount", "runtime"])
         return playingfile["item"]
 
