@@ -53,11 +53,11 @@ class Player(object):
         self.tab.connect_websocket()
         log.info("websocket connected: %s" % self.tab.url)
 
-    def close(self):
+    def cleanup(self):
+        if self.ieadapter:
+            self.ieadapter.terminate()
+            log.info("closed ieadapter")
         if self.tab:
-            focused = self.tab.evaluate('document.hasFocus()')['result']['result']['value']
-            if focused:
-                self.k.press_keys([self.k.control_key, "w"])
             self.tab.close_websocket()
 
     def get_player_coord(self):
@@ -103,15 +103,11 @@ class Player(object):
         self.m.move(**self.corner_coord)
 
     def stop(self):
-        log.info("Remote: stop triggered")
-        try:
-            self.close()
-        except self.exceptions:
-            pass
-        if self.ieadapter:
-            self.ieadapter.terminate()
-            self.ieadapter = None
-            log.info("closed ieadapter")
+        if self.tab:
+            if self.browsertype == "chrome":
+                focused = self.tab.evaluate('document.hasFocus()')['result']['result']['value']
+                if focused:
+                    self.k.press_keys([self.k.control_key, "w"])
         xbmc.Player().stop()
 
 
@@ -154,7 +150,7 @@ class Session(object):
         try:
             if self.remote:
                 self.remote.close()
-            self.player.close()
+            self.player.cleanup()
         finally:
             self.koala_playing = False
             log.info("finished onPlayBackEnded")
