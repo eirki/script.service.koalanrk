@@ -47,12 +47,9 @@ class Player(object):
             self.browsertype = "ie"
         log.info("connected to %s: %s" % (self.browsertype, self.browser))
 
-        while True:
-            try:
-                self.tab = next(tab for tab in self.browser.tabs if tab.url != "about:blank" and "file://" not in tab.url)
-                break
-            except StopIteration:
-                xbmc.sleep(50)
+        while self.tab is None:
+            self.tab = next((tab for tab in self.browser.tabs if tab.url != "about:blank" and "file://" not in tab.url), None)
+            xbmc.sleep(50)
         self.tab.connect_websocket()
         log.info("websocket connected: %s" % self.tab.url)
 
@@ -64,7 +61,10 @@ class Player(object):
             self.tab.close_websocket()
 
     def get_player_coord(self):
-        rect = self.tab.get_element_by_id("playerelement").rect
+        playerelement = self.tab.get_element_by_id("playerelement")
+        while not playerelement.present:
+            xbmc.sleep(100)
+        rect = playerelement.rect
         self.player_coord = {"x": int((rect["left"] + rect["right"]) / 2),
                              "y": int((rect["top"] + rect["bottom"]) / 2)}
 
@@ -120,9 +120,9 @@ class Session(object):
         self.koala_playing = False
 
     def start(self):
-        playingfile = self.getplayingvideofile()
+        playingfile = self.get_playing_file()
         if not (playingfile["file"].startswith(uni_join(const.libpath, const.provider)) or
-                uni_join(const.addonpath, "resources") in playingfile["file"]):
+                playingfile["file"].startswith(uni_join(const.addonpath, "resources"))):
             return
         log.info("start onPlayBackStarted")
         self.koala_playing = True
@@ -159,7 +159,7 @@ class Session(object):
             self.koala_playing = False
             log.info("finished onPlayBackEnded")
 
-    def getplayingvideofile(self):
+    def get_playing_file(self):
         active_player = rpc("Player.GetActivePlayers")[0]['playerid']
         playingfile = rpc("Player.GetItem", playerid=active_player,
                           properties=["season", "episode", "tvshowid", "file", "playcount", "runtime"])
@@ -201,9 +201,9 @@ class Session(object):
             if is_episode and new_urlid != current_urlid:
                 self.mark_watched(episode_watching, started_watching_at)
 
-                episode_watching = stored_episodes[new_urlid]
-                started_watching_at = dt.datetime.now()
                 current_urlid = new_urlid
+                episode_watching = stored_episodes[current_urlid]
+                started_watching_at = dt.datetime.now()
                 self.player.wait_player_start()
                 self.player.toggle_fullscreen()
 
