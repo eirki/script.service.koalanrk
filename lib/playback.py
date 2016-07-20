@@ -41,9 +41,12 @@ class Player(object):
             self.browser = Chromote(host="localhost", port=9222, internet_explorer=True)
         log.info("connected to %s: %s" % (self.browser.browsertype, self.browser))
 
-        while self.tab is None:
-            self.tab = next((tab for tab in self.browser.tabs if tab.url != "about:blank" and "file://" not in tab.url), None)
-            xbmc.sleep(50)
+        while True:
+            try:
+                self.tab = next(tab for tab, title, url in self.browser.tabs if url != "about:blank" and "file://" not in url)
+                break
+            except StopIteration:
+                xbmc.sleep(50)
         self.tab.connect_websocket()
         log.info("websocket connected: %s" % self.tab.url)
 
