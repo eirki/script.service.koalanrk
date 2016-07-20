@@ -9,8 +9,8 @@ import re
 from multiprocessing.dummy import Process as Thread
 import socket
 import xbmc
-import websocket
 
+import websocket
 from chromote import Chromote
 from pykeyboard import PyKeyboard
 from pymouse import PyMouse
