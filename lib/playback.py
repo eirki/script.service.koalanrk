@@ -63,8 +63,10 @@ class Player(object):
                              "y": int((rect["top"] + rect["bottom"]) / 2)}
 
     def wait_player_start(self):
-        while "ProgressTracker" not in self.tab.get_element_by_tag_name("script")["src"]:
-            xbmc.sleep(200)
+        for _ in range(120):
+            if "ProgressTracker" in self.tab.get_element_by_tag_name("script")["src"]:
+                break
+            xbmc.sleep(500)
 
     def wait_for_url_change(self):
         stored_url = self.tab.url
