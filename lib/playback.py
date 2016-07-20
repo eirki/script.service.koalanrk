@@ -27,7 +27,6 @@ class Player(object):
         self.exceptions = (requests.exceptions.ConnectionError, socket.error,
                            websocket.WebSocketBadStatusException)
         self.tab = None
-        self.ieadapter = None
         self.k = PyKeyboard()
         self.m = PyMouse()
         self.player_coord = None
@@ -38,14 +37,9 @@ class Player(object):
     def connect(self):
         try:
             self.browser = Chromote(host="localhost", port=9222)
-            self.browsertype = "chrome"
         except requests.exceptions.ConnectionError:
-            adapterpath = os_join(const.homefolder, "addons", "script.module.chromote", "resources",
-                                  "IEDiagnosticsAdapter", "IEDiagnosticsAdapter.exe")
-            self.ieadapter = subprocess.Popen(adapterpath, shell=True)
-            self.browser = Chromote(host="localhost", port=9222)
-            self.browsertype = "ie"
-        log.info("connected to %s: %s" % (self.browsertype, self.browser))
+            self.browser = Chromote(host="localhost", port=9222, internet_explorer=True)
+        log.info("connected to %s: %s" % (self.browser.browsertype, self.browser))
 
         while self.tab is None:
             self.tab = next((tab for tab in self.browser.tabs if tab.url != "about:blank" and "file://" not in tab.url), None)
@@ -54,8 +48,8 @@ class Player(object):
         log.info("websocket connected: %s" % self.tab.url)
 
     def cleanup(self):
-        if self.ieadapter:
-            self.ieadapter.terminate()
+        if self.browser.browsertype == "ie":
+            self.browser.close_ieadapter()
             log.info("closed ieadapter")
         if self.tab:
             self.tab.close_websocket()
@@ -103,11 +97,10 @@ class Player(object):
         self.m.move(**self.corner_coord)
 
     def stop(self):
-        if self.tab:
-            if self.browsertype == "chrome":
-                focused = self.tab.evaluate('document.hasFocus()')['result']['result']['value']
-                if focused:
-                    self.k.press_keys([self.k.control_key, "w"])
+        if self.tab and self.browser.browsertype == "chrome":
+            focused = self.tab.evaluate('document.hasFocus()')['result']['result']['value']
+            if focused:
+                self.k.press_keys([self.k.control_key, "w"])
         xbmc.Player().stop()
 
 
