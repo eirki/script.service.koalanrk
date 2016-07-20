@@ -8,10 +8,9 @@ import requests
 import re
 from multiprocessing.dummy import Process as Thread
 import socket
-import traceback
 import xbmc
-
 import websocket
+
 from chromote import Chromote
 from pykeyboard import PyKeyboard
 from pymouse import PyMouse
@@ -103,6 +102,7 @@ class Player(object):
         xbmc.sleep(200)
         self.m.click(n=2, **coord)
         self.m.move(**self.corner_coord)
+        log.info("fullscreen toggled")
 
     def stop(self):
         if self.tab and self.browser.browsertype == "chrome":
