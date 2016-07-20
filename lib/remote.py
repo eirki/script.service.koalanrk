@@ -7,12 +7,12 @@ from collections import namedtuple
 import xbmc
 import xbmcgui
 
-from pykeyboard import (PyKeyboardEvent, PyKeyboard)
-from pymouse import PyMouse
+from pykeyboard import PyKeyboardEvent
 
 from . import constants as const
 from .utils import os_join
 from .xbmcwrappers import (log, dialogs)
+
 
 class ConfigurationDialog(xbmcgui.WindowXMLDialog):
     def __new__(cls):
@@ -135,6 +135,10 @@ class Remote(object):
         if missing_keys:
             log.info("Note, following actions are not mapped to remote: %s" % missing_keys)
 
+    def close(self):
+        self.listener.stop()
+        log.info("Remote keylistener closed")
+
     def playpause(self):
         log.info("Remote: playpause triggered")
         self.player.playpause()
@@ -154,8 +158,3 @@ class Remote(object):
     def stop(self):
         log.info("Remote: stop triggered")
         self.player.stop()
-
-    def close(self):
-        log.info("Closing remote keylistener")
-        self.listener.stop()
-        log.info("Remote keylistener closed")
