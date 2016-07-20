@@ -8,7 +8,7 @@ import requests
 import re
 from multiprocessing.dummy import Process as Thread
 import socket
-import subprocess
+import traceback
 import xbmc
 
 import websocket
@@ -71,18 +71,21 @@ class Player(object):
                 break
             xbmc.sleep(500)
 
-    def wait_for_url_change(self):
+    def wait_for_url_change(self, stored_url=None):
         stored_url = self.tab.url
         while True:
             try:
                 current_url = self.tab.url
                 if current_url != stored_url:
                     return current_url
-                else:
-                    xbmc.sleep(1000)
-            except self.exceptions:
+            except KeyError:
+                # loading new page
+                continue
+            except (requests.exceptions.ConnectionError, socket.error,
+                    websocket.WebSocketBadStatusException):
                 # browser closed
                 return None
+            xbmc.sleep(1000)
 
     def playpause(self):
         self.k.tap_key(self.k.up_key)
@@ -183,13 +186,15 @@ class Session(object):
         starturlid, stored_episodes = self.get_episodes(playingfile)
         log.info(stored_episodes)
 
+        url = None
         current_urlid = starturlid
         episode_watching = stored_episodes[current_urlid]
         started_watching_at = dt.datetime.now()
         while self.koala_playing:
-            url = self.player.listen_for_URL_change()
+            url = self.player.wait_for_url_change(stored_url=url)
             if url is None:
-                continue
+                # browser closed
+                break
             log.info("new url: %s" % url)
             new_urlid, is_episode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", url)
             if is_episode and new_urlid != current_urlid:
