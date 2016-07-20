@@ -30,7 +30,7 @@
     <setting label="Readd show to library" action="RunScript(script.service.koalanrk, mode=update, action=readd_show)" type="action"  option="close"/>
     <setting label="Exclude movie from library" action="RunScript(script.service.koalanrk, mode=update, action=exclude_movie)" type="action"  option="close"/>
     <setting label="Readd movie to library" action="RunScript(script.service.koalanrk, mode=update, action=readd_movie)" type="action"  option="close"/>
-    <setting label="Remove all shows and movies from library" action="RunScript(script.service.koalanrk, mode=library, action=remove_all)" type="action"  option="close"/>
+    <setting label="Remove all shows and movies from library" action="RunScript(script.service.koalanrk, mode=update, action=remove_all)" type="action"  option="close"/>
 </category>
 
 <category label="Startup">

@@ -101,6 +101,8 @@ def getwatchlist():
             urlid = media["program"]["seriesId"]
             title = media["program"]["seriesTitle"]
             available_shows[urlid] = title
+    if not (available_movies or available_shows):
+        raise Exception("No media found in watchlist")
 
     return available_movies, available_shows
 

@@ -53,8 +53,7 @@ class SharedMediaMethods(object):
             os.makedirs(os_join(self.path))
         with open(os_join(self.path, self.htmfilename), "w") as txt:
             txt.write('<meta http-equiv="REFRESH" content="0;'
-                      'url=http://tv.nrk%s.no%s"> <body bgcolor="#ffffff">' %
-                      ("super" if self.in_superuniverse else "", self.urlid))
+                      'url=%s"> <body bgcolor="#ffffff">' % self.url)
 
     def write_nfo(self, root):
         tree = ET.ElementTree(root)
@@ -80,7 +79,7 @@ class Movie(SharedMediaMethods):
         self.htmfilename = "%s.htm" % stringtofile(self.title)
         self.nfofilename = "%s.nfo" % stringtofile(self.title)
         self.jsonfilename = "%s.json" % stringtofile(self.title)
-        self.in_superuniverse = False
+        self.url = "http://tv.nrk.no%s?autostart=true" % self.urlid
 
     def _get_lib_entry(self):
         moviesdict = rpc("VideoLibrary.GetMovies",
@@ -286,12 +285,13 @@ class Episode(SharedMediaMethods):
         self.urlid = urlid
         self.kodiid = kodiid
         self.code = "S%02dE%02d" % (seasonnr, episodenr)
-        self.in_superuniverse = in_superuniverse
         self.playcount = int(playcount)
         self.path = uni_join(const.libpath, "%s shows" % const.provider, stringtofile(self.showtitle), "Season %s" % self.seasonnr)
         self.htmfilename = "%s %s.htm" % (stringtofile(self.showtitle), self.code)
         self.nfofilename = "%s %s.nfo" % (stringtofile(self.showtitle), self.code)
         self.jsonfilename = "%s %s.json" % (stringtofile(self.showtitle), self.code)
+        self.url = "http://tv.nrk.no%s?autostart=true" % self.urlid
+        # self.url = "http://tv.nrk%s.no%s?autostart=true" % ("super" if in_superuniverse else "", self.urlid)
 
     def __repr__(self):
         return self.code
