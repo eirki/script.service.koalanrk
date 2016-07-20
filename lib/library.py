@@ -290,7 +290,8 @@ class Episode(SharedMediaMethods):
         self.htmfilename = "%s %s.htm" % (stringtofile(self.showtitle), self.code)
         self.nfofilename = "%s %s.nfo" % (stringtofile(self.showtitle), self.code)
         self.jsonfilename = "%s %s.json" % (stringtofile(self.showtitle), self.code)
-        self.url = "http://tv.nrk%s.no%s?autostart=true" % ("super" if in_superuniverse else "", self.urlid)
+        self.url = "http://tv.nrk.no%s?autostart=true" % self.urlid
+        # self.url = "http://tv.nrk%s.no%s?autostart=true" % ("super" if in_superuniverse else "", self.urlid)
 
     def __repr__(self):
         return self.code
