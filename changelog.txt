@@ -1,3 +1,7 @@
+0.5
+Playback improvements
+Improve auto-play
+
 0.4
 Removed bundled libraries
 Implement scheduled library updates
