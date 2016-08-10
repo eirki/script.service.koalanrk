@@ -1,3 +1,6 @@
+0.5.1
+Remote control bugfixes
+
 0.5
 Playback improvements
 Improve auto-play

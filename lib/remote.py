@@ -64,7 +64,7 @@ class ConfigurationListener(PyKeyboardEvent):
 class PlaybackListener(PyKeyboardEvent):
     def __init__(self, funcmap):
         self.funcmap = funcmap
-        mapped_codes = self.funcmap.values()
+        mapped_codes = set(self.funcmap)
         PyKeyboardEvent.__init__(self, capture_codes=mapped_codes)
 
     def run(self):
