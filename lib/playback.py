@@ -26,6 +26,7 @@ class Player(object):
         self.exceptions = (requests.exceptions.ConnectionError, socket.error,
                            websocket.WebSocketBadStatusException)
         self.tab = None
+        self.stopped = False
         self.k = PyKeyboard()
         self.m = PyMouse()
         self.player_coord = None
@@ -40,7 +41,7 @@ class Player(object):
             self.browser = Chromote(host="localhost", port=9222, internet_explorer=True)
         log.info("connected to %s: %s" % (self.browser.browsertype, self.browser))
 
-        while True:
+        while not self.stopped:
             try:
                 self.tab = next(tab for tab, title, url in self.browser.tabs if url != "about:blank" and "file://" not in url)
                 break
@@ -110,6 +111,7 @@ class Player(object):
             if focused:
                 self.k.press_keys([self.k.control_key, "w"])
         xbmc.Player().stop()
+        self.stopped = True
 
 
 class Session(object):
