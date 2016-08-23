@@ -9,7 +9,7 @@ from functools import partial
 import traceback
 import types
 import json
-import xml.etree.ElementTree as ET
+from bs4 import BeautifulSoup
 from operator import attrgetter
 
 from . utils import (os_join, uni_join, stringtofile)
@@ -86,20 +86,38 @@ class Movie(Base):
         else:
             return moviesdict['movies'][0]
 
-    def _gen_nfo(self):
+    def _write_nfo(self):
         super(Movie, self).delete_htm()
         super(Movie, self).write_htm()
+
         movsubid = re.findall(r'/program/(.*?)/.*', self.urlid)[0]
-        movinfodict = scraper.getinfodict(movsubid)
-        root = ET.Element("movie")
-        ET.SubElement(root, "title").text = self.title
-        ET.SubElement(root, "plot").text = movinfodict["plot"]
-        ET.SubElement(root, "thumb", aspect="poster").text = movinfodict["art"]
-        fanart = ET.SubElement(root, "fanart")
-        ET.SubElement(fanart, "thumb").text = movinfodict["art"]
-        ET.SubElement(root, "runtime").text = movinfodict["runtime"]
-        tree = ET.ElementTree(root)
-        tree.write(os_join(self.path, self.nfofilename), xml_declaration=True, encoding='utf-8', method="xml")
+        metadata = scraper.getinfodict(movsubid)
+
+        soup = BeautifulSoup("<?xml version='1.0' encoding='utf-8'?>")
+        root = soup.new_tag("movie")
+        soup.append(root)
+
+        root.append(soup.new_tag("title"))
+        root.title.string = self.title
+
+        # root.append(soup.new_tag("year"))
+        # root.year.string = unicode(self.year)
+
+        root.append(soup.new_tag("runtime"))
+        root.runtime.string = unicode(metadata["runtime"])
+
+        root.append(soup.new_tag("plot"))
+        root.plot.string = metadata["plot"]
+
+        root.append(soup.new_tag("thumb", aspect="poster"))
+        root.thumb.string = metadata["art"]
+
+        root.append(soup.new_tag("fanart"))
+        root.fanart.append(soup.new_tag("thumb"))
+        root.fanart.thumb.string = metadata["art"]
+
+        with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
+            nfo.write(soup.prettify().encode("utf-8"))
 
     def remove(self):
         log.info("Removing movie: %s" % self.title)
@@ -125,7 +143,7 @@ class Movie(Base):
 
         dbinfo = self._get_lib_entry()
         if not dbinfo:
-            self._gen_nfo()
+            self._write_nfo()
             log.info("NFO created, waiting for second lib update: %s" % self.title)
             yield
 
@@ -213,26 +231,42 @@ class Show(object):
                 nonadded_episodes.append(episode)
         return nonadded_episodes
 
-    def _gen_nfos(self, nonadded_episodes):
+    def _write_nfos(self, nonadded_episodes):
         koala_stored_episodes, _ = self._get_stored_episodes()
         if not koala_stored_episodes:
-            self._gen_show_nfo()
+            self._write_nfo()
         for episode in nonadded_episodes:
-            episode.gen_nfo()
+            episode.write_nfo()
 
-    def _gen_show_nfo(self):
-        infodict = scraper.getshowinfo(self.urlid)
-        root = ET.Element("tvshow")
-        ET.SubElement(root, "title").text = self.title
-        ET.SubElement(root, "year").text = infodict["year"]
-        ET.SubElement(root, "plot").text = infodict["plot"]
-        ET.SubElement(root, "thumb", aspect="poster").text = infodict["art"]
-        fanart = ET.SubElement(root, "fanart")
-        ET.SubElement(fanart, "thumb").text = infodict["art"]
-        if infodict["in_superuniverse"]:
-            ET.SubElement(root, "genre").text = "Children"
-        tree = ET.ElementTree(root)
-        tree.write(os_join(self.path, self.nfofilename), xml_declaration=True, encoding='utf-8', method="xml")
+    def _write_nfo(self):
+        metadata = scraper.getshowinfo(self.urlid)
+
+        soup = BeautifulSoup("<?xml version='1.0' encoding='utf-8'?>")
+        root = soup.new_tag("movie")
+        soup.append(root)
+
+        root.append(soup.new_tag("title"))
+        root.title.string = self.title
+
+        root.append(soup.new_tag("year"))
+        root.year.string = unicode(metadata["year"])
+
+        root.append(soup.new_tag("plot"))
+        root.plot.string = metadata["plot"]
+
+        if metadata["in_superuniverse"]:
+            root.append(soup.new_tag("genre"))
+            root.genre.string = "Children"
+
+        root.append(soup.new_tag("thumb", aspect="poster"))
+        root.thumb.string = metadata["art"]
+
+        root.append(soup.new_tag("fanart"))
+        root.fanart.append(soup.new_tag("thumb"))
+        root.fanart.thumb.string = metadata["art"]
+
+        with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
+            nfo.write(soup.prettify().encode("utf-8"))
 
     def _load_eps_playcount(self, episodes):
         for episode in episodes:
@@ -258,7 +292,7 @@ class Show(object):
 
             nonadded_episodes = self._check_eps_added(new_episodes)
             if nonadded_episodes:
-                self._gen_nfos(nonadded_episodes)
+                self._write_nfos(nonadded_episodes)
                 log.info("NFOs created, waiting for second lib update: %s, %s" %
                          (self.title, sorted(nonadded_episodes, key=attrgetter('code'))))
                 yield
@@ -313,24 +347,43 @@ class Episode(Base):
             self.kodiid = koala_stored_episodes[self.code].kodiid
             self.nonadded = False
 
-    def gen_nfo(self):
+    def write_nfo(self):
         super(Episode, self).delete_htm()
         super(Episode, self).write_htm()
         episodesubid = re.findall(r'/serie/.*?/(.*?)/.*', self.urlid)[0]
-        infodict = scraper.getinfodict(episodesubid)
-        root = ET.Element("episodedetails")
-        ET.SubElement(root, "title").text = infodict["title"]
-        ET.SubElement(root, "showtitle").text = self.showtitle
-        ET.SubElement(root, "season").text = unicode(self.seasonnr)
-        ET.SubElement(root, "episode").text = unicode(self.episodenr)
-        ET.SubElement(root, "plot").text = infodict["plot"]
-        ET.SubElement(root, "thumb").text = infodict['art']
-        ET.SubElement(root, "runtime").text = infodict["runtime"]
-        tree = ET.ElementTree(root)
-        tree.write(os_join(self.path, self.nfofilename), xml_declaration=True, encoding='utf-8', method="xml")
+        metadata = scraper.getinfodict(episodesubid)
+
+        soup = BeautifulSoup("<?xml version='1.0' encoding='utf-8'?>")
+        root = soup.new_tag("movie")
+        soup.append(root)
+
+        root.append(soup.new_tag("title"))
+        root.title.string = metadata["title"]
+
+        root.append(soup.new_tag("showtitle"))
+        root.showtitle.string = self.showtitle
+
+        root.append(soup.new_tag("season"))
+        root.season.string = unicode(self.seasonnr)
+
+        root.append(soup.new_tag("episode"))
+        root.episode.string = unicode(self.episodenr)
+
+        root.append(soup.new_tag("runtime"))
+        root.runtime.string = unicode(metadata["runtime"])
+
+        root.append(soup.new_tag("plot"))
+        root.plot.string = metadata["plot"]
+
+        root.append(soup.new_tag("thumb", aspect="poster"))
+        root.thumb.string = metadata["art"]
+
+        with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
+            nfo.write(soup.prettify().encode("utf-8"))
 
     def remove_from_lib(self):
         rpc("VideoLibrary.RemoveEpisode", episodeid=self.kodiid)
+
 
 ###################
 def execute(getwatchlist=False, to_remove=None, to_update_add=None):
