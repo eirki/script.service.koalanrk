@@ -18,9 +18,9 @@ from . import constants as const
 from . import database
 from .xbmcwrappers import (rpc, log, ScanMonitor, settings, ProgressDialog, dialogs)
 
+
 ###################
 class Base(object):
-
     def load_playcount(self):
         jsonfilepath = os_join(self.path, self.jsonfilename)
         if os.path.exists(jsonfilepath):
@@ -110,7 +110,7 @@ class Movie(Base):
             self.kodiid = dbinfo['movieid']
             self.playcount = dbinfo['playcount']
             super(Movie, self).save_playcount()
-            super(Movie, self).remove_from_lib()
+            self.remove_from_lib()
             super(Movie, self).delete_htm()
         Movie.db.remove(self.urlid)
         if settings["added_notifications"]:
@@ -300,7 +300,7 @@ class Episode(Base):
 
     def remove(self):
         super(Episode, self).save_playcount()
-        super(Episode, self).remove_from_lib()
+        self.remove_from_lib()
         super(Episode, self).delete_htm()
 
     def load_playcount(self):
