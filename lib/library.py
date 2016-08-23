@@ -19,9 +19,7 @@ from . import database
 from .xbmcwrappers import (rpc, log, ScanMonitor, settings, ProgressDialog, dialogs)
 
 ###################
-class SharedMediaMethods(object):
-    def __repr__(self):
-        return repr(self.title)
+class Base(object):
 
     def load_playcount(self):
         jsonfilepath = os_join(self.path, self.jsonfilename)
@@ -45,9 +43,6 @@ class SharedMediaMethods(object):
         except OSError:
             pass
 
-    def remove_from_lib(self):
-        rpc("VideoLibrary.Remove%s" % self.mediatype.capitalize(), **{"".join([self.mediatype, "id"]): self.kodiid})
-
     def write_htm(self):
         if not os.path.exists(os_join(self.path)):
             os.makedirs(os_join(self.path))
@@ -55,12 +50,8 @@ class SharedMediaMethods(object):
             txt.write('<meta http-equiv="REFRESH" content="0;'
                       'url=%s"> <body bgcolor="#ffffff">' % self.url)
 
-    def write_nfo(self, root):
-        tree = ET.ElementTree(root)
-        tree.write(os_join(self.path, self.nfofilename), xml_declaration=True, encoding='utf-8', method="xml")
 
-
-class Movie(SharedMediaMethods):
+class Movie(Base):
     @classmethod
     def init_databases(cls):
         cls.db = database.MediaDatabase('movies', return_as=cls)
@@ -80,6 +71,9 @@ class Movie(SharedMediaMethods):
         self.nfofilename = "%s.nfo" % stringtofile(self.title)
         self.jsonfilename = "%s.json" % stringtofile(self.title)
         self.url = "http://tv.nrk.no%s?autostart=true" % self.urlid
+
+    def __repr__(self):
+        return repr(self.title)
 
     def _get_lib_entry(self):
         moviesdict = rpc("VideoLibrary.GetMovies",
@@ -104,7 +98,8 @@ class Movie(SharedMediaMethods):
         fanart = ET.SubElement(root, "fanart")
         ET.SubElement(fanart, "thumb").text = movinfodict["art"]
         ET.SubElement(root, "runtime").text = movinfodict["runtime"]
-        super(Movie, self).write_nfo(root)
+        tree = ET.ElementTree(root)
+        tree.write(os_join(self.path, self.nfofilename), xml_declaration=True, encoding='utf-8', method="xml")
 
     def remove(self):
         log.info("Removing movie: %s" % self.title)
@@ -145,8 +140,11 @@ class Movie(SharedMediaMethods):
         log.info("Finished adding movie: %s" % self.title)
         Movie.db.upsert(self.urlid, self.title)
 
+    def remove_from_lib(self):
+        rpc("VideoLibrary.RemoveMovie", movieid=self.kodiid)
 
-class Show(SharedMediaMethods):
+
+class Show(object):
     @classmethod
     def init_databases(cls):
         cls.db = database.MediaDatabase('shows', return_as=cls, store_as=database.LastUpdatedOrderedDict)
@@ -165,6 +163,9 @@ class Show(SharedMediaMethods):
         self.title = title
         self.path = uni_join(const.libpath, "%s shows" % const.provider, stringtofile(self.title))
         self.nfofilename = "tvshow.nfo"
+
+    def __repr__(self):
+        return repr(self.title)
 
     def _get_stored_episodes(self):
         stored_episodes = rpc("VideoLibrary.GetEpisodes",
@@ -230,7 +231,8 @@ class Show(SharedMediaMethods):
         ET.SubElement(fanart, "thumb").text = infodict["art"]
         if infodict["in_superuniverse"]:
             ET.SubElement(root, "genre").text = "Children"
-        super(Show, self).write_nfo(root)
+        tree = ET.ElementTree(root)
+        tree.write(os_join(self.path, self.nfofilename), xml_declaration=True, encoding='utf-8', method="xml")
 
     def _load_eps_playcount(self, episodes):
         for episode in episodes:
@@ -276,7 +278,7 @@ class Show(SharedMediaMethods):
         log.info("Finished updating show: %s" % self.title)
 
 
-class Episode(SharedMediaMethods):
+class Episode(Base):
     def __init__(self, showtitle, seasonnr, episodenr, in_superuniverse=None, urlid=None, kodiid=None, playcount=0):
         self.mediatype = "episode"
         self.showtitle = showtitle
@@ -324,8 +326,11 @@ class Episode(SharedMediaMethods):
         ET.SubElement(root, "plot").text = infodict["plot"]
         ET.SubElement(root, "thumb").text = infodict['art']
         ET.SubElement(root, "runtime").text = infodict["runtime"]
-        super(Episode, self).write_nfo(root)
+        tree = ET.ElementTree(root)
+        tree.write(os_join(self.path, self.nfofilename), xml_declaration=True, encoding='utf-8', method="xml")
 
+    def remove_from_lib(self):
+        rpc("VideoLibrary.RemoveEpisode", episodeid=self.kodiid)
 
 ###################
 def execute(getwatchlist=False, to_remove=None, to_update_add=None):
