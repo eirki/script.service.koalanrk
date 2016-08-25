@@ -234,13 +234,6 @@ class Show(object):
                 nonadded_episodes.append(episode)
         return show_in_library, nonadded_episodes
 
-    def _write_nfos(self, nonadded_episodes):
-        koala_stored_episodes, _ = self._get_stored_episodes()
-        if not koala_stored_episodes:
-            self._write_nfo()
-        for episode in nonadded_episodes:
-            episode.write_nfo()
-
     def _write_nfo(self):
         metadata = scraper.getshowinfo(self.urlid)
 
