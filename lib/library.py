@@ -119,44 +119,54 @@ class Movie(Base):
         with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
             nfo.write(soup.prettify().encode("utf-8"))
 
-    def remove(self):
-        log.info("Removing movie: %s" % self.title)
-        dbinfo = self._get_lib_entry()
-        if not dbinfo:
-            log.info("Couldn't find in library: %s" % (self.title))
-        else:
-            self.kodiid = dbinfo['movieid']
-            self.playcount = dbinfo['playcount']
-            super(Movie, self).save_playcount()
-            self.remove_from_lib()
-            super(Movie, self).delete_htm()
-        Movie.db.remove(self.urlid)
-        if settings["added_notifications"]:
-            dialogs.notification(heading="%s movie removed:" % const.provider, message=self.title)
-        log.info("Finished removing movie: %s" % self.title)
+    def generate_removal_task(self, db_stored, exclude=False, db_excluded=None):
+        def remove(self):
+            log.info("Removing movie: %s" % self.title)
+            dbinfo = self._get_lib_entry()
+            if not dbinfo:
+                log.info("Couldn't find in library: %s" % (self.title))
+            else:
+                self.kodiid = dbinfo['movieid']
+                self.playcount = dbinfo['playcount']
+                super(Movie, self).save_playcount()
+                self.remove_from_lib()
+                super(Movie, self).delete_htm()
+            db_stored.remove(self.urlid)
+            if exclude:
+                db_excluded.add(self.urlid)
+            log.info("Finished removing movie: %s" % self.title)
+        self.task = remove
+        self.finished = False
+        self.exception = None
 
-    def update_add(self):
-        log.info("Adding movie: %s" % self.title)
-        super(Movie, self).write_htm()
-        log.info("htm created, waiting for lib update: %s" % self.title)
-        yield
-
-        dbinfo = self._get_lib_entry()
-        if not dbinfo:
-            self._write_nfo()
-            log.info("NFO created, waiting for second lib update: %s" % self.title)
+    def generate_update_task(self, db_stored, session, readd=False, db_excluded=None):
+        def add(self):
+            log.info("Adding movie: %s" % self.title)
+            super(Movie, self).write_htm()
+            log.info("htm created, waiting for lib update: %s" % self.title)
             yield
 
             dbinfo = self._get_lib_entry()
             if not dbinfo:
-                log.info("failed to add movie")
-                return
-        self.kodiid = dbinfo['movieid']
-        super(Movie, self).load_playcount()
-        if settings["added_notifications"]:
-            dialogs.notification(heading="%s movie added:" % const.provider, message=self.title)
-        log.info("Finished adding movie: %s" % self.title)
-        Movie.db.upsert(self.urlid, self.title)
+                self._write_nfo()
+                log.info("NFO created, waiting for second lib update: %s" % self.title)
+                yield
+
+                dbinfo = self._get_lib_entry()
+                if not dbinfo:
+                    log.info("failed to add movie")
+                    return
+            self.kodiid = dbinfo['movieid']
+            super(Movie, self).load_playcount()
+            if settings["added_notifications"]:
+                dialogs.notification(heading="%s movie added:" % const.provider, message=self.title)
+            db_stored.add(self.urlid)
+            if readd:
+                db_excluded.remove(self.urlid)
+            log.info("Finished adding movie: %s" % self.title)
+        self.task = add()
+        self.finished = False
+        self.exception = None
 
     def remove_from_lib(self):
         rpc("VideoLibrary.RemoveMovie", movieid=self.kodiid)
@@ -265,52 +275,67 @@ class Show(object):
         for episode in episodes:
             episode.load_playcount()
 
-    def remove(self):
-        log.info("Removing show: %s" % self.title)
-        koala_stored_episodes, _ = self._get_stored_episodes()
-        for episode in koala_stored_episodes.values():
-            episode.save_playcount()
-            episode.delete_htm()
-            episode.remove_from_lib()
-        Show.db.remove(self.urlid)
-        log.info("Finished removing show: %s" % self.title)
+    def generate_removal_task(self, db_stored, exclude=False, db_excluded=None):
+        def remove(self):
+            log.info("Removing show: %s" % self.title)
+            koala_stored_episodes, _ = self._get_stored_episodes()
+            for episode in koala_stored_episodes.values():
+                episode.save_playcount()
+                episode.delete_htm()
+                episode.remove_from_lib()
+            db_stored.remove(self.urlid)
+            log.info("Finished removing show: %s" % self.title)
+            if exclude:
+                db_excluded.add(self)
+            log.info("Removed episodes: %s, %s" % (self.title, sorted(koala_stored_episodes, key=attrgetter('code'))))
+            log.info("Finished removing show: %s" % self.title)
+        self.task = remove
+        self.finished = False
+        self.exception = None
 
-    def update_add(self):
-        log.info("Updating show: %s" % self.title)
-        unav_episodes, new_episodes = self._get_new_unav_episodes()
-        for episode in unav_episodes:
-            episode.save_playcount()
-            episode.delete_htm()
-            episode.remove_from_lib()
-        if new_episodes:
-            for episode in new_episodes:
-                episode.write_htm()
-            log.info("htms created, waiting for lib update: %s" % self.title)
-            yield
-
-            show_in_library, nonadded_episodes = self._confirm_added(new_episodes)
-            if not show_in_library:
-                self._write_nfo()
-            for episode in nonadded_episodes:
-                episode.write_nfo()
-                log.info("NFOs created, waiting for second lib update: %s, %s" %
-                         (self.title, sorted(nonadded_episodes, key=attrgetter('code'))))
+    def generate_update_task(self, db_stored, session, readd=False, db_excluded=None):
+        def update_add():
+            log.info("Updating show: %s" % self.title)
+            unav_episodes, new_episodes = self._get_new_unav_episodes()
+            for episode in unav_episodes:
+                episode.save_playcount()
+                episode.delete_htm()
+                episode.remove_from_lib()
+            if new_episodes:
+                for episode in new_episodes:
+                    episode.write_htm()
+                log.info("htms created, waiting for lib update: %s" % self.title)
                 yield
 
-            for episode in new_episodes:
-                episode.load_playcount()
-            if settings["added_notifications"]:
-                if len(new_episodes) == 1:
-                    message = "Added episode: %s" % new_episodes[0].code
-                elif len(new_episodes) <= 3:
-                    message = "Added episodes: %s" % ", ".join(sorted([ep.code for ep in new_episodes]))
-                else:
-                    message = "Added %s episodes" % len(new_episodes)
-                dialogs.notification(heading=self.title, message=message)
-            log.info("Added episodes: %s, %s" % (self.title, sorted(new_episodes, key=attrgetter('code'))))
+                show_in_library, nonadded_episodes = self._confirm_added(new_episodes)
+                if not show_in_library:
+                    self._write_nfo()
+                for episode in nonadded_episodes:
+                    episode.write_nfo()
+                if nonadded_episodes or not show_in_library:
+                    log.info("NFOs created, waiting for second lib update: %s, %s" %
+                             (self.title, sorted(nonadded_episodes, key=attrgetter('code'))))
+                    yield
 
-        Show.db.upsert(self.urlid, self.title)
-        log.info("Finished updating show: %s" % self.title)
+                for episode in new_episodes:
+                    episode.load_playcount()
+                if settings["added_notifications"]:
+                    if len(new_episodes) == 1:
+                        message = "Added episode: %s" % new_episodes[0].code
+                    elif len(new_episodes) <= 3:
+                        message = "Added episodes: %s" % ", ".join(sorted([ep.code for ep in new_episodes]))
+                    else:
+                        message = "Added %s episodes" % len(new_episodes)
+                    dialogs.notification(heading=self.title, message=message)
+                log.info("Added episodes: %s, %s" % (self.title, sorted(new_episodes, key=attrgetter('code'))))
+
+            db_stored.upsert(self.urlid, self.title)
+            if readd:
+                db_excluded.remove(self)
+            log.info("Finished updating show: %s" % self.title)
+        self.task = update_add()
+        self.finished = False
+        self.exception = None
 
 
 class Episode(Base):
