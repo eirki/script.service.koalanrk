@@ -18,11 +18,12 @@ class LastUpdatedOrderedDict(OrderedDict):
 
 
 class MediaDatabase(object):
-    def __init__(self, name, return_as, store_as=dict):
+    def __init__(self, name, mediatype, retain_order=False):
         self.name = name
         self.lock = threading.Lock()
-        self.return_as = return_as
+        self.mediatype = mediatype
         self.filepath = os_join(const.userdatafolder, ".".join([self.name, "json"]))
+        store_as = dict if not retain_order else LastUpdatedOrderedDict
         try:
             with open(self.filepath, 'r') as jf:
                 self.database = store_as(json.load(jf))
@@ -30,7 +31,7 @@ class MediaDatabase(object):
             self.database = store_as()
         self.edited = False
         self.initial_ids = set(self.database)
-        self.initial_all = [self.return_as(urlid, title) for urlid, title in self.database.items()]
+        self.initial_all = [self.mediatype(urlid, title) for urlid, title in self.database.items()]
 
     def savetofile(self):
         if self.edited:
@@ -55,7 +56,7 @@ class MediaDatabase(object):
         if not self.edited:
             return self.initial_all
         else:
-            return [self.return_as(urlid, title) for urlid, title in self.database.items()]
+            return [self.mediatype(urlid, title) for urlid, title in self.database.items()]
 
     @property
     def ids(self):

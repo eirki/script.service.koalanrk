@@ -52,16 +52,6 @@ class Base(object):
 
 
 class Movie(Base):
-    @classmethod
-    def init_databases(cls):
-        cls.db = database.MediaDatabase('movies', return_as=cls)
-        cls.db_excluded = database.MediaDatabase('excluded movies', return_as=cls)
-
-    @classmethod
-    def commit_databases(cls):
-        cls.db.savetofile()
-        cls.db_excluded.savetofile()
-
     def __init__(self, urlid, title):
         self.mediatype = "movie"
         self.urlid = urlid
@@ -173,18 +163,6 @@ class Movie(Base):
 
 
 class Show(object):
-    @classmethod
-    def init_databases(cls):
-        cls.db = database.MediaDatabase('shows', return_as=cls, store_as=database.LastUpdatedOrderedDict)
-        cls.db_excluded = database.MediaDatabase('excluded shows', return_as=cls)
-        cls.db_prioritized = database.MediaDatabase('prioritized shows', return_as=cls)
-
-    @classmethod
-    def commit_databases(cls):
-        cls.db.savetofile()
-        cls.db_excluded.savetofile()
-        cls.db_prioritized.savetofile()
-
     def __init__(self, urlid, title):
         self.mediatype = "show"
         self.urlid = urlid
@@ -428,8 +406,12 @@ def prioritize():
 
 
 def main(action):
-    Movie.init_databases()
-    Show.init_databases()
+    stored_movies = database.MediaDatabase('movies', mediatype=Movie)
+    excluded_movies = database.MediaDatabase('excluded movies', mediatype=Movie)
+    stored_shows = database.MediaDatabase('shows', mediatype=Show, retain_order=True)
+    excluded_shows = database.MediaDatabase('excluded shows', mediatype=Show)
+    prioritized_shows = database.MediaDatabase('prioritized shows', mediatype=Show)
+
 
     if action == "remove_all" and not (Show.db.all or Movie.db.all):
         dialogs.ok(heading="No media", line1="No media seems to have been added")
@@ -471,5 +453,13 @@ def main(action):
     except:
         raise
     finally:
-        Movie.commit_databases()
-        Show.commit_databases()
+    @classmethod
+    def commit_databases(cls):
+        cls.db.savetofile()
+        cls.db_excluded.savetofile()
+
+    @classmethod
+    def commit_databases(cls):
+        cls.db.savetofile()
+        cls.db_excluded.savetofile()
+        cls.db_prioritized.savetofile()
