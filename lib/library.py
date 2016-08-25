@@ -214,22 +214,15 @@ class Show(object):
 
         return unav_episodes, new_episodes
 
-    def _remove_episodes(self, episodes):
-        for episode in episodes:
-            episode.remove()
-
-    def _write_htms(self, episodes):
-        for episode in episodes:
-            episode.write_htm()
-
-    def _check_eps_added(self, episodes):
+    def _confirm_added(self, episodes):
         koala_stored_episodes, _ = self._get_stored_episodes()
+        show_in_library = True if koala_stored_episodes else False
         nonadded_episodes = []
         for episode in episodes:
             episode.check_added(koala_stored_episodes)
             if episode.nonadded:
                 nonadded_episodes.append(episode)
-        return nonadded_episodes
+        return show_in_library, nonadded_episodes
 
     def _write_nfos(self, nonadded_episodes):
         koala_stored_episodes, _ = self._get_stored_episodes()
@@ -276,28 +269,36 @@ class Show(object):
         log.info("Removing show: %s" % self.title)
         koala_stored_episodes, _ = self._get_stored_episodes()
         for episode in koala_stored_episodes.values():
-            episode.remove()
+            episode.save_playcount()
+            episode.delete_htm()
+            episode.remove_from_lib()
         Show.db.remove(self.urlid)
         log.info("Finished removing show: %s" % self.title)
 
     def update_add(self):
         log.info("Updating show: %s" % self.title)
         unav_episodes, new_episodes = self._get_new_unav_episodes()
-        if unav_episodes:
-            self._remove_episodes(unav_episodes)
+        for episode in unav_episodes:
+            episode.save_playcount()
+            episode.delete_htm()
+            episode.remove_from_lib()
         if new_episodes:
-            self._write_htms(new_episodes)
+            for episode in new_episodes:
+                episode.write_htm()
             log.info("htms created, waiting for lib update: %s" % self.title)
             yield
 
-            nonadded_episodes = self._check_eps_added(new_episodes)
-            if nonadded_episodes:
-                self._write_nfos(nonadded_episodes)
+            show_in_library, nonadded_episodes = self._confirm_added(new_episodes)
+            if not show_in_library:
+                self._write_nfo()
+            for episode in nonadded_episodes:
+                episode.write_nfo()
                 log.info("NFOs created, waiting for second lib update: %s, %s" %
                          (self.title, sorted(nonadded_episodes, key=attrgetter('code'))))
                 yield
 
-            self._load_eps_playcount(new_episodes)
+            for episode in new_episodes:
+                episode.load_playcount()
             if settings["added_notifications"]:
                 if len(new_episodes) == 1:
                     message = "Added episode: %s" % new_episodes[0].code
@@ -331,11 +332,6 @@ class Episode(Base):
 
     def __repr__(self):
         return self.code
-
-    def remove(self):
-        super(Episode, self).save_playcount()
-        self.remove_from_lib()
-        super(Episode, self).delete_htm()
 
     def load_playcount(self):
         super(Episode, self).load_playcount()
