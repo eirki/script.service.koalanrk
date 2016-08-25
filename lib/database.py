@@ -33,7 +33,7 @@ class MediaDatabase(object):
         self.initial_ids = set(self.database)
         self.initial_all = [self.mediatype(urlid, title) for urlid, title in self.database.items()]
 
-    def savetofile(self):
+    def commit_changes(self):
         if self.edited:
             with open(self.filepath, 'w') as jf:
                 json.dump(self.database.items(), jf, indent=2)
