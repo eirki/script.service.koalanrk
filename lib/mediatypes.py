@@ -16,7 +16,7 @@ class BaseLibEntry(object):
         if os.path.exists(jsonfilepath):
             with open(jsonfilepath, "r") as f:
                 playcount = json.load(f)
-            rpc("VideoLibrary.Set%sDetails" %s self.mediatype.capitalize(), playcount=playcount,
+            rpc("VideoLibrary.Set%sDetails" % self.mediatype.capitalize(), playcount=playcount,
                 **{self.mediatype + "id": self.kodiid})
             os.remove(jsonfilepath)
 
@@ -29,7 +29,7 @@ class BaseLibEntry(object):
 
 
     def remove_from_lib(self):
-        rpc("VideoLibrary.Remove%s" %s self.mediatype.capitalize(),
+        rpc("VideoLibrary.Remove%s" % self.mediatype.capitalize(),
             **{self.mediatype + "id": self.kodiid})
 
 
@@ -63,7 +63,7 @@ class Movie(object):
             pass
 
 
-class KoalaMovie(Movie)
+class KoalaMovie(Movie):
     def __init__(self, urlid, title):
         Movie.__init__(title)
         self.urlid = urlid
