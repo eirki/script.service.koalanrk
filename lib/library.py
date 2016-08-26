@@ -17,7 +17,7 @@ from . import scraper
 from . import constants as const
 from . import database
 from .xbmcwrappers import (rpc, log, settings, dialogs)
-from .mediatypes import (Movie, Show)
+from .mediatypes import (KoalaMovie, Show)
 
 
 ############################
@@ -173,16 +173,17 @@ def fetch_mediaobjects(action, session, stored_movies, stored_shows,
 
 
 def main(action):
-    stored_movies = database.Database(mediatype=Movie, category='stored')
-    excluded_movies = database.Database(mediatype=Movie, category='excluded')
-    stored_shows = database.OrderedDatabase(mediatype=Show, category='stored')
-    excluded_shows = database.Database(mediatype=Show, category='excluded')
-    prioritized_shows = database.Database(mediatype=Show, category='prioritized')
+    stored_movies = database.Database(mediaclass=KoalaMovie, name='movies')
+    excluded_movies = database.Database(mediaclass=KoalaMovie, name='excluded movies')
+    stored_shows = database.OrderedDatabase(mediaclass=Show, name='shows')
+    excluded_shows = database.Database(mediaclass=Show, name='excluded shows')
+    prioritized_shows = database.Database(mediaclass=Show, name='prioritized shows')
 
+    if action == "prioritize":
+        edit_prioritized_shows(stored_shows, prioritized_shows)
+        prioritized_shows.commit()
+        return
     try:
-        if action == "prioritize":
-            edit_prioritized_shows(stored_shows, prioritized_shows)
-            return
         progressbar = ProgressDialog()
         pool = None
         requests_session = scraper.RequestsSession() if action in ["update_all", "watchlist", "startup", "schedule",

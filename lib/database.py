@@ -5,6 +5,7 @@ import collections
 import multiprocessing.dummy as threading
 import json
 import os
+import xbmc
 
 from . utils import os_join
 from . import constants as const
@@ -70,16 +71,16 @@ class OrderedSet(collections.MutableSet):
 
 
 class BaseDatabase(object):
-    def __init__(self, mediaclass, category):
+    def __init__(self, mediaclass, name):
         self._lock = threading.Lock()
         self.mediaclass = mediaclass
-        self.mediatype = self.mediaclass.mediatype
-        self.name = "%s %ss" % (category, self.mediatype)
+        self.name = name
         self.filepath = os_join(const.userdatafolder, "%s.json" % self.name)
         self.edited = False
         self.load()
 
     def load(self):
+        xbmc.log(self.filepath)
         try:
             with open(self.filepath, 'r') as jf:
                 stored = json.load(jf)
@@ -105,16 +106,16 @@ class BaseDatabase(object):
             self.edited = True
 
 
-class Database(BaseDatabase, set):
-    def __init__(self, mediaclass, category):
-        BaseDatabase.__init__(self, mediaclass, category)
+class Database(set, BaseDatabase):
+    def __init__(self, mediaclass, name):
         set.__init__(self)
+        BaseDatabase.__init__(self, mediaclass, name)
 
 
-class OrderedDatabase(BaseDatabase, OrderedSet):
-    def __init__(self, mediaclass, category):
-        BaseDatabase.__init__(self, mediaclass, category)
+class OrderedDatabase(OrderedSet, BaseDatabase):
+    def __init__(self, mediaclass, name):
         OrderedSet.__init__(self)
+        BaseDatabase.__init__(self, mediaclass, name)
 
     def upsert(self, item):
         '''update or insert:
