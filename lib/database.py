@@ -5,7 +5,6 @@ import collections
 import multiprocessing.dummy as threading
 import json
 import os
-import xbmc
 
 from . utils import os_join
 from . import constants as const
@@ -70,23 +69,24 @@ class OrderedSet(collections.MutableSet):
         return set(self) == set(other)
 
 
-class BaseDatabase(object):
-    def __init__(self, mediaclass, name):
-        self._lock = threading.Lock()
+class MediaDatabase(object):
+    def __init__(self, mediaclass, name, retain_order=False):
+        self.lock = threading.Lock()
+        self.backend = set() if retain_order is False else OrderedSet()
         self.mediaclass = mediaclass
+        self.mediatype = mediaclass.mediatype
         self.name = name
         self.filepath = os_join(const.userdatafolder, "%s.json" % self.name)
         self.edited = False
         self.load()
 
     def load(self):
-        xbmc.log(self.filepath)
         try:
             with open(self.filepath, 'r') as jf:
                 stored = json.load(jf)
                 for urlid, title in stored:
                     media_obj = self.mediaclass(urlid, title)
-                    self.add(media_obj)
+                    self.backend.add(media_obj)
         except IOError:
             pass
 
@@ -95,27 +95,10 @@ class BaseDatabase(object):
             with open(self.filepath, 'w') as jf:
                 json.dump([(item.urlid, item.title) for item in self], jf, indent=2)
 
-    def insert(self, item):
+    def add(self, item):
         with self.lock:
-            self.add(item)
+            self.backend.add(item)
             self.edited = True
-
-    def delete(self, item):
-        with self.lock:
-            self.remove(item)
-            self.edited = True
-
-
-class Database(set, BaseDatabase):
-    def __init__(self, mediaclass, name):
-        set.__init__(self)
-        BaseDatabase.__init__(self, mediaclass, name)
-
-
-class OrderedDatabase(OrderedSet, BaseDatabase):
-    def __init__(self, mediaclass, name):
-        OrderedSet.__init__(self)
-        BaseDatabase.__init__(self, mediaclass, name)
 
     def upsert(self, item):
         '''update or insert:
@@ -123,6 +106,39 @@ class OrderedDatabase(OrderedSet, BaseDatabase):
         if item is in database and retain_order == true, move item to end of list'''
         with self.lock:
             self.discard(item)
-            self.add(item)
+            self.backend.add(item)
             self.edited = True
 
+    def remove(self, item):
+        with self.lock:
+            self.backend.remove(item)
+            self.edited = True
+
+    def __repr__(self):
+        return repr(self.backend)
+
+
+    def __contains__(self, key):
+        return key in self.backend
+
+    def __iter__(self):
+        for item in self.backend:
+            yield item
+
+    def __and__(self, other):
+        return self.backend.__and__(set(other))
+
+    def __rand__(self, other):
+        return self.backend.__rand__(set(other))
+
+    def __or__(self, other):
+        return self.backend.__or__(set(other))
+
+    def __ror__(self, other):
+        return self.backend.__ror__(set(other))
+
+    def __sub__(self, other):
+        return self.backend.__sub__(set(other))
+
+    def __rsub__(self, other):
+        return self.backend.__rsub__(set(other))

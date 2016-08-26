@@ -144,13 +144,13 @@ def fetch_mediaobjects(action, session, stored_movies, stored_shows,
                 show.generate_removal_task(db_stored=stored_shows)
                 removal_tasks.append(show)
 
-            new_movies = available_movies - (stored_movies + excluded_movies)
+            new_movies = available_movies - (stored_movies | excluded_movies)
             log.info("new_movies:\n %s" % new_movies)
             for movie in new_movies:
                 movie.generate_add_task(db_stored=stored_movies, session=session)
                 update_tasks.append(movie)
 
-            new_shows = available_shows - (stored_shows + excluded_shows)
+            new_shows = available_shows - (stored_shows | excluded_shows)
             log.info("new_shows:\n %s" % new_shows)
             for show in new_shows:
                 show.generate_update_task(db_stored=stored_shows, session=session)
