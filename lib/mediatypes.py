@@ -2,32 +2,58 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 import os
-import re
 import json
 from bs4 import BeautifulSoup
 from operator import attrgetter
 
 from . utils import (os_join, uni_join, stringtofile)
-from . import scraper
 from . import constants as const
 from .xbmcwrappers import (rpc, log, settings, dialogs)
 
-
-class Base(object):
+class BaseLibEntry(object):
     def load_playcount(self):
         jsonfilepath = os_join(self.path, self.jsonfilename)
         if os.path.exists(jsonfilepath):
             with open(jsonfilepath, "r") as f:
                 playcount = json.load(f)
-            rpc("VideoLibrary.Set%sDetails" % self.mediatype.capitalize(),
-                **{"".join([self.mediatype, "id"]): self.kodiid, "playcount": playcount})
+            rpc("VideoLibrary.Set%sDetails" %s self.mediatype.capitalize(), playcount=playcount,
+                **{self.mediatype + "id": self.kodiid})
             os.remove(jsonfilepath)
+
 
     def save_playcount(self):
         if self.playcount > 0:
             jsonfilepath = os_join(self.path, self.jsonfilename)
             with open(jsonfilepath, "w") as f:
                 json.dump(self.playcount, f)
+
+
+    def remove_from_lib(self):
+        rpc("VideoLibrary.Remove%s" %s self.mediatype.capitalize(),
+            **{self.mediatype + "id": self.kodiid})
+
+
+###########################
+class Movie(object):
+    mediatype = "movie"
+    def __init__(self, title):
+        self.title = title
+        self.path = uni_join(const.libpath, "%s movies" % const.provider)
+        self.htmfilename = "%s.htm" % stringtofile(self.title)
+        self.nfofilename = "%s.nfo" % stringtofile(self.title)
+        self.jsonfilename = "%s.json" % stringtofile(self.title)
+
+    def __repr__(self):
+        return repr(self.title)
+
+    def __hash__(self):
+        return hash(self.title)
+
+    def __eq__(self, other):
+        return self.title == other.title
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def delete_htm(self):
         os.remove(os_join(self.path, self.htmfilename))
@@ -36,6 +62,14 @@ class Base(object):
         except OSError:
             pass
 
+
+class KoalaMovie(Movie)
+    def __init__(self, urlid, title):
+        Movie.__init__(title)
+        self.urlid = urlid
+        self.url = "http://tv.nrk.no%s?autostart=true" % self.urlid
+        self.lib_entry = None
+
     def write_htm(self):
         if not os.path.exists(os_join(self.path)):
             os.makedirs(os_join(self.path))
@@ -43,40 +77,8 @@ class Base(object):
             txt.write('<meta http-equiv="REFRESH" content="0;'
                       'url=%s"> <body bgcolor="#ffffff">' % self.url)
 
-
-class Movie(Base):
-    def __init__(self, urlid, title):
-        self.mediatype = "movie"
-        self.urlid = urlid
-        self.title = title
-        self.path = uni_join(const.libpath, "%s movies" % const.provider)
-        self.htmfilename = "%s.htm" % stringtofile(self.title)
-        self.nfofilename = "%s.nfo" % stringtofile(self.title)
-        self.jsonfilename = "%s.json" % stringtofile(self.title)
-        self.url = "http://tv.nrk.no%s?autostart=true" % self.urlid
-
-    def __repr__(self):
-        return repr(self.title)
-
-    def _get_lib_entry(self):
-        moviesdict = rpc("VideoLibrary.GetMovies",
-                         properties=["file", 'playcount'],
-                         multifilter={"and": [
-                              ("filename", "is", self.htmfilename),
-                              ("path", "startswith", self.path)]})
-        if 'movies' not in moviesdict:
-            return None
-        else:
-            return moviesdict['movies'][0]
-
-    def _write_nfo(self):
-        super(Movie, self).delete_htm()
-        super(Movie, self).write_htm()
-
-        movsubid = re.findall(r'/program/(.*?)/.*', self.urlid)[0]
-        metadata = scraper.getinfodict(movsubid)
-
-        soup = BeautifulSoup("<?xml version='1.0' encoding='utf-8'?>")
+    def write_nfo(self, metadata):
+        soup = BeautifulSoup(features='xml')
         root = soup.new_tag("movie")
         soup.append(root)
 
@@ -102,62 +104,80 @@ class Movie(Base):
         with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
             nfo.write(soup.prettify().encode("utf-8"))
 
+    def get_lib_entry(self):
+        moviesdict = rpc("VideoLibrary.GetMovies",
+                         properties=["file", 'playcount'],
+                         multifilter={"and":
+                                      [("filename", "is", self.htmfilename),
+                                       ("path", "startswith", self.path)]})
+        try:
+            movie_dict = moviesdict['movies'][0]
+        except KeyError:
+            return None
+        return MovieLibEntry(self.title, movie_dict["id"], movie_dict["'playcount'"])
+
     def generate_removal_task(self, db_stored, exclude=False, db_excluded=None):
-        def remove(self):
-            log.info("Removing movie: %s" % self.title)
-            dbinfo = self._get_lib_entry()
-            if not dbinfo:
-                log.info("Couldn't find in library: %s" % (self.title))
+        def remove_movie():
+            log.info("Removing movie: %s" % self)
+            lib_entry = self.get_lib_entry()
+            if lib_entry:
+                lib_entry.save_playcount()
+                lib_entry.remove_from_lib()
+                lib_entry.delete_htm()
             else:
-                self.kodiid = dbinfo['movieid']
-                self.playcount = dbinfo['playcount']
-                super(Movie, self).save_playcount()
-                self.remove_from_lib()
-                super(Movie, self).delete_htm()
-            db_stored.remove(self.urlid)
+                log.info("Couldn't find in library: %s" % (self))
+            if settings["added_notifications"]:
+                dialogs.notification(heading="%s movie removed:" % const.provider, message=self)
+            db_stored.remove(self)
             if exclude:
-                db_excluded.add(self.urlid)
-            log.info("Finished removing movie: %s" % self.title)
-        self.task = remove
+                db_excluded.add(self)
+            log.info("Finished removing movie: %s" % self)
+        self.task = remove_movie
         self.finished = False
         self.exception = None
 
-    def generate_update_task(self, db_stored, session, readd=False, db_excluded=None):
-        def add(self):
-            log.info("Adding movie: %s" % self.title)
-            super(Movie, self).write_htm()
-            log.info("htm created, waiting for lib update: %s" % self.title)
+    def generate_add_task(self, db_stored, session, readd=False, db_excluded=None):
+        def add_movie():
+            log.info("Adding movie: %s" % self)
+            self.write_htm()
             yield
 
-            dbinfo = self._get_lib_entry()
-            if not dbinfo:
-                self._write_nfo()
-                log.info("NFO created, waiting for second lib update: %s" % self.title)
+            lib_entry = self.check_added()
+            if not lib_entry:
+                metadata = session.get_movie_metadata(self.urlid)
+                self.write_nfo(metadata)
+                self.delete_htm()
+                self.write_htm()
                 yield
 
-                dbinfo = self._get_lib_entry()
-                if not dbinfo:
-                    log.info("failed to add movie")
+                lib_entry = self.get_lib_entry()
+                if not lib_entry:
+                    log.info("Failed to add movie: %s" % self)
                     return
-            self.kodiid = dbinfo['movieid']
-            super(Movie, self).load_playcount()
+            lib_entry.load_playcount()
             if settings["added_notifications"]:
-                dialogs.notification(heading="%s movie added:" % const.provider, message=self.title)
-            db_stored.add(self.urlid)
+                dialogs.notification(heading="%s movie added:" % const.provider, message=self)
+            db_stored.add(self)
             if readd:
-                db_excluded.remove(self.urlid)
-            log.info("Finished adding movie: %s" % self.title)
-        self.task = add()
+                db_excluded.remove(self)
+            log.info("Finished adding movie: %s" % self)
+        self.task = add_movie()
         self.finished = False
         self.exception = None
 
-    def remove_from_lib(self):
-        rpc("VideoLibrary.RemoveMovie", movieid=self.kodiid)
 
+class MovieLibEntry(Movie, BaseLibEntry):
+    def __init__(self, title, kodiid, playcount=None, runtime=None):
+        Movie.__init__(title)
+        self.kodiid = kodiid
+        self.playcount = playcount
+        self.runtime = runtime
 
+###########################
 class Show(object):
+    mediatype = "show"
+
     def __init__(self, urlid, title):
-        self.mediatype = "show"
         self.urlid = urlid
         self.title = title
         self.path = uni_join(const.libpath, "%s shows" % const.provider, stringtofile(self.title))
@@ -166,48 +186,22 @@ class Show(object):
     def __repr__(self):
         return repr(self.title)
 
-    def _get_stored_episodes(self):
-        stored_episodes = rpc("VideoLibrary.GetEpisodes",
-                              properties=["season", "episode", "file", "playcount"],
-                              filter={"field": "filename", "operator": "startswith", "value": "%s S" % stringtofile(self.title)})
-        all_stored_episodes = set()
-        koala_stored_episodes = dict()
-        for epdict in stored_episodes.get('episodes', []):
-            episodecode = "S%02dE%02d" % (int(epdict['season']), int(epdict['episode']))
-            all_stored_episodes.add(episodecode)
-            if epdict["file"].startswith(self.path):
-                episode = Episode(self.title, epdict["season"], epdict["episode"],
-                                  kodiid=epdict["episodeid"], playcount=epdict["playcount"])
-                koala_stored_episodes[episodecode] = episode
-        return koala_stored_episodes, all_stored_episodes
+    def __hash__(self):
+        return hash(self.title)
 
-    def _get_new_unav_episodes(self):
-        koala_stored_episodes, all_stored_episodes = self._get_stored_episodes()
-        available_episodes = scraper.getepisodes(self.urlid)
+    def __eq__(self, other):
+        return self.title == other.title
 
-        unav_episodes = [episode for episode in koala_stored_episodes.values()
-                         if episode.code not in available_episodes]
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
-        new_episodes = [Episode(self.title, episode['seasonnr'], episode['episodenr'],
-                                urlid=episode['urlid'], in_superuniverse=episode['in_superuniverse'])
-                        for episodecode, episode in available_episodes.items()
-                        if episodecode not in all_stored_episodes]
-
+    def get_episode_availability(self, available_episodes):
+        koala_stored_episodes, all_stored_episodes = self.get_stored_episodes()
+        unav_episodes = koala_stored_episodes.difference(available_episodes)
+        new_episodes = available_episodes.difference(all_stored_episodes)
         return unav_episodes, new_episodes
 
-    def _confirm_added(self, episodes):
-        koala_stored_episodes, _ = self._get_stored_episodes()
-        show_in_library = True if koala_stored_episodes else False
-        nonadded_episodes = []
-        for episode in episodes:
-            episode.check_added(koala_stored_episodes)
-            if episode.nonadded:
-                nonadded_episodes.append(episode)
-        return show_in_library, nonadded_episodes
-
-    def _write_nfo(self):
-        metadata = scraper.getshowinfo(self.urlid)
-
+    def write_nfo(self, metadata):
         soup = BeautifulSoup("<?xml version='1.0' encoding='utf-8'?>")
         root = soup.new_tag("movie")
         soup.append(root)
@@ -235,20 +229,60 @@ class Show(object):
         with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
             nfo.write(soup.prettify().encode("utf-8"))
 
-    def _load_eps_playcount(self, episodes):
-        for episode in episodes:
-            episode.load_playcount()
+    def notify(self, new_episodes):
+        if len(new_episodes) == 1:
+            message = "Added episode: %s" % new_episodes[0].code
+        elif len(new_episodes) <= 3:
+            message = "Added episodes: %s" % ", ".join(sorted([ep.code for ep in new_episodes]))
+        else:
+            message = "Added %s episodes" % len(new_episodes)
+        dialogs.notification(heading=self.title, message=message)
+
+    def get_koala_stored_eps(self):
+        # get any stored koala episodes
+        episodes = rpc("VideoLibrary.GetEpisodes",
+                       filter={"field": "filename", "operator": "startswith", "value": self.path})
+        koala_stored_episodes = set()
+        for epdict in episodes.get('episodes', []):
+            episode = EpisodeLibEntry(self.title, epdict["season"], epdict["episode"],
+                                      kodiid=epdict["episodeid"], playcount=epdict["playcount"])
+            koala_stored_episodes.add(episode)
+
+        return koala_stored_episodes
+
+    def get_stored_episodes(self):
+        koala_stored_episodes = self.get_koala_stored_eps()
+        if koala_stored_episodes:
+            any_ep_kodiid = koala_stored_episodes[0].kodiid
+        else:
+            # no stored koala episode, get any stored episode
+            episodes = rpc("VideoLibrary.GetEpisodes", limits={"start": 0, "end": 1},
+                           filter={"field": "filename", "operator": "startswith", "value": "%s S" % stringtofile(self.title)},
+                           ).get('episodes', [])
+            if not episodes:
+                # no stored episodes detectable
+                return set(), set()
+            any_ep_kodiid = episodes["episodes"][0]['id']
+
+        kodiid = rpc("VideoLibrary.GetTVShows", properties={"episode": any_ep_kodiid})['tvshows'][0]['id']
+
+        all_stored_episodes_dict = rpc("VideoLibrary.GetEpisodes",
+                                       properties=["season", "episode"],
+                                       filter={"field": "tvshowid", "operator": "is", "value": kodiid})
+        all_stored_episodes_set = set(Episode(showtitle=self.title, seasonnr=epdict['season'], episodenr=epdict['episode'])
+                                      for epdict in all_stored_episodes_dict.get('episodes', []))
+
+        return koala_stored_episodes, all_stored_episodes_set
 
     def generate_removal_task(self, db_stored, exclude=False, db_excluded=None):
-        def remove(self):
+        def remove():
             log.info("Removing show: %s" % self.title)
-            koala_stored_episodes, _ = self._get_stored_episodes()
-            for episode in koala_stored_episodes.values():
-                episode.save_playcount()
-                episode.delete_htm()
-                episode.remove_from_lib()
-            db_stored.remove(self.urlid)
-            log.info("Finished removing show: %s" % self.title)
+            koala_stored_episodes = self.get_koala_stored_eps()
+            for lib_entry in koala_stored_episodes:
+                lib_entry.save_playcount()
+                lib_entry.delete_htm()
+                lib_entry.remove_from_lib()
+            db_stored.remove(self)
             if exclude:
                 db_excluded.add(self)
             log.info("Removed episodes: %s, %s" % (self.title, sorted(koala_stored_episodes, key=attrgetter('code'))))
@@ -259,85 +293,102 @@ class Show(object):
 
     def generate_update_task(self, db_stored, session, readd=False, db_excluded=None):
         def update_add():
-            log.info("Updating show: %s" % self.title)
-            unav_episodes, new_episodes = self._get_new_unav_episodes()
-            for episode in unav_episodes:
-                episode.save_playcount()
-                episode.delete_htm()
-                episode.remove_from_lib()
+            log.info("Updating show: %s" % self)
+            available_episodes = session.getepisodes(self.urllid)
+            unav_episodes, new_episodes = self.get_episode_availability(available_episodes)
+            for lib_entry in unav_episodes:
+                lib_entry.save_playcount()
+                lib_entry.delete_htm()
+                lib_entry.remove_from_lib()
             if new_episodes:
                 for episode in new_episodes:
                     episode.write_htm()
-                log.info("htms created, waiting for lib update: %s" % self.title)
+                log.info("htms created, waiting for lib update: %s %s" %
+                         (self, sorted(new_episodes, key=attrgetter('code'))))
                 yield
 
-                show_in_library, nonadded_episodes = self._confirm_added(new_episodes)
-                if not show_in_library:
-                    self._write_nfo()
-                for episode in nonadded_episodes:
-                    episode.write_nfo()
-                if nonadded_episodes or not show_in_library:
+                koala_stored_episodes = self.get_koala_stored_eps()
+                nonadded_episodes = new_episodes.difference(koala_stored_episodes)
+                if nonadded_episodes:
+                    if not koala_stored_episodes:
+                        metadata = session.get_show_metadata(episode.urlid)
+                        self.write_nfo(metadata)
+                    for episode in nonadded_episodes:
+                        metadata = session.get_episode_metadata(episode.urlid)
+                        episode.write_nfo(metadata)
+                        episode.delete_htm()
+                        episode.write_htm()
                     log.info("NFOs created, waiting for second lib update: %s, %s" %
-                             (self.title, sorted(nonadded_episodes, key=attrgetter('code'))))
+                             (self, sorted(nonadded_episodes, key=attrgetter('code'))))
                     yield
 
-                for episode in new_episodes:
-                    episode.load_playcount()
-                if settings["added_notifications"]:
-                    if len(new_episodes) == 1:
-                        message = "Added episode: %s" % new_episodes[0].code
-                    elif len(new_episodes) <= 3:
-                        message = "Added episodes: %s" % ", ".join(sorted([ep.code for ep in new_episodes]))
-                    else:
-                        message = "Added %s episodes" % len(new_episodes)
-                    dialogs.notification(heading=self.title, message=message)
-                log.info("Added episodes: %s, %s" % (self.title, sorted(new_episodes, key=attrgetter('code'))))
+                    koala_stored_episodes = self.get_koala_stored_eps()
+                    nonadded_episodes = new_episodes.difference(koala_stored_episodes)
+                    if nonadded_episodes:
+                        log.info("Failed to add episodes: %s, %s" % (self, sorted(nonadded_episodes, key=attrgetter('code'))))
 
-            db_stored.upsert(self.urlid, self.title)
+                added_episodes = koala_stored_episodes.difference(nonadded_episodes)
+                for lib_entry in added_episodes:
+                    lib_entry.load_playcount()
+
+                if settings["added_notifications"]:
+                    self.notify(new_episodes)
+                log.info("Added episodes: %s, %s" % (self, sorted(added_episodes, key=attrgetter('code'))))
+            if unav_episodes:
+                log.info("Removed episodes: %s, %s" % (self, sorted(unav_episodes, key=attrgetter('code'))))
+            db_stored.upsert(self)
             if readd:
                 db_excluded.remove(self)
-            log.info("Finished updating show: %s" % self.title)
-        self.task = update_add()
+            log.info("Finished updating show: %s" % self)
+        self.task = update_add_show()
         self.finished = False
         self.exception = None
 
 
-class Episode(Base):
-    def __init__(self, showtitle, seasonnr, episodenr, in_superuniverse=None, urlid=None, kodiid=None, playcount=0):
-        self.mediatype = "episode"
+###########################
+class Episode(object):
+    mediatype = "episode"
+
+    def __init__(self, showtitle, seasonnr, episodenr):
         self.showtitle = showtitle
         self.seasonnr = int(seasonnr)
         self.episodenr = int(episodenr)
-        self.urlid = urlid
-        self.kodiid = kodiid
         self.code = "S%02dE%02d" % (seasonnr, episodenr)
-        self.playcount = int(playcount)
-        self.path = uni_join(const.libpath, "%s shows" % const.provider, stringtofile(self.showtitle), "Season %s" % self.seasonnr)
+        self.path = uni_join(const.libpath, "%s shows" % const.provider,
+                             stringtofile(self.showtitle), "Season %s" % self.seasonnr)
         self.htmfilename = "%s %s.htm" % (stringtofile(self.showtitle), self.code)
         self.nfofilename = "%s %s.nfo" % (stringtofile(self.showtitle), self.code)
         self.jsonfilename = "%s %s.json" % (stringtofile(self.showtitle), self.code)
-        self.url = "http://tv.nrk.no%s?autostart=true" % self.urlid
-        # self.url = "http://tv.nrk%s.no%s?autostart=true" % ("super" if in_superuniverse else "", self.urlid)
 
     def __repr__(self):
         return self.code
 
-    def load_playcount(self):
-        super(Episode, self).load_playcount()
+    def __hash__(self):
+        return hash(self.code)
 
-    def check_added(self, koala_stored_episodes):
-        if self.code not in koala_stored_episodes:
-            self.nonadded = True
-        else:
-            self.kodiid = koala_stored_episodes[self.code].kodiid
-            self.nonadded = False
+    def __eq__(self, other):
+        return self.code == other.code
 
-    def write_nfo(self):
-        super(Episode, self).delete_htm()
-        super(Episode, self).write_htm()
-        episodesubid = re.findall(r'/serie/.*?/(.*?)/.*', self.urlid)[0]
-        metadata = scraper.getinfodict(episodesubid)
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
+
+class KoalaEpisode(Episode):
+    def __init__(self, showtitle, seasonnr, episodenr, in_superuniverse, urlid):
+        Episode.__init__(showtitle, seasonnr, episodenr)
+        self.in_superuniverse = in_superuniverse
+        self.urlid = urlid
+        self.url = "http://tv.nrk%s.no%s?autostart=true" % ("super" if in_superuniverse else "", urlid)
+        self.lib_entry = None
+
+    def write_htm(self):
+        if not os.path.exists(os_join(self.path)):
+            os.makedirs(os_join(self.path))
+        with open(os_join(self.path, self.htmfilename), "w") as txt:
+            txt.write('<meta http-equiv="REFRESH" content="0;'
+                      'url=%s"> <body bgcolor="#ffffff">' % self.url)
+
+    def write_nfo(self, metadata):
         soup = BeautifulSoup("<?xml version='1.0' encoding='utf-8'?>")
         root = soup.new_tag("movie")
         soup.append(root)
@@ -366,5 +417,18 @@ class Episode(Base):
         with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
             nfo.write(soup.prettify().encode("utf-8"))
 
-    def remove_from_lib(self):
-        rpc("VideoLibrary.RemoveEpisode", episodeid=self.kodiid)
+
+class EpisodeLibEntry(Episode, BaseLibEntry):
+    def __init__(self, showtitle, seasonnr, episodenr, kodiid, playcount=None, runtime=None):
+        Episode.__init__(showtitle, seasonnr, episodenr)
+        self.kodiid = kodiid
+        self.playcount = playcount
+        self.runtime = runtime
+
+    def delete_htm(self):
+        os.remove(os_join(self.path, self.htmfilename))
+        try:
+            os.removedirs(os_join(self.path))
+        except OSError:
+            pass
+
