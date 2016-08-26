@@ -1,67 +1,125 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
-from collections import OrderedDict
+from __future__ import unicode_literals
+import collections
 import multiprocessing.dummy as threading
 import json
+import os
 
 from . utils import os_join
 from . import constants as const
 
+class BaseDatabase(object):
+    def __init__(self, mediaclass, category):
+        self._lock = threading.Lock()
+        self.mediaclass = mediaclass
+        self.mediatype = self.mediaclass.mediatype
+        self.name = "%s %ss" % (category, self.mediatype)
+        self.filepath = os_join(const.userdatafolder, "%s.json" % self.name)
+        self.edited = False
+        self.load()
 
-class LastUpdatedOrderedDict(OrderedDict):
-    '''Store items in the order the keys were last added
-    from https://docs.python.org/2/library/collections.html#collections.OrderedDict'''
-    def __setitem__(self, key, value):
-        if key in self:
-            del self[key]
-        OrderedDict.__setitem__(self, key, value)
-
-
-class MediaDatabase(object):
-    def __init__(self, name, mediatype, retain_order=False):
-        self.name = name
-        self.lock = threading.Lock()
-        self.mediatype = mediatype
-        self.filepath = os_join(const.userdatafolder, ".".join([self.name, "json"]))
-        store_as = dict if not retain_order else LastUpdatedOrderedDict
+    def load(self):
         try:
             with open(self.filepath, 'r') as jf:
-                self.database = store_as(json.load(jf))
+                stored = json.load(jf)
+                for urlid, title in stored:
+                    media_obj = self.mediaclass(urlid, title)
+                    self.add(media_obj)
         except IOError:
-            self.database = store_as()
-        self.edited = False
-        self.initial_ids = set(self.database)
-        self.initial_all = [self.mediatype(urlid, title) for urlid, title in self.database.items()]
+            pass
 
-    def commit_changes(self):
+    def commit(self):
         if self.edited:
             with open(self.filepath, 'w') as jf:
-                json.dump(self.database.items(), jf, indent=2)
+                json.dump([(item.urlid, item.title) for item in self], jf, indent=2)
 
-    def upsert(self, urlid, title):
+    def insert(self, item):
+        with self.lock:
+            self.add(item)
+            self.edited = True
+
+    def delete(self, item):
+        with self.lock:
+            self.remove(item)
+            self.edited = True
+
+class Database(BaseDatabase, set):
+    def __init__(self, mediaclass, category):
+        BaseDatabase.__init__(mediaclass, category)
+        set.__init__(self)
+
+class OrderedDatabase(BaseDatabase, OrderedSet):
+    def __init__(self, mediaclass, category):
+        BaseDatabase.__init__(mediaclass, category)
+        OrderedSet.__init__(self)
+
+    def upsert(self, item):
         '''update or insert:
-        insert if id not in database.
-        if id is in database and store_as=LastUpdatedOrderedDict, put id and title at end of database'''
+        insert if item not in database.
+        if item is in database and retain_order == true, move item to end of list'''
         with self.lock:
-            self.database[urlid] = title
+            self.discard(item)
+            self.add(item)
             self.edited = True
 
-    def remove(self, urlid):
-        with self.lock:
-            del self.database[urlid]
-            self.edited = True
+# https://code.activestate.com/recipes/576694/
+class OrderedSet(collections.MutableSet):
 
-    @property
-    def all(self):
-        if not self.edited:
-            return self.initial_all
-        else:
-            return [self.mediatype(urlid, title) for urlid, title in self.database.items()]
+    def __init__(self, iterable=None):
+        self.end = end = []
+        end += [None, end, end]         # sentinel node for doubly linked list
+        self.map = {}                   # key --> [key, prev, next]
+        if iterable is not None:
+            self |= iterable
 
-    @property
-    def ids(self):
-        if not self.edited:
-            return self.initial_ids
-        else:
-            return set(self.database)
+    def __len__(self):
+        return len(self.map)
+
+    def __contains__(self, key):
+        return key in self.map
+
+    def add(self, key):
+        if key not in self.map:
+            end = self.end
+            curr = end[1]
+            curr[2] = end[1] = self.map[key] = [key, curr, end]
+
+    def discard(self, key):
+        if key in self.map:
+            key, prev, next = self.map.pop(key)
+            prev[2] = next
+            next[1] = prev
+
+    def __iter__(self):
+        end = self.end
+        curr = end[2]
+        while curr is not end:
+            yield curr[0]
+            curr = curr[2]
+
+    def __reversed__(self):
+        end = self.end
+        curr = end[1]
+        while curr is not end:
+            yield curr[0]
+            curr = curr[1]
+
+    def pop(self, last=True):
+        if not self:
+            raise KeyError('set is empty')
+        key = self.end[1][0] if last else self.end[2][0]
+        self.discard(key)
+        return key
+
+    def __repr__(self):
+        if not self:
+            return '%s()' % (self.__class__.__name__,)
+        return '%s(%r)' % (self.__class__.__name__, list(self))
+
+    def __eq__(self, other):
+        if isinstance(other, OrderedSet):
+            return len(self) == len(other) and list(self) == list(other)
+        return set(self) == set(other)
+
 
