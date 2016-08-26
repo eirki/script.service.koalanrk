@@ -173,11 +173,11 @@ def fetch_mediaobjects(action, session, stored_movies, stored_shows,
 
 
 def main(action):
-    stored_movies = database.MediaDatabase('movies', mediatype=Movie)
-    excluded_movies = database.MediaDatabase('excluded movies', mediatype=Movie)
-    stored_shows = database.MediaDatabase('shows', mediatype=Show, retain_order=True)
-    excluded_shows = database.MediaDatabase('excluded shows', mediatype=Show)
-    prioritized_shows = database.MediaDatabase('prioritized shows', mediatype=Show)
+    stored_movies = database.Database(mediatype=Movie, category='stored')
+    excluded_movies = database.Database(mediatype=Movie, category='excluded')
+    stored_shows = database.OrderedDatabase(mediatype=Show, category='stored')
+    excluded_shows = database.Database(mediatype=Show, category='excluded')
+    prioritized_shows = database.Database(mediatype=Show, category='prioritized')
 
     try:
         if action == "prioritize":
@@ -245,10 +245,6 @@ def main(action):
     finally:
         if pool is not None:
             pool.close()
-        stored_movies.commit_changes()
-        excluded_movies.commit_changes()
-        stored_shows.commit_changes()
-        excluded_shows.commit_changes()
-        prioritized_shows.commit_changes()
-
+        for db in stored_movies, excluded_movies, stored_shows, excluded_shows, prioritized_shows:
+            db.commit()
         progressbar.close()
