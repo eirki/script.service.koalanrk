@@ -65,7 +65,7 @@ class Movie(object):
 
 class KoalaMovie(Movie):
     def __init__(self, urlid, title):
-        Movie.__init__(title)
+        Movie.__init__(self, title)
         self.urlid = urlid
         self.url = "http://tv.nrk.no%s?autostart=true" % self.urlid
         self.lib_entry = None
@@ -168,7 +168,7 @@ class KoalaMovie(Movie):
 
 class MovieLibEntry(Movie, BaseLibEntry):
     def __init__(self, title, kodiid, playcount=None, runtime=None):
-        Movie.__init__(title)
+        Movie.__init__(self, title)
         self.kodiid = kodiid
         self.playcount = playcount
         self.runtime = runtime
@@ -375,7 +375,7 @@ class Episode(object):
 
 class KoalaEpisode(Episode):
     def __init__(self, showtitle, seasonnr, episodenr, in_superuniverse, urlid):
-        Episode.__init__(showtitle, seasonnr, episodenr)
+        Episode.__init__(self, showtitle, seasonnr, episodenr)
         self.in_superuniverse = in_superuniverse
         self.urlid = urlid
         self.url = "http://tv.nrk%s.no%s?autostart=true" % ("super" if in_superuniverse else "", urlid)
@@ -420,7 +420,7 @@ class KoalaEpisode(Episode):
 
 class EpisodeLibEntry(Episode, BaseLibEntry):
     def __init__(self, showtitle, seasonnr, episodenr, kodiid, playcount=None, runtime=None):
-        Episode.__init__(showtitle, seasonnr, episodenr)
+        Episode.__init__(self, showtitle, seasonnr, episodenr)
         self.kodiid = kodiid
         self.playcount = playcount
         self.runtime = runtime
