@@ -48,48 +48,6 @@ def select_mediaitem(database):
     return objects[selected] if selected != -1 else None
 
 
-class ProgressDialog(object):
-    def __init__(self, heading):
-        self.heading = heading
-        self.current_level = 0
-        self.pDialog = xbmcgui.DialogProgressBG()
-
-    def goto(self, new_level):
-        if self.current_level == 0:
-            self.pDialog.create(self.heading)
-        while self.current_level < new_level:
-            self.current_level += 1
-            self.pDialog.update(self.current_level)
-            xbmc.sleep(50)
-        self.current_level = new_level
-
-    def close(self):
-        if self.current_level > 0:
-            self.pDialog.close()
-
-
-class ScanMonitor(xbmc.Monitor):
-    def __init__(self):
-        xbmc.Monitor.__init__(self)
-        self.scanning = False
-
-    def onScanStarted(self, library):
-        if library == "video":
-            self.scanning = True
-
-    def onScanFinished(self, library):
-        if library == "video":
-            self.scanning = False
-
-    def update_video_library(self):
-        while self.scanning:
-            xbmc.sleep(100)
-        self.scanning = True
-        xbmc.executebuiltin('UpdateLibrary(video, "", false)')
-        while self.scanning:
-            xbmc.sleep(100)
-
-
 ############################
 # main functions
 def edit_prioritized_shows(stored_shows, prioritized_shows):

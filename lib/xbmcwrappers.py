@@ -72,25 +72,22 @@ dialogs = Dialogs()
 
 
 class ProgressDialog(object):
-    def __init__(self):
-        self.active = False
-
-    def create(self, heading):
+    def __init__(self, heading):
         self.heading = heading
-        self.level = 0
+        self.current_level = 0
+        self.pDialog = xbmcgui.DialogProgressBG()
 
-    def goto(self, level):
-        if settings["startupnotification"] and not self.active:
-            self.pDialog = xbmcgui.DialogProgressBG()
+    def goto(self, new_level):
+        if self.current_level == 0:
             self.pDialog.create(self.heading)
-            self.active = True
-
-        if self.active:
-            self.level = level
-            self.pDialog.update(self.level)
+        while self.current_level < new_level:
+            self.current_level += 1
+            self.pDialog.update(self.current_level)
+            xbmc.sleep(50)
+        self.current_level = new_level
 
     def close(self):
-        if self.active:
+        if self.current_level > 0:
             self.pDialog.close()
 
 
@@ -99,22 +96,21 @@ class ScanMonitor(xbmc.Monitor):
         xbmc.Monitor.__init__(self)
         self.scanning = False
 
-    def onScanStarted(self, database):
-        self.scanning = True
+    def onScanStarted(self, library):
+        if library == "video":
+            self.scanning = True
 
-    def onScanFinished(self, database):
-        self.scanning = False
+    def onScanFinished(self, library):
+        if library == "video":
+            self.scanning = False
 
     def update_video_library(self):
         while self.scanning:
             xbmc.sleep(100)
-        log.debug("Updating video library")
         self.scanning = True
         xbmc.executebuiltin('UpdateLibrary(video, "", false)')
         while self.scanning:
             xbmc.sleep(100)
-        log.debug("Library update complete")
-
 
 def rpc(method, multifilter=False, **kwargs):
     if multifilter:
