@@ -10,9 +10,10 @@ from types import MethodType
 from HTMLParser import HTMLParser
 from collections import namedtuple
 
-from .utils import os_join
+from . utils import os_join
 from . import constants as const
-from .xbmcwrappers import (log, settings)
+from . xbmcwrappers import (log, settings)
+from . mediatypes import (KoalaMovie, Show)
 
 
 Mediatuple = namedtuple("Media", "urlid title")
@@ -80,8 +81,8 @@ class RequestSession(object):
         setup()
         watchlistpage = self.get("https://tv.nrk.no/mycontent")
         mediaitems = json.loads(watchlistpage.text.replace("\r\n", ""))
-        available_movies = {}
-        available_shows = {}
+        available_movies = set()
+        available_shows = set()
         for media in mediaitems['favorites']:
             # media["isAvailable"] True (mostly) for shows currently airing with no available episodes
             # media["program"]["usageRights"]["hasRightsNow"] false for some airing with no available episodes (bug?)
@@ -91,11 +92,12 @@ class RequestSession(object):
                     continue
                 urlid = "/program/%s/%s" % (media["program"]["myContentId"], media["program"]["programUrlMetadata"])
                 title = media["program"]["mainTitle"]
-                available_movies[urlid] = title
+                available_movies.add(Movie(urlid, title))
             elif mediatype == "show":
                 urlid = media["program"]["seriesId"]
                 title = media["program"]["seriesTitle"]
-                available_shows[urlid] = title
+                available_shows.add(Show(urlid, title))
+
         if not (available_movies or available_shows):
             raise Exception("No media found in watchlist")
 
