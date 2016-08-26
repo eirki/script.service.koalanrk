@@ -16,8 +16,8 @@ from . utils import (os_join, uni_join, stringtofile)
 from . import scraper
 from . import constants as const
 from . import database
-from .xbmcwrappers import (rpc, log, settings, dialogs)
-from .mediatypes import (KoalaMovie, Show)
+from . xbmcwrappers import (rpc, log, settings, dialogs, ProgressDialog, ScanMonitor)
+from . mediatypes import (KoalaMovie, Show)
 
 
 ############################
@@ -127,9 +127,8 @@ def fetch_mediaobjects(action, session, stored_movies, stored_shows,
         movie.generate_update_task(db_stored=stored_movies, session=session, readd=True, db_excluded=excluded_movies)
         update_tasks.append(movie)
 
-    elif action in ["startup" "schedule" "watchlist"]:
+    elif action in ["startup", "schedule", "watchlist"]:
         if action == "watchlist" or (action in ["startup", "schedule"] and settings["watchlist on %s" % action]):
-
             available_movies, available_shows = session.getwatchlist()
 
             unav_movies = stored_movies - available_movies
@@ -173,35 +172,38 @@ def fetch_mediaobjects(action, session, stored_movies, stored_shows,
 
 
 def main(action):
-    stored_movies = database.Database(mediaclass=KoalaMovie, name='movies')
-    excluded_movies = database.Database(mediaclass=KoalaMovie, name='excluded movies')
-    stored_shows = database.OrderedDatabase(mediaclass=Show, name='shows')
-    excluded_shows = database.Database(mediaclass=Show, name='excluded shows')
-    prioritized_shows = database.Database(mediaclass=Show, name='prioritized shows')
+    stored_movies = database.MediaDatabase(mediaclass=KoalaMovie, name='movies')
+    excluded_movies = database.MediaDatabase(mediaclass=KoalaMovie, name='excluded movies')
+    stored_shows = database.MediaDatabase(mediaclass=Show, name='shows', retain_order=True)
+    excluded_shows = database.MediaDatabase(mediaclass=Show, name='excluded shows')
+    prioritized_shows = database.MediaDatabase(mediaclass=Show, name='prioritized shows')
 
     if action == "prioritize":
         edit_prioritized_shows(stored_shows, prioritized_shows)
         prioritized_shows.commit()
         return
     try:
-        progressbar = ProgressDialog()
         pool = None
+        progressbar = ProgressDialog()
         requests_session = scraper.RequestsSession() if action in ["update_all", "watchlist", "startup", "schedule",
                                                                    "update_single", "readd_show", "readd_movie"] else None
 
         if action == "watchlist" or (action in ["startup", "schedule"] and settings["watchlist on %s" % action]):
             progressbar.goto(10)
-            requests_session.login()
+            requests_session.setup()
             progressbar.goto(20)
 
-        removal_tasks, update_tasks = fetch_mediaobjects(action, requests_session, stored_movies, excluded_movies,
-                                                          stored_shows, excluded_shows, prioritized_shows)
-        if not (removal_tasks or update_tasks):
+        tasks = fetch_mediaobjects(action, session=requests_session, stored_movies=stored_movies,
+                                   excluded_movies=excluded_movies, stored_shows=stored_shows,
+                                   excluded_shows=excluded_shows, prioritized_shows=prioritized_shows)
+        if not tasks:
             return
+
+        removal_tasks, update_tasks = tasks
 
         if action in ["update_all", "update_single", "readd_show", "readd_movie"]:
             progressbar.goto(30)
-            requests_session.login()
+            requests_session.setup()
 
         progressbar.goto(20)
         for obj in removal_tasks:
@@ -241,7 +243,7 @@ def main(action):
         if errors:
             raise Exception("%d library updates finished with %d error(s):\n\n"
                             "%s." % (len(update_tasks), len(errors),
-                                     "\n".join(["%s\n%s" % (obj, unicode(obj.exception)) for obj in errors])))
+                                     "\n".join(["%s: %s" % (obj, unicode(obj.exception)) for obj in errors])))
 
     finally:
         if pool is not None:

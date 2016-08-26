@@ -44,7 +44,7 @@ class Movie(object):
         self.jsonfilename = "%s.json" % stringtofile(self.title)
 
     def __repr__(self):
-        return repr(self.title)
+        return self.title.encode("ascii", "ignore")
 
     def __hash__(self):
         return hash(self.title)
@@ -117,7 +117,7 @@ class KoalaMovie(Movie):
         return MovieLibEntry(self.title, movie_dict["id"], movie_dict["'playcount'"])
 
     def generate_removal_task(self, db_stored, exclude=False, db_excluded=None):
-        def remove_movie():
+        def remove():
             log.info("Removing movie: %s" % self)
             lib_entry = self.get_lib_entry()
             if lib_entry:
@@ -132,12 +132,12 @@ class KoalaMovie(Movie):
             if exclude:
                 db_excluded.add(self)
             log.info("Finished removing movie: %s" % self)
-        self.task = remove_movie
+        self.task = remove
         self.finished = False
         self.exception = None
 
     def generate_add_task(self, db_stored, session, readd=False, db_excluded=None):
-        def add_movie():
+        def add():
             log.info("Adding movie: %s" % self)
             self.write_htm()
             yield
@@ -161,7 +161,7 @@ class KoalaMovie(Movie):
             if readd:
                 db_excluded.remove(self)
             log.info("Finished adding movie: %s" % self)
-        self.task = add_movie()
+        self.task = add()
         self.finished = False
         self.exception = None
 
@@ -184,7 +184,7 @@ class Show(object):
         self.nfofilename = "tvshow.nfo"
 
     def __repr__(self):
-        return repr(self.title)
+        return self.title.encode("ascii", "ignore")
 
     def __hash__(self):
         return hash(self.title)
@@ -294,7 +294,7 @@ class Show(object):
     def generate_update_task(self, db_stored, session, readd=False, db_excluded=None):
         def update_add():
             log.info("Updating show: %s" % self)
-            available_episodes = session.getepisodes(self.urllid)
+            available_episodes = session.getepisodes(self.urlid)
             unav_episodes, new_episodes = self.get_episode_availability(available_episodes)
             for lib_entry in unav_episodes:
                 lib_entry.save_playcount()
@@ -340,7 +340,7 @@ class Show(object):
             if readd:
                 db_excluded.remove(self)
             log.info("Finished updating show: %s" % self)
-        self.task = update_add_show()
+        self.task = update_add()
         self.finished = False
         self.exception = None
 

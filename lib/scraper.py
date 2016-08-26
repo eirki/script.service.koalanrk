@@ -19,7 +19,7 @@ from . mediatypes import (KoalaMovie, Show)
 Mediatuple = namedtuple("Media", "urlid title")
 
 
-class RequestSession(object):
+class RequestsSession(object):
     def __init__(self):
         self.session = requests.Session()
 
@@ -51,7 +51,7 @@ class RequestSession(object):
         req.soup = MethodType(self.soup, req)
         return req
 
-    def login(loginpage):
+    def login(self, loginpage):
         log.info("logging in")
         username = settings["username"]
         passw = settings["password"]
@@ -72,13 +72,12 @@ class RequestSession(object):
     def setup(self):
         loginpage = self.get("https://tv.nrk.no/logginn", verify=False)
         if loginpage.soup().find('title').text == "Innlogging":
-            loginpage = login(loginpage)
+            loginpage = self.login(loginpage)
         url = loginpage.soup().find("form")["action"]
         payload = {t['name']: t.get('value') for t in loginpage.soup().find_all('input', attrs={'type': 'hidden'})}
         self.post(url, data=payload)
 
     def getwatchlist(self):
-        setup()
         watchlistpage = self.get("https://tv.nrk.no/mycontent")
         mediaitems = json.loads(watchlistpage.text.replace("\r\n", ""))
         available_movies = set()
