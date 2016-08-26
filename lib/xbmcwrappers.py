@@ -72,19 +72,15 @@ dialogs = Dialogs()
 
 
 class ProgressDialog(object):
-    def __init__(self, heading):
-        self.heading = heading
+    def __init__(self):
         self.current_level = 0
         self.pDialog = xbmcgui.DialogProgressBG()
 
     def goto(self, new_level):
         if self.current_level == 0:
-            self.pDialog.create(self.heading)
-        while self.current_level < new_level:
-            self.current_level += 1
-            self.pDialog.update(self.current_level)
-            xbmc.sleep(50)
+            self.pDialog.create(heading="Updating %s" % const.provider)
         self.current_level = new_level
+        self.pDialog.update(self.current_level)
 
     def close(self):
         if self.current_level > 0:
