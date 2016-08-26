@@ -9,60 +9,6 @@ import os
 from . utils import os_join
 from . import constants as const
 
-class BaseDatabase(object):
-    def __init__(self, mediaclass, category):
-        self._lock = threading.Lock()
-        self.mediaclass = mediaclass
-        self.mediatype = self.mediaclass.mediatype
-        self.name = "%s %ss" % (category, self.mediatype)
-        self.filepath = os_join(const.userdatafolder, "%s.json" % self.name)
-        self.edited = False
-        self.load()
-
-    def load(self):
-        try:
-            with open(self.filepath, 'r') as jf:
-                stored = json.load(jf)
-                for urlid, title in stored:
-                    media_obj = self.mediaclass(urlid, title)
-                    self.add(media_obj)
-        except IOError:
-            pass
-
-    def commit(self):
-        if self.edited:
-            with open(self.filepath, 'w') as jf:
-                json.dump([(item.urlid, item.title) for item in self], jf, indent=2)
-
-    def insert(self, item):
-        with self.lock:
-            self.add(item)
-            self.edited = True
-
-    def delete(self, item):
-        with self.lock:
-            self.remove(item)
-            self.edited = True
-
-class Database(BaseDatabase, set):
-    def __init__(self, mediaclass, category):
-        BaseDatabase.__init__(mediaclass, category)
-        set.__init__(self)
-
-class OrderedDatabase(BaseDatabase, OrderedSet):
-    def __init__(self, mediaclass, category):
-        BaseDatabase.__init__(mediaclass, category)
-        OrderedSet.__init__(self)
-
-    def upsert(self, item):
-        '''update or insert:
-        insert if item not in database.
-        if item is in database and retain_order == true, move item to end of list'''
-        with self.lock:
-            self.discard(item)
-            self.add(item)
-            self.edited = True
-
 # https://code.activestate.com/recipes/576694/
 class OrderedSet(collections.MutableSet):
 
@@ -122,4 +68,60 @@ class OrderedSet(collections.MutableSet):
             return len(self) == len(other) and list(self) == list(other)
         return set(self) == set(other)
 
+
+class BaseDatabase(object):
+    def __init__(self, mediaclass, category):
+        self._lock = threading.Lock()
+        self.mediaclass = mediaclass
+        self.mediatype = self.mediaclass.mediatype
+        self.name = "%s %ss" % (category, self.mediatype)
+        self.filepath = os_join(const.userdatafolder, "%s.json" % self.name)
+        self.edited = False
+        self.load()
+
+    def load(self):
+        try:
+            with open(self.filepath, 'r') as jf:
+                stored = json.load(jf)
+                for urlid, title in stored:
+                    media_obj = self.mediaclass(urlid, title)
+                    self.add(media_obj)
+        except IOError:
+            pass
+
+    def commit(self):
+        if self.edited:
+            with open(self.filepath, 'w') as jf:
+                json.dump([(item.urlid, item.title) for item in self], jf, indent=2)
+
+    def insert(self, item):
+        with self.lock:
+            self.add(item)
+            self.edited = True
+
+    def delete(self, item):
+        with self.lock:
+            self.remove(item)
+            self.edited = True
+
+
+class Database(BaseDatabase, set):
+    def __init__(self, mediaclass, category):
+        BaseDatabase.__init__(self, mediaclass, category)
+        set.__init__(self)
+
+
+class OrderedDatabase(BaseDatabase, OrderedSet):
+    def __init__(self, mediaclass, category):
+        BaseDatabase.__init__(self, mediaclass, category)
+        OrderedSet.__init__(self)
+
+    def upsert(self, item):
+        '''update or insert:
+        insert if item not in database.
+        if item is in database and retain_order == true, move item to end of list'''
+        with self.lock:
+            self.discard(item)
+            self.add(item)
+            self.edited = True
 
