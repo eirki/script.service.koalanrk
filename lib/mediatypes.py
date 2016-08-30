@@ -294,7 +294,7 @@ class Show(object):
     def generate_update_task(self, db_stored, session, readd=False, db_excluded=None):
         def update_add():
             log.info("Updating show: %s" % self)
-            available_episodes = session.getepisodes(self.urlid)
+            available_episodes = session.getepisodes(self)
             unav_episodes, new_episodes = self.get_episode_availability(available_episodes)
             for lib_entry in unav_episodes:
                 lib_entry.save_playcount()

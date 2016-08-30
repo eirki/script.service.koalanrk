@@ -13,7 +13,7 @@ from collections import namedtuple
 from . utils import os_join
 from . import constants as const
 from . xbmcwrappers import (log, settings)
-from . mediatypes import (KoalaMovie, Show)
+from . mediatypes import (KoalaMovie, Show, KoalaEpisode)
 
 
 Mediatuple = namedtuple("Media", "urlid title")
@@ -102,9 +102,9 @@ class RequestsSession(object):
 
         return available_movies, available_shows
 
-    def getepisodes(self, showid):
-        episodes = {}
-        showpage = self.get("http://tv.nrk.no/serie/%s/" % showid).soup()
+    def getepisodes(self, show):
+        episodes = set()
+        showpage = self.get("http://tv.nrk.no/serie/%s/" % show.urlid).soup()
         date_for_episodenr = showpage.find(attrs={"name": "latestepisodeurls"}) and "/episode-" not in showpage.find(attrs={"name": "latestepisodeurls"})["content"]
         seasons = showpage.find_all(class_="season-menu-item")
         in_superuniverse = "isInSuperUniverse: true" in showpage.text
@@ -112,7 +112,7 @@ class RequestsSession(object):
             seasonid = seasondata.a["data-season"]
             if not in_superuniverse:
                 headers = {'X-Requested-With': 'XMLHttpRequest'}
-                episodepage = self.get("https://tv.nrk.no/program/Episodes/%s/%s" % (showid, seasonid), headers=headers).soup()
+                episodepage = self.get("https://tv.nrk.no/program/Episodes/%s/%s" % (show.urlid, seasonid), headers=headers).soup()
                 episodedata = episodepage.find_all(class_="episode-item")
                 for episodenr, episode in enumerate(episodedata, start=1):
                     if "no-rights" in episode["class"]:
@@ -120,18 +120,16 @@ class RequestsSession(object):
                     episodeid = episode.find(class_="clearfix")["href"]
                     if not date_for_episodenr:
                         seasonnr, episodenr = re.findall(r"sesong-(\d+)/episode-(\d+)", episodeid)[0]
-                    epcode = "S%02dE%02d" % (int(seasonnr), int(episodenr))
-                    episodes[epcode] = {"seasonnr": int(seasonnr), "episodenr": int(episodenr),
-                                        "urlid": str(episodeid), "in_superuniverse": False}
+                    episodes.add(KoalaEpisode(showtitle=show.title, seasonnr=int(seasonnr), episodenr=int(episodenr),
+                                              urlid=str(episodeid), in_superuniverse=False))
             else:
-                episodepage = self.get("http://tv.nrksuper.no/program/EpisodesSuper/%s/%s" % (showid, seasonid)).json()
+                episodepage = self.get("http://tv.nrksuper.no/program/EpisodesSuper/%s/%s" % (show.urlid, seasonid)).json()
                 for episodenr, episodeitem in enumerate(episodepage["data"], start=1):
                     episodeid = "/serie/%s/%s/%s" % (episodeitem['seriesId'], episodeitem['id'], episodeitem['programUrlMetadata'])
                     if not date_for_episodenr:
                         seasonnr, episodenr = re.findall(r"sesong-(\d+)/episode-(\d+)", episodeitem['programUrlMetadata'])[0]
-                    epcode = "S%02dE%02d" % (int(seasonnr), int(episodenr))
-                    episodes[epcode] = {"seasonnr": int(seasonnr), "episodenr": int(episodenr),
-                                        "urlid": str(episodeid), "in_superuniverse": True}
+                    episodes.add(KoalaEpisode(showtitle=show.title, seasonnr=int(seasonnr), episodenr=int(episodenr),
+                                              urlid=str(episodeid), in_superuniverse=True))
         return episodes
 
     def getinfodict(self, urlid):
