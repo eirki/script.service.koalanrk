@@ -114,7 +114,7 @@ class KoalaMovie(Movie):
             movie_dict = moviesdict['movies'][0]
         except KeyError:
             return None
-        return MovieLibEntry(self.title, movie_dict["id"], movie_dict["'playcount'"])
+        return MovieLibEntry(self.title, movie_dict["movieid"], movie_dict["'playcount'"])
 
     def generate_removal_task(self, db_stored, exclude=False, db_excluded=None):
         def remove():
