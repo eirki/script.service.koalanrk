@@ -197,8 +197,8 @@ class Show(object):
 
     def get_episode_availability(self, available_episodes):
         koala_stored_episodes, all_stored_episodes = self.get_stored_episodes()
-        unav_episodes = koala_stored_episodes.difference(available_episodes)
-        new_episodes = available_episodes.difference(all_stored_episodes)
+        unav_episodes = koala_stored_episodes - available_episodes
+        new_episodes = available_episodes - all_stored_episodes
         return unav_episodes, new_episodes
 
     def write_nfo(self, metadata):
@@ -308,7 +308,7 @@ class Show(object):
                 yield
 
                 koala_stored_episodes = self.get_koala_stored_eps()
-                nonadded_episodes = new_episodes.difference(koala_stored_episodes)
+                nonadded_episodes = new_episodes - koala_stored_episodes
                 if nonadded_episodes:
                     if not koala_stored_episodes:
                         metadata = session.get_show_metadata(episode.urlid)
@@ -323,11 +323,11 @@ class Show(object):
                     yield
 
                     koala_stored_episodes = self.get_koala_stored_eps()
-                    nonadded_episodes = new_episodes.difference(koala_stored_episodes)
+                    nonadded_episodes = new_episodes - koala_stored_episodes
                     if nonadded_episodes:
                         log.info("Failed to add episodes: %s, %s" % (self, sorted(nonadded_episodes, key=attrgetter('code'))))
 
-                added_episodes = koala_stored_episodes.difference(nonadded_episodes)
+                added_episodes = koala_stored_episodes - nonadded_episodes
                 for lib_entry in added_episodes:
                     lib_entry.load_playcount()
 
