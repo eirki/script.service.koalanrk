@@ -114,7 +114,7 @@ class KoalaMovie(Movie):
             movie_dict = moviesdict['movies'][0]
         except KeyError:
             return None
-        return MovieLibEntry(self.title, movie_dict["movieid"], movie_dict["'playcount'"])
+        return MovieLibEntry(self.title, movie_dict["movieid"], movie_dict["playcount"])
 
     def generate_removal_task(self, db_stored, exclude=False, db_excluded=None):
         def remove():
@@ -127,7 +127,7 @@ class KoalaMovie(Movie):
             else:
                 log.info("Couldn't find in library: %s" % (self))
             if settings["added_notifications"]:
-                dialogs.notification(heading="%s movie removed:" % const.provider, message=self)
+                dialogs.notification(heading="%s movie removed:" % const.provider, message=self.title)
             db_stored.remove(self)
             if exclude:
                 db_excluded.add(self)
@@ -156,7 +156,7 @@ class KoalaMovie(Movie):
                     return
             lib_entry.load_playcount()
             if settings["added_notifications"]:
-                dialogs.notification(heading="%s movie added:" % const.provider, message=self)
+                dialogs.notification(heading="%s movie added:" % const.provider, message=self.title)
             db_stored.add(self)
             if readd:
                 db_excluded.remove(self)
@@ -172,6 +172,7 @@ class MovieLibEntry(Movie, BaseLibEntry):
         self.kodiid = kodiid
         self.playcount = playcount
         self.runtime = runtime
+
 
 ###########################
 class Show(object):
