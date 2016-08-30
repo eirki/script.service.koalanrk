@@ -142,7 +142,10 @@ class RequestsSession(object):
             }
         return infodict
 
-    def getshowinfo(self, showid):
+    def get_movie_metadata(self, urlid):
+        return self.getinfodict(urlid)
+
+    def get_show_metadata(self, showid):
         showpage = self.get("http://tv.nrk.no/serie/%s/" % showid).soup()
         plot_heading = showpage.find("h3", text="Seriebeskrivelse")
         infodict = {
@@ -157,3 +160,6 @@ class RequestsSession(object):
             infodict["art"] = showpage.find(id="playerelement")["data-posterimage"]
 
         return infodict
+
+    def get_episode_metadata(self, urlid):
+        return self.getinfodict(urlid)
