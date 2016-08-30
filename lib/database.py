@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 import collections
 import multiprocessing.dummy as threading
 import json
-import os
 
 from . utils import os_join
 from . import constants as const

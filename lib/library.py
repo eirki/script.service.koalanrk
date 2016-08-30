@@ -2,21 +2,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 import multiprocessing.dummy as threading
-import os
-import re
-from functools import partial
 import traceback
-import types
-import json
 from operator import attrgetter
-import xbmcgui
-import xbmc
 
-from . utils import (os_join, uni_join, stringtofile)
 from . import scraper
-from . import constants as const
 from . import database
-from . xbmcwrappers import (rpc, log, settings, dialogs, ProgressDialog, ScanMonitor)
+from . xbmcwrappers import (log, settings, dialogs, ProgressDialog, ScanMonitor)
 from . mediatypes import (KoalaMovie, Show)
 
 

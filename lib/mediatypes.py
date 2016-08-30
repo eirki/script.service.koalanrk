@@ -10,6 +10,7 @@ from . utils import (os_join, uni_join, stringtofile)
 from . import constants as const
 from .xbmcwrappers import (rpc, log, settings, dialogs)
 
+
 class BaseLibEntry(object):
     def load_playcount(self):
         jsonfilepath = os_join(self.path, self.jsonfilename)
@@ -20,22 +21,21 @@ class BaseLibEntry(object):
                 **{self.mediatype + "id": self.kodiid})
             os.remove(jsonfilepath)
 
-
     def save_playcount(self):
         if self.playcount > 0:
             jsonfilepath = os_join(self.path, self.jsonfilename)
             with open(jsonfilepath, "w") as f:
                 json.dump(self.playcount, f)
 
-
     def remove_from_lib(self):
         rpc("VideoLibrary.Remove%s" % self.mediatype.capitalize(),
             **{self.mediatype + "id": self.kodiid})
-
-
 ###########################
+
+
 class Movie(object):
     mediatype = "movie"
+
     def __init__(self, title):
         self.title = title
         self.path = uni_join(const.libpath, "%s movies" % const.provider)
@@ -172,9 +172,9 @@ class MovieLibEntry(Movie, BaseLibEntry):
         self.kodiid = kodiid
         self.playcount = playcount
         self.runtime = runtime
-
-
 ###########################
+
+
 class Show(object):
     mediatype = "show"
 
@@ -344,9 +344,9 @@ class Show(object):
         self.task = update_add()
         self.finished = False
         self.exception = None
-
-
 ###########################
+
+
 class Episode(object):
     mediatype = "episode"
 
@@ -432,4 +432,3 @@ class EpisodeLibEntry(Episode, BaseLibEntry):
             os.removedirs(os_join(self.path))
         except OSError:
             pass
-
