@@ -263,13 +263,12 @@ class Show(object):
             if not episodes:
                 # no stored episodes detectable
                 return set(), set()
-            any_ep_kodiid = episodes["episodes"][0]['id']
-
-        kodiid = rpc("VideoLibrary.GetTVShows", properties={"episode": any_ep_kodiid})['tvshows'][0]['id']
+            any_ep_kodiid = episodes[0]['episodeid']
+        scraped_title = rpc("VideoLibrary.GetEpisodeDetails", episodeid=any_ep_kodiid, properties=["showtitle"])['episodedetails']['showtitle']
 
         all_stored_episodes_dict = rpc("VideoLibrary.GetEpisodes",
                                        properties=["season", "episode"],
-                                       filter={"field": "tvshowid", "operator": "is", "value": kodiid})
+                                       filter={"field": "tvshow", "operator": "is", "value": scraped_title})
         all_stored_episodes_set = set(Episode(showtitle=self.title, seasonnr=epdict['season'], episodenr=epdict['episode'])
                                       for epdict in all_stored_episodes_dict.get('episodes', []))
 
@@ -373,6 +372,13 @@ class Episode(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def delete_htm(self):
+        os.remove(os_join(self.path, self.htmfilename))
+        try:
+            os.removedirs(os_join(self.path))
+        except OSError:
+            pass
+
 
 class KoalaEpisode(Episode):
     def __init__(self, showtitle, seasonnr, episodenr, in_superuniverse, urlid):
@@ -426,9 +432,3 @@ class EpisodeLibEntry(Episode, BaseLibEntry):
         self.playcount = playcount
         self.runtime = runtime
 
-    def delete_htm(self):
-        os.remove(os_join(self.path, self.htmfilename))
-        try:
-            os.removedirs(os_join(self.path))
-        except OSError:
-            pass
