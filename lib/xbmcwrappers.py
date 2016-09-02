@@ -120,6 +120,8 @@ def rpc(method, multifilter=False, **kwargs):
         req_dict = {"jsonrpc": "2.0", "id": "1", "method": method}
     response = xbmc.executeJSONRPC(json.dumps(req_dict))
     output = json.loads(response)
+    if "error" in output:
+        raise Exception("RPC error: %s,\n with message: %s" % (output, req_dict))
     result = output.get("result")
     return result
 
