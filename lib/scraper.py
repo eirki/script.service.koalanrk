@@ -22,6 +22,12 @@ Mediatuple = namedtuple("Media", "urlid title")
 class RequestsSession(object):
     def __init__(self):
         self.session = requests.Session()
+        self.session.headers = {
+            'User-Agent': 'NRK%20TV/43 CFNetwork/711.5.6 Darwin/14.0.0',
+            "accept": '*/*',
+            'app-version-ios': '43',
+            'Accept-Language': 'en-us',
+        }
 
     def load_cookies(self):
         try:
@@ -91,7 +97,7 @@ class RequestsSession(object):
                     continue
                 urlid = "/program/%s/%s" % (media["program"]["myContentId"], media["program"]["programUrlMetadata"])
                 title = media["program"]["mainTitle"]
-                available_movies.add(Movie(urlid, title))
+                available_movies.add(KoalaMovie(urlid, title))
             elif mediatype == "show":
                 urlid = media["program"]["seriesId"]
                 title = media["program"]["seriesTitle"]
@@ -104,35 +110,36 @@ class RequestsSession(object):
 
     def getepisodes(self, show):
         episodes = set()
-        showpage = self.get("http://tv.nrk.no/serie/%s/" % show.urlid).soup()
-        date_for_episodenr = showpage.find(attrs={"name": "latestepisodeurls"}) and "/episode-" not in showpage.find(attrs={"name": "latestepisodeurls"})["content"]
-        seasons = showpage.find_all(class_="season-menu-item")
-        in_superuniverse = "isInSuperUniverse: true" in showpage.text
-        for seasonnr, seasondata in enumerate(reversed(seasons), start=1):
-            seasonid = seasondata.a["data-season"]
-            if not in_superuniverse:
-                headers = {'X-Requested-With': 'XMLHttpRequest'}
-                episodepage = self.get("https://tv.nrk.no/program/Episodes/%s/%s" % (show.urlid, seasonid), headers=headers).soup()
-                episodedata = episodepage.find_all(class_="episode-item")
-                for episodenr, episode in enumerate(episodedata, start=1):
-                    if "no-rights" in episode["class"]:
-                        continue
-                    episodeid = episode.find(class_="clearfix")["href"]
-                    if not date_for_episodenr:
-                        seasonnr, episodenr = re.findall(r"sesong-(\d+)/episode-(\d+)", episodeid)[0]
-                    episodes.add(KoalaEpisode(showtitle=show.title, seasonnr=int(seasonnr), episodenr=int(episodenr),
-                                              urlid=str(episodeid), in_superuniverse=False))
-            else:
-                episodepage = self.get("http://tv.nrksuper.no/program/EpisodesSuper/%s/%s" % (show.urlid, seasonid)).json()
-                for episodenr, episodeitem in enumerate(episodepage["data"], start=1):
-                    episodeid = "/serie/%s/%s/%s" % (episodeitem['seriesId'], episodeitem['id'], episodeitem['programUrlMetadata'])
-                    if not date_for_episodenr:
-                        seasonnr, episodenr = re.findall(r"sesong-(\d+)/episode-(\d+)", episodeitem['programUrlMetadata'])[0]
-                    episodes.add(KoalaEpisode(showtitle=show.title, seasonnr=int(seasonnr), episodenr=int(episodenr),
-                                              urlid=str(episodeid), in_superuniverse=True))
+        showdata = self.get("http://tvapi.nrk.no/v1/series/%s/" % show.urlid).json()
+        date_for_episodenr = ":" not in showdata["programs"][0]["episodeNumberOrDate"]
+        if not date_for_episodenr:
+            seasons = {season["id"]: int(season["name"].split()[-1]) for season in showdata["seasonIds"]}
+            for episode in showdata["programs"]:
+                if not episode["isAvailable"]:
+                    continue
+                episodenr = int(episode["episodeNumberOrDate"].split(":")[0])
+                seasonnr = seasons[episode["seasonId"]]
+                urlid = episode["programId"]
+                episodes.add(KoalaEpisode(showtitle=show.title, seasonnr=seasonnr, episodenr=episodenr, urlid=urlid, plot=episode["description"],
+                                          runtime=int(episode["duration"]/1000), art=episode["imageId"], title=episode["title"]))
+
+        else:
+            seasons = {season["id"]: i for i, season in enumerate(reversed(showdata["seasonIds"]), start=1)}
+            prevseasonid = None
+            for i, episode in enumerate(reversed(showdata["programs"]), start=1):
+                if not episode["isAvailable"]:
+                    continue
+                seasonid = episode["seasonId"]
+                seasonnr = seasons[seasonid]
+                episodenr = episodenr + 1 if seasonid == prevseasonid else 1
+                prevseasonid = seasonid
+
+                urlid = episode["programId"]
+                episodes.add(KoalaEpisode(showtitle=show.title, seasonnr=seasonnr, episodenr=episodenr, urlid=urlid, plot=episode["description"],
+                                          runtime=int(episode["duration"]/1000), art=episode["imageId"], title=episode["title"]))
         return episodes
 
-    def getinfodict(self, urlid):
+    def get_movie_metadata(self, urlid):
         raw_infodict = self.get("http://v8.psapi.nrk.no/mediaelement/%s" % urlid).json()
         infodict = {
             "title": raw_infodict["fullTitle"],
@@ -141,9 +148,6 @@ class RequestsSession(object):
             "runtime": re.sub(r"PT(\d+)M.*", r"\1", raw_infodict["duration"]),
             }
         return infodict
-
-    def get_movie_metadata(self, urlid):
-        return self.getinfodict(urlid)
 
     def get_show_metadata(self, showid):
         showpage = self.get("http://tv.nrk.no/serie/%s/" % showid).soup()
@@ -160,6 +164,3 @@ class RequestsSession(object):
             infodict["art"] = showpage.find(id="playerelement")["data-posterimage"]
 
         return infodict
-
-    def get_episode_metadata(self, urlid):
-        return self.getinfodict(urlid)

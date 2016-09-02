@@ -311,11 +311,10 @@ class Show(object):
                 nonadded_episodes = new_episodes - koala_stored_episodes
                 if nonadded_episodes:
                     if not koala_stored_episodes:
-                        metadata = session.get_show_metadata(episode.urlid)
+                        metadata = session.get_show_metadata(self.urlid)
                         self.write_nfo(metadata)
                     for episode in nonadded_episodes:
-                        metadata = session.get_episode_metadata(episode.urlid)
-                        episode.write_nfo(metadata)
+                        episode.write_nfo()
                         episode.delete_htm()
                         episode.write_htm()
                     log.info("NFOs created, waiting for second lib update: %s, %s" %
@@ -381,12 +380,14 @@ class Episode(object):
 
 
 class KoalaEpisode(Episode):
-    def __init__(self, showtitle, seasonnr, episodenr, in_superuniverse, urlid):
+    def __init__(self, showtitle, seasonnr, episodenr, urlid, plot, runtime, art, title):
         Episode.__init__(self, showtitle, seasonnr, episodenr)
-        self.in_superuniverse = in_superuniverse
         self.urlid = urlid
-        self.url = "http://tv.nrk%s.no%s?autostart=true" % ("super" if in_superuniverse else "", urlid)
-        self.lib_entry = None
+        self.url = "http://tv.nrk.no%s?autostart=true" % urlid
+        self.title = title
+        self.plot = plot
+        self.runtime = runtime
+        self.art = "https://gfx.nrk.no/%s" % art
 
     def write_htm(self):
         if not os.path.exists(os_join(self.path)):
@@ -395,13 +396,13 @@ class KoalaEpisode(Episode):
             txt.write('<meta http-equiv="REFRESH" content="0;'
                       'url=%s"> <body bgcolor="#ffffff">' % self.url)
 
-    def write_nfo(self, metadata):
+    def write_nfo(self):
         soup = BeautifulSoup("<?xml version='1.0' encoding='utf-8'?>")
         root = soup.new_tag("movie")
         soup.append(root)
 
         root.append(soup.new_tag("title"))
-        root.title.string = metadata["title"]
+        root.title.string = self.title
 
         root.append(soup.new_tag("showtitle"))
         root.showtitle.string = self.showtitle
@@ -412,14 +413,14 @@ class KoalaEpisode(Episode):
         root.append(soup.new_tag("episode"))
         root.episode.string = unicode(self.episodenr)
 
-        root.append(soup.new_tag("runtime"))
-        root.runtime.string = unicode(metadata["runtime"])
-
         root.append(soup.new_tag("plot"))
-        root.plot.string = metadata["plot"]
+        root.plot.string = self.plot
+
+        root.append(soup.new_tag("runtime"))
+        root.runtime.string = unicode(self.runtime)
 
         root.append(soup.new_tag("thumb", aspect="poster"))
-        root.thumb.string = metadata["art"]
+        root.thumb.string = self.art
 
         with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
             nfo.write(soup.prettify().encode("utf-8"))
