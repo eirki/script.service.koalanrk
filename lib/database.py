@@ -45,7 +45,7 @@ class MediaDatabase(object):
         insert if item not in database.
         if item is in database and retain_order == true, move item to end of list'''
         with self.lock:
-            self.discard(item)
+            self.backend.discard(item)
             self.backend.add(item)
             self.edited = True
 
@@ -56,7 +56,6 @@ class MediaDatabase(object):
 
     def __repr__(self):
         return repr(self.backend)
-
 
     def __contains__(self, key):
         return key in self.backend
