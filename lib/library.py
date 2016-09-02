@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import multiprocessing.dummy as threading
 import traceback
 from operator import attrgetter
+import sys
 
 from . import scraper
 from . import database
@@ -24,7 +25,7 @@ def obj_mapper(obj):
     except StopIteration:
         obj.finished = True
     except Exception as exc:
-        log.info("Error adding/updating %s:\n%s" % (obj, traceback.format_exc()))
+        log.info("Error adding/updating %s:\n%s" % (obj, traceback.format_exc().decode(sys.getfilesystemencoding())))
         obj.exception = exc
         obj.finished = True
 
