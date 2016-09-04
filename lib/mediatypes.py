@@ -252,7 +252,7 @@ class Show(object):
     def get_stored_episodes(self):
         koala_stored_episodes = self.get_koala_stored_eps()
         if koala_stored_episodes:
-            any_ep_kodiid = koala_stored_episodes[0].kodiid
+            any_ep_kodiid = next(iter(koala_stored_episodes)).kodiid
         else:
             # no stored koala episode, get any stored episode
             episodes = rpc("VideoLibrary.GetEpisodes", limits={"start": 0, "end": 1},
