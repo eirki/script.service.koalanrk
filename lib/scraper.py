@@ -4,14 +4,12 @@ from __future__ import unicode_literals
 import re
 import json
 from bs4 import BeautifulSoup
-import pickle
+import browsercookie
 import requests
 from types import MethodType
 from HTMLParser import HTMLParser
 from collections import namedtuple
 
-from . utils import os_join
-from . import constants as const
 from . xbmcwrappers import (log, settings)
 from . mediatypes import (KoalaMovie, Show, KoalaEpisode)
 
@@ -30,15 +28,7 @@ class RequestsSession(object):
         }
 
     def load_cookies(self):
-        try:
-            with open(os_join(const.userdatafolder, "cookies"), 'rb') as f:
-                self.session.cookies = pickle.load(f)
-        except IOError:
-            pass
-
-    def save_cookies(self):
-        with open(os_join(const.userdatafolder, "cookies"), 'wb') as f:
-            pickle.dump(self.session.cookies, f)
+        self.session.cookies = browsercookie.chrome()
 
     def soup(self, resp):
         return BeautifulSoup(resp.text)
@@ -57,28 +47,11 @@ class RequestsSession(object):
         req.soup = MethodType(self.soup, req)
         return req
 
-    def login(self, loginpage):
-        log.info("logging in")
-        username = settings["username"]
-        passw = settings["password"]
-        if not username or not passw:
-            raise Exception('Username or password not specified')
-        scriptsection = loginpage.soup().find(id="modelJson")
-        unescaped_json = HTMLParser().unescape(scriptsection.text.strip())
-        scrdata = json.loads(unescaped_json)
-        payload = {
-            scrdata["antiForgery"]["name"]: scrdata["antiForgery"]["value"],
-            scrdata["apiAntiForgery"]["name"]: scrdata["apiAntiForgery"]["value"],
-            "userName": username,
-            "password": passw,
-        }
-        loginpage2 = self.post(loginpage.url, data=payload, allow_redirects=True, hidden=True)
-        return loginpage2
-
     def setup(self):
+        self.load_cookies()
         loginpage = self.get("https://tv.nrk.no/logginn", verify=False)
         if loginpage.soup().find('title').text == "Innlogging":
-            loginpage = self.login(loginpage)
+            raise Exception('Login failed. Ensure chrome is logged in')
         url = loginpage.soup().find("form")["action"]
         payload = {t['name']: t.get('value') for t in loginpage.soup().find_all('input', attrs={'type': 'hidden'})}
         self.post(url, data=payload)

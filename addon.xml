@@ -10,6 +10,9 @@
     <import addon="script.module.pyuserinput" version="0.1.10"/>
     <import addon="script.module.websocket_client" version="0.37.0"/>
     <import addon="script.module.chromote" version="0.1.2"/>
+    <import addon="script.module.browsercookie" version="0.6.3"/>
+    <import addon="script.module.pycryptodome" version="3.4.1"/>
+    <import addon="script.module.keyring" version="9.3.1"/>
   </requires>
   <extension
     point="xbmc.python.script"

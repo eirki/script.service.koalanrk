@@ -1,7 +1,5 @@
 <settings>
 <category label="Setup">
-  <setting label="Username" id="username"  type="text"/>
-  <setting label="Password" id="password"  type="text" option="hidden"/>
   <setting label="Use Custom Library Path" default="false" id="usecustomLibPath" type="bool" />
   <setting label="Library Path" default="special://profile/addon_data/script.service.koalanrk/Library" enable="eq(-1,true)" id="LibPath" option="writeable" type="folder" />
   <setting label="Enable remote control" id="remote" type="bool" default="false" />

@@ -136,8 +136,6 @@ def open_settings(mode, action):
             "",
             "",
             "",
-            "",
-            "",
             "configureremote",
             "",
             "prioritize",
