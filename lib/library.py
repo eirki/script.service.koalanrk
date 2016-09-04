@@ -116,7 +116,7 @@ def fetch_mediaobjects(action, session, stored_movies, stored_shows,
         movie = select_mediaitem(excluded_movies)
         if not movie:
             return
-        movie.generate_update_task(db_stored=stored_movies, session=session, readd=True, db_excluded=excluded_movies)
+        movie.generate_add_task(db_stored=stored_movies, session=session, readd=True, db_excluded=excluded_movies)
         update_tasks.append(movie)
 
     elif action in ["startup", "schedule", "watchlist"]:
