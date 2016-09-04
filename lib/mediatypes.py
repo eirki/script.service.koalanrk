@@ -239,8 +239,8 @@ class Show(object):
 
     def get_koala_stored_eps(self):
         # get any stored koala episodes
-        episodes = rpc("VideoLibrary.GetEpisodes",
-                       filter={"field": "filename", "operator": "startswith", "value": self.path})
+        episodes = rpc("VideoLibrary.GetEpisodes", properties=["season", "episode", "playcount"],
+                       filter={"field": "path", "operator": "startswith", "value": self.path})
         koala_stored_episodes = set()
         for epdict in episodes.get('episodes', []):
             episode = EpisodeLibEntry(self.title, epdict["season"], epdict["episode"],
@@ -262,7 +262,8 @@ class Show(object):
                 # no stored episodes detectable
                 return set(), set()
             any_ep_kodiid = episodes[0]['episodeid']
-        scraped_title = rpc("VideoLibrary.GetEpisodeDetails", episodeid=any_ep_kodiid, properties=["showtitle"])['episodedetails']['showtitle']
+        any_episode = rpc("VideoLibrary.GetEpisodeDetails", episodeid=any_ep_kodiid, properties=["showtitle"])
+        scraped_title = any_episode['episodedetails']['showtitle']
 
         all_stored_episodes_dict = rpc("VideoLibrary.GetEpisodes",
                                        properties=["season", "episode"],
