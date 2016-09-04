@@ -160,6 +160,9 @@ def fetch_mediaobjects(action, session, stored_movies, stored_shows,
                 show.generate_update_task(db_stored=stored_shows, session=session)
                 update_tasks.append(show)
 
+    else:
+        raise Exception("Unknown library action: %s" % action)
+
     return removal_tasks, update_tasks
 
 

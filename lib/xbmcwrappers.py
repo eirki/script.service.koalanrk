@@ -9,6 +9,12 @@ from .utils import (wrap_unicode, byteify, os_join)
 from . import constants as const
 
 
+def open_settings(category, action):
+    xbmc.executebuiltin('Addon.OpenSettings(%s)' % const.addonid)
+    xbmc.executebuiltin('SetFocus(%i)' % (int(category) + 100 - 1))
+    xbmc.executebuiltin('SetFocus(%i)' % (int(action) + 200 - 1))
+
+
 class SettingsAsDict(dict):
     @wrap_unicode
     def getsetting(self, key):
@@ -107,6 +113,7 @@ class ScanMonitor(xbmc.Monitor):
         xbmc.executebuiltin('UpdateLibrary(video, "", false)')
         while self.scanning:
             xbmc.sleep(100)
+
 
 def rpc(method, multifilter=False, **kwargs):
     if multifilter:
