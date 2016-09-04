@@ -68,7 +68,6 @@ class KoalaMovie(Movie):
         Movie.__init__(self, title)
         self.urlid = urlid
         self.url = "http://tv.nrk.no%s?autostart=true" % self.urlid
-        self.lib_entry = None
 
     def write_htm(self):
         if not os.path.exists(os_join(self.path)):
@@ -167,11 +166,10 @@ class KoalaMovie(Movie):
 
 
 class MovieLibEntry(Movie, BaseLibEntry):
-    def __init__(self, title, kodiid, playcount=None, runtime=None):
+    def __init__(self, title, kodiid, playcount):
         Movie.__init__(self, title)
         self.kodiid = kodiid
         self.playcount = playcount
-        self.runtime = runtime
 ###########################
 
 
@@ -427,9 +425,7 @@ class KoalaEpisode(Episode):
 
 
 class EpisodeLibEntry(Episode, BaseLibEntry):
-    def __init__(self, showtitle, seasonnr, episodenr, kodiid, playcount=None, runtime=None):
+    def __init__(self, showtitle, seasonnr, episodenr, kodiid, playcount):
         Episode.__init__(self, showtitle, seasonnr, episodenr)
         self.kodiid = kodiid
         self.playcount = playcount
-        self.runtime = runtime
-
