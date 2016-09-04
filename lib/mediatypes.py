@@ -141,7 +141,7 @@ class KoalaMovie(Movie):
             self.write_htm()
             yield
 
-            lib_entry = self.check_added()
+            lib_entry = self.get_lib_entry()
             if not lib_entry:
                 metadata = session.get_movie_metadata(self.urlid)
                 self.write_nfo(metadata)
