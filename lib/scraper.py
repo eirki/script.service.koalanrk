@@ -120,7 +120,7 @@ class RequestsSession(object):
                 episodenr = int(episode["episodeNumberOrDate"].split(":")[0])
                 seasonnr = seasons[episode["seasonId"]]
                 urlid = episode["programId"]
-                episodes.add(KoalaEpisode(showtitle=show.title, seasonnr=seasonnr, episodenr=episodenr, urlid=urlid, plot=episode["description"],
+                episodes.add(KoalaEpisode(show=show, seasonnr=seasonnr, episodenr=episodenr, urlid=urlid, plot=episode["description"],
                                           runtime=int(episode["duration"]/1000), art=episode["imageId"], title=episode["title"]))
 
         else:

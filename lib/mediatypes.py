@@ -270,7 +270,6 @@ class Show(object):
                                        filter={"field": "tvshow", "operator": "is", "value": scraped_title})
         all_stored_episodes_set = set(Episode(showtitle=self.title, seasonnr=epdict['season'], episodenr=epdict['episode'])
                                       for epdict in all_stored_episodes_dict.get('episodes', []))
-
         return koala_stored_episodes, all_stored_episodes_set
 
     def generate_removal_task(self, db_stored, exclude=False, db_excluded=None):
@@ -379,10 +378,10 @@ class Episode(object):
 
 
 class KoalaEpisode(Episode):
-    def __init__(self, showtitle, seasonnr, episodenr, urlid, plot, runtime, art, title):
-        Episode.__init__(self, showtitle, seasonnr, episodenr)
+    def __init__(self, show, seasonnr, episodenr, urlid, plot, runtime, art, title):
+        Episode.__init__(self, show.title, seasonnr, episodenr)
         self.urlid = urlid
-        self.url = "http://tv.nrk.no%s?autostart=true" % urlid
+        self.url = "http://tv.nrk.no/serie/%s/%s?autostart=true" % (show.urlid, urlid)
         self.title = title
         self.plot = plot
         self.runtime = runtime
