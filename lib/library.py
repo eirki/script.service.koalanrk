@@ -197,7 +197,7 @@ def main(action):
             progressbar.goto(30)
             requests_session.setup()
 
-        progressbar.goto(20)
+        progressbar.goto(40)
         for obj in removal_tasks:
             try:
                 obj.task()
@@ -212,22 +212,22 @@ def main(action):
             else:
                 map_ = map
 
-            progressbar.goto(30)
+            progressbar.goto(50)
             map_(obj_mapper, update_tasks)
 
             step2 = [obj for obj in update_tasks if not obj.finished]
             if step2:
-                progressbar.goto(40)
+                progressbar.goto(60)
                 monitor = ScanMonitor()
                 monitor.update_video_library()
-                progressbar.goto(50)
+                progressbar.goto(70)
                 map_(obj_mapper, step2)
 
                 step3 = [obj for obj in step2 if not obj.finished]
                 if step3:
-                    progressbar.goto(60)
+                    progressbar.goto(80)
                     monitor.update_video_library()
-                    progressbar.goto(70)
+                    progressbar.goto(90)
                     map_(obj_mapper, step3)
 
         progressbar.goto(100)
