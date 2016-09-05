@@ -108,7 +108,7 @@ class RequestsSession(object):
                 prevseasonid = seasonid
 
                 urlid = episode["programId"]
-                episodes.add(KoalaEpisode(showtitle=show.title, seasonnr=seasonnr, episodenr=episodenr, urlid=urlid, plot=episode["description"],
+                episodes.add(KoalaEpisode(show=show, seasonnr=seasonnr, episodenr=episodenr, urlid=urlid, plot=episode["description"],
                                           runtime=int(episode["duration"]/1000), art=episode["imageId"], title=episode["title"]))
         return episodes
 
