@@ -196,9 +196,9 @@ def main(action):
 
         removal_tasks, update_tasks = tasks
 
-        if action in ["update_all", "update_single", "readd_show", "readd_movie"]:
-            progressbar.goto(30)
-            requests_session.setup()
+        # if action in ["update_all", "update_single", "readd_show", "readd_movie"]:
+        #     progressbar.goto(30)
+        #     requests_session.setup()
 
         progressbar.goto(40)
         for obj in removal_tasks:
