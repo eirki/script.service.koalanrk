@@ -44,7 +44,7 @@ class Movie(object):
         self.jsonfilename = "%s.json" % stringtofile(self.title)
 
     def __repr__(self):
-        return self.title.encode("ascii", "ignore")
+        return repr(self.title)
 
     def __hash__(self):
         return hash(self.title)
@@ -183,7 +183,7 @@ class Show(object):
         self.nfofilename = "tvshow.nfo"
 
     def __repr__(self):
-        return self.title.encode("ascii", "ignore")
+        return repr(self.title)
 
     def __hash__(self):
         return hash(self.title)
