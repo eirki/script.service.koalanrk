@@ -66,7 +66,7 @@ def fetch_mediaobjects(action, session, stored_movies, stored_shows,
     update_tasks = []
     removal_tasks = []
     if action == "remove_all":
-        if not stored_movies or stored_shows:
+        if not (stored_movies or stored_shows):
             dialogs.ok(heading="No media", line1="No movies or TV shows seems to be in library")
             return
         for movie in stored_movies:
