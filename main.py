@@ -85,7 +85,7 @@ def library_mode(action):
         if action in ["startup", "schedule"]:
             return
         run = dialogs.yesno(heading="Running", line1="Koala is running. ",
-                            line2="Running multiple instances cause instablity.", line3="Continue?")
+                            line2="Running multiple can instances cause instablity.", line3="Continue?")
         if not run:
             return
     koalasetup()
@@ -95,11 +95,15 @@ def library_mode(action):
                    line2=uni_join(const.libpath, "%s shows" % const.provider),
                    line3=uni_join(const.libpath, "%s movies" % const.provider))
         return
+
+    starttime = dt.datetime.now()
+    log.info("Starting %s" % action)
+    xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "true")
     try:
-        xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "true")
         library.main(action)
     finally:
         xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "false")
+        log.info("Finished %s in %s" % (action, str(dt.datetime.now() - starttime)))
 
 
 def main_mode(action):
@@ -118,20 +122,17 @@ def main(argv=None):
         argv = get_params(sys.argv)
     mode = argv['mode']
     action = argv.get('action', None)
-    settings_coord = argv['reopen_settings'].split() if 'reopen_settings' in argv else None
+    settings_coord = argv.get('reopen_settings', "").split()
 
+    switch = {
+        "main": main_mode,
+        "library": library_mode,
+        "watch": watch_mode,
+    }
+    selected_mode = switch[mode]
     try:
-        starttime = dt.datetime.now()
-        log.info("Starting %s" % const.addonname)
-        switch = {
-            "main": main_mode,
-            "library": library_mode,
-            "watch": watch_mode,
-        }
-        selected_mode = switch[mode]
         selected_mode(action)
     finally:
-        log.info("%s finished (in %s)" % (const.addonname, str(dt.datetime.now() - starttime)))
         if settings_coord:
             open_settings(*settings_coord)
 
