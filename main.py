@@ -19,6 +19,10 @@ from lib import playback
 from lib.remote import Remote
 
 
+def start():
+    open_settings(category=2, action=1)
+
+
 def koalasetup():
     if not os.path.exists(const.userdatafolder):
         os.makedirs(const.userdatafolder)
@@ -42,20 +46,14 @@ def refresh_settings():
     xbmc.executebuiltin('Addon.OpenSettings(%s)' % const.addonid)
 
 
-def restart_service():
-    rpc("Addons.SetAddonEnabled", addonid=const.addonid, enabled=False)
-    rpc("Addons.SetAddonEnabled", addonid=const.addonid, enabled=True)
-
-
-def deletecookies():
-    cookiefile = os_join(const.userdatafolder, "cookies")
-    if os.path.isfile(cookiefile):
-        os.remove(cookiefile)
-
-
-def testsuite():
+def run_testsuite():
     suite = unittest.TestLoader().discover(start_dir='tests')
     unittest.TextTestRunner().run(suite)
+
+
+def configure_remote():
+    remote = Remote()
+    remote.configure()
 
 
 def test():
@@ -66,7 +64,7 @@ def get_params(argv):
     params = {}
     if argv in (["main.py"], ['']):
         # if addon-icon clicked or addon selected in program addons list
-        params = {"mode": "main_start"}
+        params = {"mode": "main", "action": "start"}
     else:
         # if action triggered from settings/service
         arg_pairs = argv[1:]
@@ -78,19 +76,11 @@ def get_params(argv):
     return params
 
 
-def setup_mode(action):
-    if action == "configureremote":
-        remote = Remote()
-        remote.configure()
-    elif action == "prioritize":
-        library.main(action="prioritize")
-
-
 def watch_mode(action):
     playback.live(action)
 
 
-def update_mode(action):
+def library_mode(action):
     if xbmcgui.Window(10000).getProperty("%s running" % const.addonname) == "true":
         if action in ["startup", "schedule"]:
             return
@@ -112,15 +102,15 @@ def update_mode(action):
         xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "false")
 
 
-def debug_mode(action):
-    debugactions = {
-        "refreshsettings": refresh_settings,
-        "deletecookies": deletecookies,
+def main_mode(action):
+    switch = {
+        "start": start,
+        "configure_remote": configure_remote,
+        "refresh_settings": refresh_settings,
         "test": test,
-        "testsuite": testsuite,
-        "restart_service": restart_service,
+        "run_testsuite": run_testsuite,
     }
-    debugactions[action]()
+    switch[action]()
 
 
 def main(argv=None):
@@ -133,16 +123,12 @@ def main(argv=None):
     try:
         starttime = dt.datetime.now()
         log.info("Starting %s" % const.addonname)
-        if mode == "main_start":
-            open_settings(category=2, action=1)
-            return
-        modes = {
-            "setup": setup_mode,
-            "update": update_mode,
+        switch = {
+            "main": main_mode,
+            "library": library_mode,
             "watch": watch_mode,
-            "debug": debug_mode,
         }
-        selected_mode = modes[mode]
+        selected_mode = switch[mode]
         selected_mode(action)
     finally:
         log.info("%s finished (in %s)" % (const.addonname, str(dt.datetime.now() - starttime)))
