@@ -115,55 +115,6 @@ class KoalaMovie(Movie):
             return None
         return MovieLibEntry(self.title, movie_dict["movieid"], movie_dict["playcount"])
 
-    def generate_removal_task(self, db_stored, exclude=False, db_excluded=None):
-        def remove():
-            log.info("Removing movie: %s" % self)
-            lib_entry = self.get_lib_entry()
-            if lib_entry:
-                lib_entry.save_playcount()
-                lib_entry.remove_from_lib()
-                lib_entry.delete_htm()
-            else:
-                log.info("Couldn't find in library: %s" % (self))
-            if settings["added_notifications"]:
-                dialogs.notification(heading="%s movie removed:" % const.provider, message=self.title)
-            db_stored.remove(self)
-            if exclude:
-                db_excluded.add(self)
-            log.info("Finished removing movie: %s" % self)
-        self.task = remove
-        self.finished = False
-        self.exception = None
-
-    def generate_add_task(self, db_stored, session, readd=False, db_excluded=None):
-        def add():
-            log.info("Adding movie: %s" % self)
-            self.write_htm()
-            yield
-
-            lib_entry = self.get_lib_entry()
-            if not lib_entry:
-                metadata = session.get_movie_metadata(self.urlid)
-                self.write_nfo(metadata)
-                self.delete_htm()
-                self.write_htm()
-                yield
-
-                lib_entry = self.get_lib_entry()
-                if not lib_entry:
-                    log.info("Failed to add movie: %s" % self)
-                    return
-            lib_entry.load_playcount()
-            if settings["added_notifications"]:
-                dialogs.notification(heading="%s movie added:" % const.provider, message=self.title)
-            db_stored.add(self)
-            if readd:
-                db_excluded.remove(self)
-            log.info("Finished adding movie: %s" % self)
-        self.task = add()
-        self.finished = False
-        self.exception = None
-
 
 class MovieLibEntry(Movie, BaseLibEntry):
     def __init__(self, title, kodiid, playcount):
@@ -271,75 +222,6 @@ class Show(object):
         all_stored_episodes_set = set(Episode(showtitle=self.title, seasonnr=epdict['season'], episodenr=epdict['episode'])
                                       for epdict in all_stored_episodes_dict.get('episodes', []))
         return koala_stored_episodes, all_stored_episodes_set
-
-    def generate_removal_task(self, db_stored, exclude=False, db_excluded=None):
-        def remove():
-            log.info("Removing show: %s" % self.title)
-            koala_stored_episodes = self.get_koala_stored_eps()
-            for lib_entry in koala_stored_episodes:
-                lib_entry.save_playcount()
-                lib_entry.delete_htm()
-                lib_entry.remove_from_lib()
-            db_stored.remove(self)
-            if exclude:
-                db_excluded.add(self)
-            log.info("Removed episodes: %s, %s" % (self.title, sorted(koala_stored_episodes, key=attrgetter('code'))))
-            log.info("Finished removing show: %s" % self.title)
-        self.task = remove
-        self.finished = False
-        self.exception = None
-
-    def generate_update_task(self, db_stored, session, readd=False, db_excluded=None):
-        def update_add():
-            log.info("Updating show: %s" % self)
-            available_episodes = session.getepisodes(self)
-            unav_episodes, new_episodes = self.get_episode_availability(available_episodes)
-            for lib_entry in unav_episodes:
-                lib_entry.save_playcount()
-                lib_entry.delete_htm()
-                lib_entry.remove_from_lib()
-            if new_episodes:
-                for episode in new_episodes:
-                    episode.write_htm()
-                log.info("htms created, waiting for lib update: %s %s" %
-                         (self, sorted(new_episodes, key=attrgetter('code'))))
-                yield
-
-                koala_stored_episodes = self.get_koala_stored_eps()
-                nonadded_episodes = new_episodes - koala_stored_episodes
-                if nonadded_episodes:
-                    if not koala_stored_episodes:
-                        metadata = session.get_show_metadata(self.urlid)
-                        self.write_nfo(metadata)
-                    for episode in nonadded_episodes:
-                        episode.write_nfo()
-                        episode.delete_htm()
-                        episode.write_htm()
-                    log.info("NFOs created, waiting for second lib update: %s, %s" %
-                             (self, sorted(nonadded_episodes, key=attrgetter('code'))))
-                    yield
-
-                    koala_stored_episodes = self.get_koala_stored_eps()
-                    nonadded_episodes = new_episodes - koala_stored_episodes
-                    if nonadded_episodes:
-                        log.info("Failed to add episodes: %s, %s" % (self, sorted(nonadded_episodes, key=attrgetter('code'))))
-
-                added_episodes = koala_stored_episodes - nonadded_episodes
-                for lib_entry in added_episodes:
-                    lib_entry.load_playcount()
-
-                if settings["added_notifications"]:
-                    self.notify(new_episodes)
-                log.info("Added episodes: %s, %s" % (self, sorted(added_episodes, key=attrgetter('code'))))
-            if unav_episodes:
-                log.info("Removed episodes: %s, %s" % (self, sorted(unav_episodes, key=attrgetter('code'))))
-            db_stored.upsert(self)
-            if readd:
-                db_excluded.remove(self)
-            log.info("Finished updating show: %s" % self)
-        self.task = update_add()
-        self.finished = False
-        self.exception = None
 ###########################
 
 

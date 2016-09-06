@@ -7,9 +7,137 @@ from operator import attrgetter
 import sys
 
 from . import scraper
-from . import database
+from . import databases
 from . xbmcwrappers import (log, settings, dialogs, ProgressDialog, ScanMonitor)
-from . mediatypes import (KoalaMovie, Show)
+from . import constants as const
+
+
+# Library tasks
+def remove_movie(movie):
+    log.info("Removing movie: %s" % movie)
+    lib_entry = movie.get_lib_entry()
+    if lib_entry:
+        lib_entry.save_playcount()
+        lib_entry.remove_from_lib()
+        lib_entry.delete_htm()
+    else:
+        log.info("Couldn't find in library: %s" % (movie))
+    if settings["added_notifications"]:
+        dialogs.notification(heading="%s movie removed:" % const.provider, message=movie.title)
+    databases.stored_movies.remove(movie)
+    log.info("Finished removing movie: %s" % movie)
+
+
+def exclude_movie(movie):
+    log.info("Excluding movie: %s" % movie.title)
+    remove_movie(movie)
+    databases.excluded_movies.add(movie)
+    log.info("Finished excluding movie: %s" % movie.title)
+
+
+def add_movie(movie):
+    log.info("Adding movie: %s" % movie)
+    movie.write_htm()
+    yield
+
+    lib_entry = movie.get_lib_entry()
+    if not lib_entry:
+        metadata = scraper.get_movie_metadata(movie.urlid)
+        movie.write_nfo(metadata)
+        movie.delete_htm()
+        movie.write_htm()
+        yield
+
+        lib_entry = movie.get_lib_entry()
+        if not lib_entry:
+            log.info("Failed to add movie: %s" % movie)
+            return
+    lib_entry.load_playcount()
+    if settings["added_notifications"]:
+        dialogs.notification(heading="%s movie added:" % const.provider, message=movie.title)
+    databases.stored_movies.add(movie)
+    log.info("Finished adding movie: %s" % movie)
+
+
+def readd_movie(movie):
+    log.info("Readding movie: %s" % movie.title)
+    for step in add_movie(movie):
+        yield step
+    databases.excluded_movies.remove(movie)
+    log.info("Finished readding movie: %s" % movie.title)
+
+
+def remove_show(show):
+    log.info("Removing show: %s" % show.title)
+    koala_stored_episodes = show.get_koala_stored_eps()
+    for lib_entry in koala_stored_episodes:
+        lib_entry.save_playcount()
+        lib_entry.delete_htm()
+        lib_entry.remove_from_lib()
+    databases.stored_shows.remove(show)
+    log.info("Removed episodes: %s, %s" % (show.title, sorted(koala_stored_episodes, key=attrgetter('code'))))
+    log.info("Finished removing show: %s" % show.title)
+
+
+def exclude_show(show):
+    log.info("Excluding show: %s" % show.title)
+    remove_show(show)
+    databases.excluded_shows.add(show)
+    log.info("Finished excluding show: %s" % show.title)
+
+
+def update_add_show(show):
+    log.info("Updating show: %s" % show)
+    available_episodes = scraper.getepisodes(show)
+    unav_episodes, new_episodes = show.get_episode_availability(available_episodes)
+    for lib_entry in unav_episodes:
+        lib_entry.save_playcount()
+        lib_entry.delete_htm()
+        lib_entry.remove_from_lib()
+    if new_episodes:
+        for episode in new_episodes:
+            episode.write_htm()
+        log.info("htms created, waiting for lib update: %s %s" %
+                 (show, sorted(new_episodes, key=attrgetter('code'))))
+        yield
+
+        koala_stored_episodes = show.get_koala_stored_eps()
+        nonadded_episodes = new_episodes - koala_stored_episodes
+        if nonadded_episodes:
+            if not koala_stored_episodes:
+                metadata = scraper.get_show_metadata(show.urlid)
+                show.write_nfo(metadata)
+            for episode in nonadded_episodes:
+                episode.write_nfo()
+                episode.delete_htm()
+                episode.write_htm()
+            log.info("NFOs created, waiting for second lib update: %s, %s" %
+                     (show, sorted(nonadded_episodes, key=attrgetter('code'))))
+            yield
+
+            koala_stored_episodes = show.get_koala_stored_eps()
+            nonadded_episodes = new_episodes - koala_stored_episodes
+            if nonadded_episodes:
+                log.info("Failed to add episodes: %s, %s" % (show, sorted(nonadded_episodes, key=attrgetter('code'))))
+
+        added_episodes = koala_stored_episodes - nonadded_episodes
+        for lib_entry in added_episodes:
+            lib_entry.load_playcount()
+
+        if settings["added_notifications"]:
+            show.notify(new_episodes)
+        log.info("Added episodes: %s, %s" % (show, sorted(added_episodes, key=attrgetter('code'))))
+    if unav_episodes:
+        log.info("Removed episodes: %s, %s" % (show, sorted(unav_episodes, key=attrgetter('code'))))
+    databases.stored_shows.upsert(show)
+
+
+def readd_show(show):
+    log.info("Readding show: %s" % show.title)
+    for step in update_add_show(show):
+        yield step
+    databases.excluded_shows.remove(show)
+    log.info("Finished readding show: %s" % show.title)
 
 
 ############################
