@@ -85,7 +85,7 @@ def library_mode(action):
         if action in ["startup", "schedule"]:
             return
         run = dialogs.yesno(heading="Running", line1="Koala is running. ",
-                            line2="Running multiple can instances cause instablity.", line3="Continue?")
+                            line2="Running multiple instances may cause instablity.", line3="Continue?")
         if not run:
             return
     koalasetup()
