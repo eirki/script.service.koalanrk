@@ -7,7 +7,6 @@ from bs4 import BeautifulSoup
 import browsercookie
 import requests
 from types import MethodType
-from HTMLParser import HTMLParser
 from collections import namedtuple
 
 from . xbmcwrappers import (log, settings)
