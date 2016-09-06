@@ -181,7 +181,7 @@ class Show(object):
 
     def notify(self, new_episodes):
         if len(new_episodes) == 1:
-            message = "Added episode: %s" % new_episodes[0].code
+            message = "Added episode: %s" % list(new_episodes)[0].code
         elif len(new_episodes) <= 3:
             message = "Added episodes: %s" % ", ".join(sorted([ep.code for ep in new_episodes]))
         else:

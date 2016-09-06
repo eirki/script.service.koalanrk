@@ -7,6 +7,7 @@ import json
 
 from . utils import os_join
 from . import constants as const
+from . mediatypes import (KoalaMovie, Show)
 
 
 class MediaDatabase(object):
@@ -18,22 +19,22 @@ class MediaDatabase(object):
         self.name = name
         self.filepath = os_join(const.userdatafolder, "%s.json" % self.name)
         self.edited = False
-        self.load()
+        self.loaded = False
 
     def load(self):
         try:
             with open(self.filepath, 'r') as jf:
                 stored = json.load(jf)
-                for urlid, title in stored:
-                    media_obj = self.mediaclass(urlid, title)
-                    self.backend.add(media_obj)
         except IOError:
-            pass
+            stored = []
+        for urlid, title in stored:
+            media_obj = self.mediaclass(urlid, title)
+            self.backend.add(media_obj)
+        self.loaded = True
 
     def commit(self):
-        if self.edited:
-            with open(self.filepath, 'w') as jf:
-                json.dump([(item.urlid, item.title) for item in self], jf, indent=2)
+        with open(self.filepath, 'w') as jf:
+            json.dump([(item.urlid, item.title) for item in self], jf, indent=2)
 
     def add(self, item):
         with self.lock:
@@ -141,3 +142,10 @@ class OrderedSet(collections.MutableSet):
         if isinstance(other, OrderedSet):
             return len(self) == len(other) and list(self) == list(other)
         return set(self) == set(other)
+
+
+stored_movies = MediaDatabase(mediaclass=KoalaMovie, name='movies')
+excluded_movies = MediaDatabase(mediaclass=KoalaMovie, name='excluded movies')
+stored_shows = MediaDatabase(mediaclass=Show, name='shows', retain_order=True)
+excluded_shows = MediaDatabase(mediaclass=Show, name='excluded shows')
+prioritized_shows = MediaDatabase(mediaclass=Show, name='prioritized shows')

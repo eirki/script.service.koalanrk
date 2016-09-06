@@ -141,23 +141,42 @@ def readd_show(show):
 
 
 ############################
+# Task management
+class Task(object):
+    def __init__(self, obj, func):
+        self.obj = obj
+        self.func = func
+        self.coroutine = None
+        self.exception = None
+        self.finished = False
+
+    @staticmethod
+    def coro_mapper(task):
+        '''Executes next step in coroutine sent as arg,
+           Prints traceback otherwise swallowed due to multithreading
+           Stores indication of whether coroutine is finished (stopiteration), errored (exception), or unfinished
+           '''
+        try:
+            next(task.coroutine)
+        except StopIteration:
+            task.finished = True
+        except Exception as exc:
+            log.info("Error adding/updating %s:\n%s" % (task.obj, traceback.format_exc().decode(sys.getfilesystemencoding())))
+            task.exception = exc
+            task.finished = True
+
+    @staticmethod
+    def func_mapper(task):
+        '''Stores indication of whether function errored'''
+        try:
+            task.func(task.obj)
+        except Exception as exc:
+            log.info("Error removing %s:\n%s" % (task.obj, traceback.format_exc().decode(sys.getfilesystemencoding())))
+            task.exception = exc
+
+
+############################
 # helper functions
-def obj_mapper(obj):
-    '''1: execute next step in generator sent as arg,
-       2: print traceback otherwise swallowed due to multithreading
-       3: Return indication of whether generator is finished (stopiteration), errored (exception), or unfinished
-       '''
-    try:
-        next(obj.task)
-        obj.finished = False
-    except StopIteration:
-        obj.finished = True
-    except Exception as exc:
-        log.info("Error adding/updating %s:\n%s" % (obj, traceback.format_exc().decode(sys.getfilesystemencoding())))
-        obj.exception = exc
-        obj.finished = True
-
-
 def select_mediaitem(database):
     if not database:
         dialogs.ok(heading="No media", line1="No relevant media seems to be in library")
@@ -168,209 +187,253 @@ def select_mediaitem(database):
     return objects[selected] if selected != -1 else None
 
 
-############################
-# main functions
-def edit_prioritized_shows(stored_shows, prioritized_shows):
-    if not stored_shows:
+def edit_prioritized_shows():
+    databases.stored_shows.load()
+    databases.prioritized_shows.load()
+    if not databases.stored_shows:
         dialogs.ok(heading="No media", line1="No TV shows seems to be in library")
         return None
-    objects = sorted(stored_shows, key=attrgetter("title"))
-    titles = ["[Prioritized] %s" % show.title if show in prioritized_shows else show.title for show in objects]
+    objects = sorted(databases.stored_shows, key=attrgetter("title"))
+    titles = ["[Prioritized] %s" % show.title if show in databases.prioritized_shows else show.title for show in objects]
     while True:
         selected = dialogs.select('Select shows to prioritize', titles)
         if selected == -1:
             break
         show = objects[selected]
-        if show not in prioritized_shows:
-            prioritized_shows.add(show)
+        if show not in databases.prioritized_shows:
+            databases.prioritized_shows.add(show)
             titles[selected] = "[Prioritized] %s" % show.title
         else:
-            prioritized_shows.remove(show)
+            databases.prioritized_shows.remove(show)
             titles[selected] = show.title
 
 
-def fetch_mediaobjects(action, session, stored_movies, stored_shows,
-                       excluded_movies, excluded_shows, prioritized_shows):
-    update_tasks = []
-    removal_tasks = []
-    if action == "remove_all":
-        if not (stored_movies or stored_shows):
-            dialogs.ok(heading="No media", line1="No movies or TV shows seems to be in library")
-            return
-        for movie in stored_movies:
-            movie.generate_removal_task(db_stored=stored_movies)
-            removal_tasks.append(movie)
-        for show in stored_shows:
-            show.generate_removal_task(db_stored=stored_shows)
-            removal_tasks.append(show)
+def get_watchlist_changes(session, tasks):
+    available_movies, available_shows = session.getwatchlist()
 
-    elif action == "update_all":
-        if not stored_shows:
-            dialogs.ok(heading="No media", line1="No TV shows seems to be in library")
-            return
-        for show in stored_shows:
-            show.generate_update_task(db_stored=stored_shows, session=session)
-            update_tasks.append(show)
+    unav_movies = databases.stored_movies - available_movies
+    log.info("unavailable_movies:\n %s" % unav_movies)
+    tasks["removals"].extend([Task(movie, remove_movie) for movie in unav_movies])
 
-    elif action == "update_single":
-        show = select_mediaitem(stored_shows)
-        if not show:
-            return
-        show.generate_update_task(db_stored=stored_shows, session=session)
-        update_tasks.append(show)
+    unav_shows = databases.stored_shows - available_shows
+    log.info("unavailable_shows:\n %s" % unav_shows)
+    tasks["removals"].extend([Task(show, remove_show) for show in unav_shows])
 
-    elif action == "exclude_show":
-        show = select_mediaitem(stored_shows)
-        if not show:
-            return
-        show.generate_removal_task(db_stored=stored_shows, exclude=True, db_excluded=excluded_shows)
-        removal_tasks.append(show)
+    new_movies = available_movies - (databases.stored_movies | databases.excluded_movies)
+    log.info("new_movies:\n %s" % new_movies)
+    tasks["updates"].extend([Task(movie, add_movie) for movie in new_movies])
 
-    elif action == "exclude_movie":
-        movie = select_mediaitem(stored_movies)
-        if not movie:
-            return
-        movie.generate_removal_task(db_stored=stored_movies, exclude=True, db_excluded=excluded_movies)
-        removal_tasks.append(movie)
-
-    elif action == "readd_show":
-        show = select_mediaitem(excluded_shows)
-        if not show:
-            return
-        show.generate_update_task(db_stored=stored_shows, session=session, readd=True, db_excluded=excluded_shows)
-        update_tasks.append(show)
-
-    elif action == "readd_movie":
-        movie = select_mediaitem(excluded_movies)
-        if not movie:
-            return
-        movie.generate_add_task(db_stored=stored_movies, session=session, readd=True, db_excluded=excluded_movies)
-        update_tasks.append(movie)
-
-    elif action in ["startup", "schedule", "watchlist"]:
-        if action == "watchlist" or (action in ["startup", "schedule"] and settings["watchlist on %s" % action]):
-            available_movies, available_shows = session.getwatchlist()
-
-            unav_movies = stored_movies - available_movies
-            log.info("unavailable_movies:\n %s" % unav_movies)
-            for movie in unav_movies:
-                movie.generate_removal_task(db_stored=stored_movies)
-                removal_tasks.append(movie)
-
-            unav_shows = stored_shows - available_shows
-            log.info("unavailable_shows:\n %s" % unav_shows)
-            for show in unav_shows:
-                show.generate_removal_task(db_stored=stored_shows)
-                removal_tasks.append(show)
-
-            new_movies = available_movies - (stored_movies | excluded_movies)
-            log.info("new_movies:\n %s" % new_movies)
-            for movie in new_movies:
-                movie.generate_add_task(db_stored=stored_movies, session=session)
-                update_tasks.append(movie)
-
-            new_shows = available_shows - (stored_shows | excluded_shows)
-            log.info("new_shows:\n %s" % new_shows)
-            for show in new_shows:
-                show.generate_update_task(db_stored=stored_shows, session=session)
-                update_tasks.append(show)
-
-        else:
-            unav_shows = set()
-
-        if action in ["startup", "schedule"] and settings["shows on %s" % action]:
-            prioritized_stored = list((prioritized_shows & stored_shows) - unav_shows)
-            nonprioritized_stored = list((stored_shows - prioritized_shows) - unav_shows)
-            if not settings["all shows on %s" % action]:
-                n = settings["n shows on %s" % action]
-                nonprioritized_stored = nonprioritized_stored[:n]
-            for show in prioritized_stored + nonprioritized_stored:
-                show.generate_update_task(db_stored=stored_shows, session=session)
-                update_tasks.append(show)
-
-    else:
-        raise Exception("Unknown library action: %s" % action)
-
-    return removal_tasks, update_tasks
+    new_shows = available_shows - (databases.stored_shows | databases.excluded_shows)
+    log.info("new_shows:\n %s" % new_shows)
+    tasks["updates"].extend([Task(show, update_add_show) for show in new_shows])
 
 
-def main(action):
-    stored_movies = database.MediaDatabase(mediaclass=KoalaMovie, name='movies')
-    excluded_movies = database.MediaDatabase(mediaclass=KoalaMovie, name='excluded movies')
-    stored_shows = database.MediaDatabase(mediaclass=Show, name='shows', retain_order=True)
-    excluded_shows = database.MediaDatabase(mediaclass=Show, name='excluded shows')
-    prioritized_shows = database.MediaDatabase(mediaclass=Show, name='prioritized shows')
+def get_n_shows(all_shows, n_shows):
+    prioritized_stored = list(databases.prioritized_shows & databases.stored_shows)
+    nonprioritized_stored = list(databases.stored_shows - databases.prioritized_shows)
+    if not all_shows:
+        nonprioritized_stored = nonprioritized_stored[:n_shows]
+    return prioritized_stored + nonprioritized_stored
 
-    if action == "prioritize":
-        edit_prioritized_shows(stored_shows, prioritized_shows)
-        prioritized_shows.commit()
+
+############################
+# Fetch tasks functions
+def remove_all_fetch():
+    databases.stored_movies.load()
+    databases.stored_shows.load()
+    if not (databases.stored_movies or databases.stored_shows):
+        dialogs.ok(heading="No media", line1="No movies or TV shows seems to be in library")
         return
+    tasks = {"removals": [Task(movie, remove_movie) for movie in databases.stored_movies] +
+                         [Task(show, remove_show) for show in databases.stored_shows]}
+    return tasks
+
+
+def update_all_fetch():
+    databases.stored_shows.load()
+    if not databases.stored_shows:
+        dialogs.ok(heading="No media", line1="No TV shows seems to be in library")
+        return
+    tasks = {"updates": [Task(show, update_add_show) for show in databases.stored_shows]}
+    return tasks
+
+
+def update_single_fetch():
+    databases.stored_shows.load()
+    show = select_mediaitem(databases.stored_shows)
+    if not show:
+        return
+    tasks = {"updates": [Task(show, update_add_show)]}
+    return tasks
+
+
+def exclude_show_fetch():
+    databases.stored_shows.load()
+    databases.excluded_shows.load()
+    show = select_mediaitem(databases.stored_shows)
+    if not show:
+        return
+    tasks = {"removals": [Task(show, exclude_show)]}
+    return tasks
+
+
+def exclude_movie_fetch():
+    databases.stored_movies.load()
+    databases.excluded_movies.load()
+    movie = select_mediaitem(databases.stored_movies)
+    if not movie:
+        return
+    tasks = {"removals": [Task(movie, exclude_movie)]}
+    return tasks
+
+
+def readd_show_fetch():
+    databases.stored_shows.load()
+    databases.excluded_shows.load()
+    show = select_mediaitem(databases.excluded_shows)
+    if not show:
+        return
+    tasks = {"updates": [Task(show, readd_show)]}
+    return tasks
+
+
+def readd_movie_fetch():
+    databases.stored_movies.load()
+    databases.excluded_movies.load()
+    movie = select_mediaitem(databases.excluded_movies)
+    if not movie:
+        return
+    tasks = {"updates": [Task(movie, readd_movie)]}
+    return tasks
+
+
+def startup_fetch():
+    for db in (databases.stored_movies, databases.stored_shows, databases.excluded_movies,
+               databases.excluded_shows, databases.prioritized_shows):
+        db.load()
+    n_shows = []
+    if settings["shows on startup"]:
+        n_shows = get_n_shows(all_shows=settings["all shows on startup"], n_shows=settings["n shows on startup"])
+    tasks = {"updates": [Task(show, update_add_show) for show in n_shows],
+             "removals": []}
+    # wathclist tasks fetched after login
+    return tasks
+
+
+def schedule_fetch():
+    for db in (databases.stored_movies, databases.stored_shows, databases.excluded_movies,
+               databases.excluded_shows, databases.prioritized_shows):
+        db.load()
+    n_shows = []
+    if settings["shows on schedule"]:
+        n_shows = get_n_shows(all_shows=settings["all shows on schedule"], n_shows=settings["n shows on schedule"])
+    tasks = {"updates": [Task(show, update_add_show) for show in n_shows],
+             "removals": []}
+    # wathclist tasks fetched after login
+    return tasks
+
+
+def watchlist_fetch():
+    databases.stored_movies.load()
+    databases.stored_shows.load()
+    databases.excluded_movies.load()
+    databases.excluded_shows.load()
+    # wathclist tasks fetched after login
+    tasks = {"removals": [], "updates": []}
+    return tasks
+
+
+############################
+def main(action):
+    pool = None
+    progressbar = ProgressDialog()
     try:
-        pool = None
-        progressbar = ProgressDialog()
-        requests_session = scraper.RequestsSession() if action in ["update_all", "watchlist", "startup", "schedule",
-                                                                   "update_single", "readd_show", "readd_movie"] else None
+        if action == "prioritize":
+            edit_prioritized_shows()
+            return
+
+        switch = {
+            "remove_all": remove_all_fetch,
+            "update_all": update_all_fetch,
+            "update_single": update_single_fetch,
+            "exclude_show": exclude_show_fetch,
+            "exclude_movie": exclude_movie_fetch,
+            "readd_show": readd_show_fetch,
+            "readd_movie": readd_movie_fetch,
+            "startup": startup_fetch,
+            "schedule": schedule_fetch,
+            "watchlist": watchlist_fetch,
+        }
+        tasks = switch[action]()
+
+        if tasks is None:
+            return
 
         if action == "watchlist" or (action in ["startup", "schedule"] and settings["watchlist on %s" % action]):
             progressbar.goto(10)
-            requests_session.setup()
+            session = scraper.RequestsSession()
+            session.setup()
+
             progressbar.goto(20)
+            get_watchlist_changes(session, tasks)
 
-        tasks = fetch_mediaobjects(action, session=requests_session, stored_movies=stored_movies,
-                                   excluded_movies=excluded_movies, stored_shows=stored_shows,
-                                   excluded_shows=excluded_shows, prioritized_shows=prioritized_shows)
-        if not tasks:
-            return
+            if not (tasks["removals"] or tasks["updates"]):
+                return
 
-        removal_tasks, update_tasks = tasks
+        removals = tasks.get("removals", [])
+        updates = tasks.get("updates", [])
 
-        # if action in ["update_all", "update_single", "readd_show", "readd_movie"]:
-        #     progressbar.goto(30)
-        #     requests_session.setup()
+        # step1
+        progressbar.goto(30)
+        map(Task.func_mapper, removals)
 
-        progressbar.goto(40)
-        for obj in removal_tasks:
-            try:
-                obj.task()
-            except Exception as exc:
-                log.info("Error removing %s:\n%s" % (obj, traceback.format_exc()))
-                obj.exception = exc
+        if updates:
 
-        if update_tasks:
-            if settings['multithreading'] and len(update_tasks) > 1:
+            for task in updates:
+                task.coroutine = task.func(task.obj)
+                # task.coroutine = task.func(task.obj, session) nflx
+
+            if settings['multithreading'] and len(updates) > 1:
                 pool = threading.Pool(5)
                 map_ = pool.map
             else:
                 map_ = map
 
-            progressbar.goto(50)
-            map_(obj_mapper, update_tasks)
+            # step2
+            progressbar.goto(40)
+            map_(Task.coro_mapper, updates)
 
-            step2 = [obj for obj in update_tasks if not obj.finished]
-            if step2:
-                progressbar.goto(60)
+            step3 = [task for task in updates if not task.finished]
+            if step3:
+                progressbar.goto(50)
                 monitor = ScanMonitor()
                 monitor.update_video_library()
-                progressbar.goto(70)
-                map_(obj_mapper, step2)
 
-                step3 = [obj for obj in step2 if not obj.finished]
-                if step3:
-                    progressbar.goto(80)
+                # step3
+                progressbar.goto(60)
+                map_(Task.coro_mapper, step3)
+
+                step4 = [task for task in step3 if not task.finished]
+                if step4:
+                    progressbar.goto(70)
                     monitor.update_video_library()
-                    progressbar.goto(90)
-                    map_(obj_mapper, step3)
+
+                    # step4
+                    progressbar.goto(80)
+                    map_(Task.coro_mapper, step4)
 
         progressbar.goto(100)
-        errors = [obj for obj in removal_tasks + update_tasks if obj.exception is not None]
+        errors = [task for task in removals + updates if task.exception is not None]
         if errors:
-            raise Exception("%d library updates finished with %d error(s):\n\n"
-                            "%s." % (len(update_tasks), len(errors),
-                                     "\n".join(["%s: %s" % (obj, unicode(obj.exception)) for obj in errors])))
+            raise Exception("\nAttempted %d updates and %d library removals, with %d error(s):\n"
+                            "%s." % (len(removals), len(updates), len(errors),
+                                     "\n".join(["%s: %s" % (task.obj, unicode(task.exception)) for task in errors])))
 
     finally:
         if pool is not None:
             pool.close()
-        for db in stored_movies, excluded_movies, stored_shows, excluded_shows, prioritized_shows:
-            db.commit()
+        for db in (databases.stored_movies, databases.stored_shows, databases.excluded_movies,
+                   databases.excluded_shows, databases.prioritized_shows):
+            if db.loaded and db.edited:
+                db.commit()
         progressbar.close()
