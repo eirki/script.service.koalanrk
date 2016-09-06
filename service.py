@@ -53,11 +53,11 @@ def run_schedule():
 
         log.info("Starting scheduled update next update at %s" %
                  (dt.datetime.now() + dt.timedelta(seconds=timeout)).strftime("%H:%M"))
-        xbmc.executebuiltin("RunScript(%s, mode=update, action=schedule)" % const.addonid)
+        xbmc.executebuiltin("RunScript(%s, mode=library, action=schedule)" % const.addonid)
 
 
 if __name__ == '__main__':
     monitor = playback.Monitor()
     if settings["enable startup"]:
-        xbmc.executebuiltin("RunScript(%s, mode=update, action=startup)" % const.addonid)
+        xbmc.executebuiltin("RunScript(%s, mode=library, action=startup)" % const.addonid)
     run_schedule()
