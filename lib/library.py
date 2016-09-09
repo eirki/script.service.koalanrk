@@ -141,7 +141,6 @@ def readd_show(show):
 
 
 ############################
-# Task management
 class Task(object):
     def __init__(self, obj, func):
         self.obj = obj
@@ -228,12 +227,12 @@ def get_watchlist_changes(session, tasks):
     tasks["updates"].extend([Task(show, update_add_show) for show in new_shows])
 
 
-def get_n_shows(all_shows, n_shows):
+def get_n_shows(tasks, all_shows, n_shows):
     prioritized_stored = list(databases.prioritized_shows & databases.stored_shows)
     nonprioritized_stored = list(databases.stored_shows - databases.prioritized_shows)
     if not all_shows:
         nonprioritized_stored = nonprioritized_stored[:n_shows]
-    return prioritized_stored + nonprioritized_stored
+    tasks["updates"].extend([Task(show, update_add_show) for show in prioritized_stored + nonprioritized_stored])
 
 
 ############################
@@ -311,11 +310,9 @@ def startup_fetch():
     for db in (databases.stored_movies, databases.stored_shows, databases.excluded_movies,
                databases.excluded_shows, databases.prioritized_shows):
         db.load()
-    n_shows = []
+    tasks = {"updates": [], "removals": []}
     if settings["shows on startup"]:
-        n_shows = get_n_shows(all_shows=settings["all shows on startup"], n_shows=settings["n shows on startup"])
-    tasks = {"updates": [Task(show, update_add_show) for show in n_shows],
-             "removals": []}
+        get_n_shows(tasks, all_shows=settings["all shows on startup"], n_shows=settings["n shows on startup"])
     # wathclist tasks fetched after login
     return tasks
 
@@ -324,11 +321,9 @@ def schedule_fetch():
     for db in (databases.stored_movies, databases.stored_shows, databases.excluded_movies,
                databases.excluded_shows, databases.prioritized_shows):
         db.load()
-    n_shows = []
+    tasks = {"updates": [], "removals": []}
     if settings["shows on schedule"]:
-        n_shows = get_n_shows(all_shows=settings["all shows on schedule"], n_shows=settings["n shows on schedule"])
-    tasks = {"updates": [Task(show, update_add_show) for show in n_shows],
-             "removals": []}
+        get_n_shows(tasks, all_shows=settings["all shows on schedule"], n_shows=settings["n shows on schedule"])
     # wathclist tasks fetched after login
     return tasks
 
@@ -391,7 +386,6 @@ def main(action):
 
             for task in updates:
                 task.coroutine = task.func(task.obj)
-                # task.coroutine = task.func(task.obj, session) nflx
 
             if settings['multithreading'] and len(updates) > 1:
                 pool = threading.Pool(5)
