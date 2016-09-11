@@ -42,7 +42,7 @@ def add_movie(movie):
 
     lib_entry = movie.get_lib_entry()
     if not lib_entry:
-        metadata = scraper.get_movie_metadata(movie.urlid)
+        metadata = scraper.get_movie_metadata(movie)
         movie.write_nfo(metadata)
         movie.delete_htm()
         movie.write_htm()
@@ -88,7 +88,7 @@ def exclude_show(show):
 
 def update_add_show(show):
     log.info("Updating show: %s" % show)
-    available_episodes = scraper.getepisodes(show)
+    show_metadata, available_episodes = scraper.get_showdata_episodes(show)
     unav_episodes, new_episodes = show.get_episode_availability(available_episodes)
     for lib_entry in unav_episodes:
         lib_entry.save_playcount()
@@ -105,8 +105,7 @@ def update_add_show(show):
         nonadded_episodes = new_episodes - koala_stored_episodes
         if nonadded_episodes:
             if not koala_stored_episodes:
-                metadata = scraper.get_show_metadata(show.urlid)
-                show.write_nfo(metadata)
+                show.write_nfo(show_metadata)
             for episode in nonadded_episodes:
                 episode.write_nfo()
                 episode.delete_htm()

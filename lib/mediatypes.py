@@ -3,12 +3,13 @@
 from __future__ import unicode_literals
 import os
 import json
-from bs4 import BeautifulSoup
-from operator import attrgetter
+import xml.etree.ElementTree as ET
+import xml.dom.minidom
+
 
 from . utils import (os_join, uni_join, stringtofile)
 from . import constants as const
-from .xbmcwrappers import (rpc, log, settings, dialogs)
+from .xbmcwrappers import (rpc, dialogs)
 
 
 class BaseLibEntry(object):
@@ -77,31 +78,18 @@ class KoalaMovie(Movie):
                       'url=%s"> <body bgcolor="#ffffff">' % self.url)
 
     def write_nfo(self, metadata):
-        soup = BeautifulSoup(features='xml')
-        root = soup.new_tag("movie")
-        soup.append(root)
+        root = ET.Element("movie")
+        ET.SubElement(root, "title").text = self.title
+        ET.SubElement(root, "runtime").text = unicode(metadata["runtime"].seconds/60)
+        ET.SubElement(root, "plot").text = metadata["plot"]
+        ET.SubElement(root, "thumb", aspect="poster").text = metadata["art"]
+        fanart = ET.SubElement(root, "fanart")
+        ET.SubElement(fanart, "thumb").text = metadata["art"]
 
-        root.append(soup.new_tag("title"))
-        root.title.string = self.title
-
-        # root.append(soup.new_tag("year"))
-        # root.year.string = unicode(self.year)
-
-        root.append(soup.new_tag("runtime"))
-        root.runtime.string = unicode(metadata["runtime"])
-
-        root.append(soup.new_tag("plot"))
-        root.plot.string = metadata["plot"]
-
-        root.append(soup.new_tag("thumb", aspect="poster"))
-        root.thumb.string = metadata["art"]
-
-        root.append(soup.new_tag("fanart"))
-        root.fanart.append(soup.new_tag("thumb"))
-        root.fanart.thumb.string = metadata["art"]
-
+        as_string = ET.tostring(root, method='xml')
+        pretty_xml_as_string = xml.dom.minidom.parseString(as_string).toprettyxml()
         with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
-            nfo.write(soup.prettify().encode("utf-8"))
+            nfo.write(pretty_xml_as_string.encode("utf-8"))
 
     def get_lib_entry(self):
         moviesdict = rpc("VideoLibrary.GetMovies",
@@ -152,32 +140,18 @@ class Show(object):
         return unav_episodes, new_episodes
 
     def write_nfo(self, metadata):
-        soup = BeautifulSoup("<?xml version='1.0' encoding='utf-8'?>")
-        root = soup.new_tag("movie")
-        soup.append(root)
+        root = ET.Element("tvshow")
+        ET.SubElement(root, "title").text = self.title
+        ET.SubElement(root, "plot").text = metadata["plot"]
+        ET.SubElement(root, "thumb", aspect="poster").text = metadata["art"]
+        fanart = ET.SubElement(root, "fanart")
+        ET.SubElement(fanart, "thumb").text = metadata["art"]
+        ET.SubElement(root, "genre").text = metadata["genre"]
 
-        root.append(soup.new_tag("title"))
-        root.title.string = self.title
-
-        root.append(soup.new_tag("year"))
-        root.year.string = unicode(metadata["year"])
-
-        root.append(soup.new_tag("plot"))
-        root.plot.string = metadata["plot"]
-
-        if metadata["in_superuniverse"]:
-            root.append(soup.new_tag("genre"))
-            root.genre.string = "Children"
-
-        root.append(soup.new_tag("thumb", aspect="poster"))
-        root.thumb.string = metadata["art"]
-
-        root.append(soup.new_tag("fanart"))
-        root.fanart.append(soup.new_tag("thumb"))
-        root.fanart.thumb.string = metadata["art"]
-
+        as_string = ET.tostring(root, method='xml')
+        pretty_xml_as_string = xml.dom.minidom.parseString(as_string).toprettyxml()
         with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
-            nfo.write(soup.prettify().encode("utf-8"))
+            nfo.write(pretty_xml_as_string.encode("utf-8"))
 
     def notify(self, new_episodes):
         if len(new_episodes) == 1:
@@ -260,14 +234,14 @@ class Episode(object):
 
 
 class KoalaEpisode(Episode):
-    def __init__(self, show, seasonnr, episodenr, urlid, plot, runtime, art, title):
+    def __init__(self, show, seasonnr, episodenr, urlid, plot, runtime, thumb, title):
         Episode.__init__(self, show.title, seasonnr, episodenr)
         self.urlid = urlid
         self.url = "http://tv.nrk.no/serie/%s/%s?autostart=true" % (show.urlid, urlid)
         self.title = title
         self.plot = plot
         self.runtime = runtime
-        self.art = "https://gfx.nrk.no/%s" % art
+        self.thumb = "http://gfx.nrk.no/%s" % thumb
 
     def write_htm(self):
         if not os.path.exists(os_join(self.path)):
@@ -277,33 +251,19 @@ class KoalaEpisode(Episode):
                       'url=%s"> <body bgcolor="#ffffff">' % self.url)
 
     def write_nfo(self):
-        soup = BeautifulSoup("<?xml version='1.0' encoding='utf-8'?>")
-        root = soup.new_tag("movie")
-        soup.append(root)
+        root = ET.Element("episodedetails")
+        ET.SubElement(root, "title").text = self.title
+        ET.SubElement(root, "showtitle").text = self.showtitle
+        ET.SubElement(root, "season").text = unicode(self.seasonnr)
+        ET.SubElement(root, "episode").text = unicode(self.episodenr)
+        ET.SubElement(root, "plot").text = self.plot
+        ET.SubElement(root, "runtime").text = unicode(self.runtime.seconds/60)
+        ET.SubElement(root, "thumb").text = self.thumb
 
-        root.append(soup.new_tag("title"))
-        root.title.string = self.title
-
-        root.append(soup.new_tag("showtitle"))
-        root.showtitle.string = self.showtitle
-
-        root.append(soup.new_tag("season"))
-        root.season.string = unicode(self.seasonnr)
-
-        root.append(soup.new_tag("episode"))
-        root.episode.string = unicode(self.episodenr)
-
-        root.append(soup.new_tag("plot"))
-        root.plot.string = self.plot
-
-        root.append(soup.new_tag("runtime"))
-        root.runtime.string = unicode(self.runtime)
-
-        root.append(soup.new_tag("thumb", aspect="poster"))
-        root.thumb.string = self.art
-
+        as_string = ET.tostring(root, method='xml')
+        pretty_xml_as_string = xml.dom.minidom.parseString(as_string).toprettyxml()
         with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
-            nfo.write(soup.prettify().encode("utf-8"))
+            nfo.write(pretty_xml_as_string.encode("utf-8"))
 
 
 class EpisodeLibEntry(Episode, BaseLibEntry):

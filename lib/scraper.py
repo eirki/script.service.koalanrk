@@ -7,14 +7,10 @@ from bs4 import BeautifulSoup
 import browsercookie
 import requests
 from types import MethodType
-from collections import namedtuple
+import datetime as dt
 
-from . xbmcwrappers import (log, settings)
-from . import constants as const
+from . xbmcwrappers import log
 from . mediatypes import (KoalaMovie, Show, KoalaEpisode)
-
-
-Mediatuple = namedtuple("Media", "urlid title")
 
 
 class RequestsSession(object):
@@ -82,10 +78,15 @@ class RequestsSession(object):
         return available_movies, available_shows
 
 
-def getepisodes(show):
+def get_showdata_episodes(show):
     episodes = set()
     reqs = RequestsSession()
     showdata = reqs.get("http://tvapi.nrk.no/v1/series/%s/" % show.urlid).json()
+    metadata = {
+        "genre": showdata["category"]["displayValue"],
+        "plot": showdata["description"],
+        "art": "http://gfx.nrk.no/%s" % showdata["imageId"],
+    }
     date_for_episodenr = ":" not in showdata["programs"][0]["episodeNumberOrDate"]
     if not date_for_episodenr:
         seasons = {season["id"]: int(season["name"].split()[-1]) for season in showdata["seasonIds"]}
@@ -95,8 +96,9 @@ def getepisodes(show):
             episodenr = int(episode["episodeNumberOrDate"].split(":")[0])
             seasonnr = seasons[episode["seasonId"]]
             urlid = episode["programId"]
+            runtime = dt.timedelta(milliseconds=episode["duration"])
             episodes.add(KoalaEpisode(show=show, seasonnr=seasonnr, episodenr=episodenr, urlid=urlid, plot=episode["description"],
-                                      runtime=int(episode["duration"]/1000), art=episode["imageId"], title=episode["title"]))
+                                      runtime=runtime, thumb=episode["imageId"], title=episode["title"]))
 
     else:
         seasons = {season["id"]: i for i, season in enumerate(reversed(showdata["seasonIds"]), start=1)}
@@ -110,36 +112,26 @@ def getepisodes(show):
             prevseasonid = seasonid
 
             urlid = episode["programId"]
+            runtime = dt.timedelta(milliseconds=episode["duration"])
             episodes.add(KoalaEpisode(show=show, seasonnr=seasonnr, episodenr=episodenr, urlid=urlid, plot=episode["description"],
-                                      runtime=int(episode["duration"]/1000), art=episode["imageId"], title=episode["title"]))
-    return episodes
+                                      runtime=runtime, thumb=episode["imageId"], title=episode["title"]))
+    return metadata, episodes
 
 
-def get_movie_metadata(urlid):
+def get_movie_metadata(movie):
     reqs = RequestsSession()
-    raw_infodict = reqs.get("http://v8.psapi.nrk.no/mediaelement/%s" % urlid).json()
+    _, _, subid, _ = movie.urlid.split("/")
+    raw_infodict = reqs.get("http://v8.psapi.nrk.no/mediaelement/%s" % subid).json()
+    hours, minutes, seconds = re.match(r"PT(\d+H)?(\d+M)?(\d+S)?", raw_infodict["duration"]).groups()
+    runtime = dt.timedelta(
+        hours=int(hours[:-1]) if hours is not None else 0,
+        minutes=int(minutes[:-1]) if minutes is not None else 0,
+        seconds=int(seconds[:-1]) if seconds is not None else 0,
+    )
     infodict = {
         "title": raw_infodict["fullTitle"],
         "plot": raw_infodict["description"],
         "art": raw_infodict['images']["webImages"][-1]["imageUrl"],
-        "runtime": re.sub(r"PT(\d+)M.*", r"\1", raw_infodict["duration"]),
+        "runtime": runtime,
         }
-    return infodict
-
-
-def get_show_metadata(showid):
-    reqs = RequestsSession()
-    showpage = reqs.get("http://tv.nrk.no/serie/%s/" % showid).soup()
-    plot_heading = showpage.find("h3", text="Seriebeskrivelse")
-    infodict = {
-        "year": showpage.find("dt", text="Produksjonsår:").next_sibling.next_sibling.text,
-        "in_superuniverse": "isInSuperUniverse: true" in showpage.text,
-        "plot": plot_heading.next_sibling.next_sibling.text if plot_heading else ""
-    }
-    try:
-        infodict["art"] = showpage.find(class_="play-icon-action").img["src"]
-    except KeyError:
-        log.info("Note: New nfo image location invalid")
-        infodict["art"] = showpage.find(id="playerelement")["data-posterimage"]
-
     return infodict
