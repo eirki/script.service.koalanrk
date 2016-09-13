@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+import abc
 import os
 import json
 import xml.etree.ElementTree as ET
@@ -9,10 +10,18 @@ import xml.dom.minidom
 
 from . utils import (os_join, uni_join, stringtofile)
 from . import constants as const
-from .xbmcwrappers import (rpc, dialogs)
+from .xbmcwrappers import rpc
 
 
 class BaseLibEntry(object):
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def __init__(self, kodiid, playcount):
+        self.kodiid = kodiid
+        self.playcount = playcount
+
+    @abc.abstractmethod
     def load_playcount(self):
         jsonfilepath = os_join(self.path, self.jsonfilename)
         if os.path.exists(jsonfilepath):
@@ -22,19 +31,29 @@ class BaseLibEntry(object):
                 **{self.mediatype + "id": self.kodiid})
             os.remove(jsonfilepath)
 
+    @abc.abstractmethod
     def save_playcount(self):
         if self.playcount > 0:
             jsonfilepath = os_join(self.path, self.jsonfilename)
             with open(jsonfilepath, "w") as f:
                 json.dump(self.playcount, f)
 
+    @abc.abstractmethod
     def remove_from_lib(self):
         rpc("VideoLibrary.Remove%s" % self.mediatype.capitalize(),
             **{self.mediatype + "id": self.kodiid})
+
+    @abc.abstractmethod
+    def delete_htm(self):
+        os.remove(os_join(self.path, self.htmfilename))
+        try:
+            os.removedirs(os_join(self.path))
+        except OSError:
+            pass
 ###########################
 
 
-class Movie(object):
+class BaseMovie(object):
     mediatype = "movie"
 
     def __init__(self, title):
@@ -56,23 +75,14 @@ class Movie(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def delete_htm(self):
-        os.remove(os_join(self.path, self.htmfilename))
-        try:
-            os.removedirs(os_join(self.path))
-        except OSError:
-            pass
 
-
-class KoalaMovie(Movie):
+class ScrapedMovie(BaseMovie):
     def __init__(self, urlid, title):
-        Movie.__init__(self, title)
+        BaseMovie.__init__(self, title)
         self.urlid = urlid
         self.url = "http://tv.nrk.no%s?autostart=true" % self.urlid
 
     def write_htm(self):
-        if not os.path.exists(os_join(self.path)):
-            os.makedirs(os_join(self.path))
         with open(os_join(self.path, self.htmfilename), "w") as txt:
             txt.write('<meta http-equiv="REFRESH" content="0;'
                       'url=%s"> <body bgcolor="#ffffff">' % self.url)
@@ -104,15 +114,26 @@ class KoalaMovie(Movie):
         return MovieLibEntry(self.title, movie_dict["movieid"], movie_dict["playcount"])
 
 
-class MovieLibEntry(Movie, BaseLibEntry):
+class MovieLibEntry(BaseMovie, BaseLibEntry):
     def __init__(self, title, kodiid, playcount):
-        Movie.__init__(self, title)
-        self.kodiid = kodiid
-        self.playcount = playcount
+        BaseMovie.__init__(self, title)
+        BaseLibEntry.__init__(self, kodiid, playcount)
+
+    def load_playcount(self):
+        BaseLibEntry.load_playcount(self)
+
+    def save_playcount(self):
+        BaseLibEntry.save_playcount(self)
+
+    def remove_from_lib(self):
+        BaseLibEntry.remove_from_lib(self)
+
+    def delete_htm(self):
+        BaseLibEntry.delete_htm(self)
 ###########################
 
 
-class Show(object):
+class ScrapedShow(object):
     mediatype = "show"
 
     def __init__(self, urlid, title):
@@ -153,22 +174,13 @@ class Show(object):
         with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
             nfo.write(pretty_xml_as_string.encode("utf-8"))
 
-    def notify(self, new_episodes):
-        if len(new_episodes) == 1:
-            message = "Added episode: %s" % list(new_episodes)[0].code
-        elif len(new_episodes) <= 3:
-            message = "Added episodes: %s" % ", ".join(sorted([ep.code for ep in new_episodes]))
-        else:
-            message = "Added %s episodes" % len(new_episodes)
-        dialogs.notification(heading=self.title, message=message)
-
     def get_koala_stored_eps(self):
         # get any stored koala episodes
         episodes = rpc("VideoLibrary.GetEpisodes", properties=["season", "episode", "playcount"],
                        filter={"field": "path", "operator": "startswith", "value": self.path})
         koala_stored_episodes = set()
         for epdict in episodes.get('episodes', []):
-            episode = EpisodeLibEntry(self.title, epdict["season"], epdict["episode"],
+            episode = EpisodeLibEntry(self, epdict["season"], epdict["episode"],
                                       kodiid=epdict["episodeid"], playcount=epdict["playcount"])
             koala_stored_episodes.add(episode)
 
@@ -193,17 +205,17 @@ class Show(object):
         all_stored_episodes_dict = rpc("VideoLibrary.GetEpisodes",
                                        properties=["season", "episode"],
                                        filter={"field": "tvshow", "operator": "is", "value": scraped_title})
-        all_stored_episodes_set = set(Episode(showtitle=self.title, seasonnr=epdict['season'], episodenr=epdict['episode'])
+        all_stored_episodes_set = set(BaseEpisode(show=self, seasonnr=epdict['season'], episodenr=epdict['episode'])
                                       for epdict in all_stored_episodes_dict.get('episodes', []))
         return koala_stored_episodes, all_stored_episodes_set
 ###########################
 
 
-class Episode(object):
+class BaseEpisode(object):
     mediatype = "episode"
 
-    def __init__(self, showtitle, seasonnr, episodenr):
-        self.showtitle = showtitle
+    def __init__(self, show, seasonnr, episodenr):
+        self.showtitle = show.title
         self.seasonnr = int(seasonnr)
         self.episodenr = int(episodenr)
         self.code = "S%02dE%02d" % (seasonnr, episodenr)
@@ -225,17 +237,10 @@ class Episode(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def delete_htm(self):
-        os.remove(os_join(self.path, self.htmfilename))
-        try:
-            os.removedirs(os_join(self.path))
-        except OSError:
-            pass
 
-
-class KoalaEpisode(Episode):
+class ScrapedEpisode(BaseEpisode):
     def __init__(self, show, seasonnr, episodenr, urlid, plot, runtime, thumb, title):
-        Episode.__init__(self, show.title, seasonnr, episodenr)
+        BaseEpisode.__init__(self, show=show, seasonnr=seasonnr, episodenr=episodenr)
         self.urlid = urlid
         self.url = "http://tv.nrk.no/serie/%s/%s?autostart=true" % (show.urlid, urlid)
         self.title = title
@@ -266,8 +271,19 @@ class KoalaEpisode(Episode):
             nfo.write(pretty_xml_as_string.encode("utf-8"))
 
 
-class EpisodeLibEntry(Episode, BaseLibEntry):
-    def __init__(self, showtitle, seasonnr, episodenr, kodiid, playcount):
-        Episode.__init__(self, showtitle, seasonnr, episodenr)
-        self.kodiid = kodiid
-        self.playcount = playcount
+class EpisodeLibEntry(BaseEpisode, BaseLibEntry):
+    def __init__(self, show, seasonnr, episodenr, kodiid, playcount):
+        BaseEpisode.__init__(self, show=show, seasonnr=seasonnr, episodenr=episodenr)
+        BaseLibEntry.__init__(self, kodiid=kodiid, playcount=playcount)
+
+    def load_playcount(self):
+        BaseLibEntry.load_playcount(self)
+
+    def save_playcount(self):
+        BaseLibEntry.save_playcount(self)
+
+    def remove_from_lib(self):
+        BaseLibEntry.remove_from_lib(self)
+
+    def delete_htm(self):
+        BaseLibEntry.delete_htm(self)

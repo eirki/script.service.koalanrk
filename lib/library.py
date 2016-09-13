@@ -44,7 +44,6 @@ def add_movie(movie):
     if not lib_entry:
         metadata = scraper.get_movie_metadata(movie)
         movie.write_nfo(metadata)
-        movie.delete_htm()
         movie.write_htm()
         yield
 
@@ -108,7 +107,6 @@ def update_add_show(show):
                 show.write_nfo(show_metadata)
             for episode in nonadded_episodes:
                 episode.write_nfo()
-                episode.delete_htm()
                 episode.write_htm()
             log.info("NFOs created, waiting for second lib update: %s, %s" %
                      (show, sorted(nonadded_episodes, key=attrgetter('code'))))
@@ -124,7 +122,13 @@ def update_add_show(show):
             lib_entry.load_playcount()
 
         if settings["added_notifications"]:
-            show.notify(new_episodes)
+            if len(new_episodes) == 1:
+                message = "Added episode: %s" % list(new_episodes)[0].code
+            elif len(new_episodes) <= 3:
+                message = "Added episodes: %s" % ", ".join(sorted([ep.code for ep in new_episodes]))
+            else:
+                message = "Added %s episodes" % len(new_episodes)
+            dialogs.notification(heading=show.title, message=message)
         log.info("Added episodes: %s, %s" % (show, sorted(added_episodes, key=attrgetter('code'))))
     if unav_episodes:
         log.info("Removed episodes: %s, %s" % (show, sorted(unav_episodes, key=attrgetter('code'))))

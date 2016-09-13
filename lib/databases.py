@@ -7,7 +7,7 @@ import json
 
 from . utils import os_join
 from . import constants as const
-from . mediatypes import (KoalaMovie, Show)
+from . mediatypes import (ScrapedMovie, ScrapedShow)
 
 
 class MediaDatabase(object):
@@ -144,8 +144,8 @@ class OrderedSet(collections.MutableSet):
         return set(self) == set(other)
 
 
-stored_movies = MediaDatabase(mediaclass=KoalaMovie, name='movies')
-excluded_movies = MediaDatabase(mediaclass=KoalaMovie, name='excluded movies')
-stored_shows = MediaDatabase(mediaclass=Show, name='shows', retain_order=True)
-excluded_shows = MediaDatabase(mediaclass=Show, name='excluded shows')
-prioritized_shows = MediaDatabase(mediaclass=Show, name='prioritized shows')
+stored_movies = MediaDatabase(mediaclass=ScrapedMovie, name='movies')
+excluded_movies = MediaDatabase(mediaclass=ScrapedMovie, name='excluded movies')
+stored_shows = MediaDatabase(mediaclass=ScrapedShow, name='shows', retain_order=True)
+excluded_shows = MediaDatabase(mediaclass=ScrapedShow, name='excluded shows')
+prioritized_shows = MediaDatabase(mediaclass=ScrapedShow, name='prioritized shows')
