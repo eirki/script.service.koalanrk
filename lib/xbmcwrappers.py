@@ -77,22 +77,6 @@ class Dialogs(object):
 dialogs = Dialogs()
 
 
-class ProgressDialog(object):
-    def __init__(self):
-        self.current_level = 0
-        self.pDialog = xbmcgui.DialogProgressBG()
-
-    def goto(self, new_level):
-        if self.current_level == 0:
-            self.pDialog.create(heading="Updating %s" % const.provider)
-        self.current_level = new_level
-        self.pDialog.update(self.current_level)
-
-    def close(self):
-        if self.current_level > 0:
-            self.pDialog.close()
-
-
 class ScanMonitor(xbmc.Monitor):
     def __init__(self):
         xbmc.Monitor.__init__(self)

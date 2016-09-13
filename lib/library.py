@@ -5,10 +5,11 @@ import multiprocessing.dummy as threading
 import traceback
 from operator import attrgetter
 import sys
+import xbmcgui
 
 from . import scraper
 from . import databases
-from . xbmcwrappers import (log, settings, dialogs, ProgressDialog, ScanMonitor)
+from . xbmcwrappers import (log, settings, dialogs, ScanMonitor)
 from . import constants as const
 
 
@@ -344,7 +345,7 @@ def watchlist_fetch():
 ############################
 def main(action):
     pool = None
-    progressbar = ProgressDialog()
+    progressbar = None
     try:
         if action == "prioritize":
             edit_prioritized_shows()
@@ -367,12 +368,15 @@ def main(action):
         if tasks is None:
             return
 
+        progressbar = xbmcgui.DialogProgressBG()
+        progressbar.create(heading="Updating %s" % const.provider)
+
         if action == "watchlist" or (action in ["startup", "schedule"] and settings["watchlist on %s" % action]):
-            progressbar.goto(10)
+            progressbar.update(10)
             session = scraper.RequestsSession()
             session.setup()
 
-            progressbar.goto(20)
+            progressbar.update(20)
             get_watchlist_changes(session, tasks)
 
             if not (tasks["removals"] or tasks["updates"]):
@@ -382,11 +386,12 @@ def main(action):
         updates = tasks.get("updates", [])
 
         # step1
-        progressbar.goto(30)
-        map(Task.func_mapper, removals)
+        if removals:
+            progressbar.update(30)
+            map(Task.func_mapper, removals)
 
         if updates:
-
+            progressbar.update(40)
             for task in updates:
                 task.coroutine = task.func(task.obj)
 
@@ -397,29 +402,28 @@ def main(action):
                 map_ = map
 
             # step2
-            progressbar.goto(40)
             map_(Task.coro_mapper, updates)
 
             step3 = [task for task in updates if not task.finished]
             if step3:
-                progressbar.goto(50)
+                progressbar.update(50)
                 monitor = ScanMonitor()
                 monitor.update_video_library()
 
                 # step3
-                progressbar.goto(60)
+                progressbar.update(60)
                 map_(Task.coro_mapper, step3)
 
                 step4 = [task for task in step3 if not task.finished]
                 if step4:
-                    progressbar.goto(70)
+                    progressbar.update(70)
                     monitor.update_video_library()
 
                     # step4
-                    progressbar.goto(80)
+                    progressbar.update(80)
                     map_(Task.coro_mapper, step4)
 
-        progressbar.goto(100)
+        progressbar.update(100)
         errors = [task for task in removals + updates if task.exception is not None]
         if errors:
             raise Exception("\nAttempted %d updates and %d library removals, with %d error(s):\n"
@@ -433,4 +437,5 @@ def main(action):
                    databases.excluded_shows, databases.prioritized_shows):
             if db.loaded and db.edited:
                 db.commit()
-        progressbar.close()
+        if progressbar:
+            progressbar.close()
