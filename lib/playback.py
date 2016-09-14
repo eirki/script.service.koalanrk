@@ -106,10 +106,6 @@ class Player(object):
         log.info("fullscreen toggled")
 
     def stop(self):
-        if self.tab and self.browser.browsertype == "chrome":
-            focused = self.tab.evaluate('document.hasFocus()')['result']['result']['value']
-            if focused:
-                self.k.press_keys([self.k.control_key, "w"])
         xbmc.Player().stop()
         self.stopped = True
 
