@@ -52,7 +52,7 @@ class RequestsSession(object):
         payload = {t['name']: t.get('value') for t in loginpage.soup().find_all('input', attrs={'type': 'hidden'})}
         self.post(url, data=payload)
 
-    def getwatchlist(self):
+    def get_watchlist(self):
         watchlistpage = self.get("https://tv.nrk.no/mycontent")
         mediaitems = json.loads(watchlistpage.text.replace("\r\n", ""))
         available_movies = set()

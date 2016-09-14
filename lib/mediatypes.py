@@ -7,7 +7,6 @@ import json
 import xml.etree.ElementTree as ET
 import xml.dom.minidom
 
-
 from . utils import (os_join, uni_join, stringtofile)
 from . import constants as const
 from .xbmcwrappers import rpc

@@ -134,6 +134,7 @@ def update_add_show(show):
     if unav_episodes:
         log.info("Removed episodes: %s, %s" % (show, sorted(unav_episodes, key=attrgetter('code'))))
     databases.stored_shows.upsert(show)
+    log.info("Finished updating show: %s" % show)
 
 
 def readd_show(show):
@@ -212,7 +213,7 @@ def edit_prioritized_shows():
 
 
 def get_watchlist_changes(session, tasks):
-    available_movies, available_shows = session.getwatchlist()
+    available_movies, available_shows = session.get_watchlist()
 
     unav_movies = databases.stored_movies - available_movies
     log.info("unavailable_movies:\n %s" % unav_movies)
