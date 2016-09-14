@@ -9,6 +9,12 @@ from .utils import (wrap_unicode, byteify, os_join)
 from . import constants as const
 
 
+def open_settings(category, action):
+    xbmc.executebuiltin('Addon.OpenSettings(%s)' % const.addonid)
+    xbmc.executebuiltin('SetFocus(%i)' % (int(category) + 100 - 1))
+    xbmc.executebuiltin('SetFocus(%i)' % (int(action) + 200 - 1))
+
+
 class SettingsAsDict(dict):
     @wrap_unicode
     def getsetting(self, key):
@@ -71,49 +77,26 @@ class Dialogs(object):
 dialogs = Dialogs()
 
 
-class ProgressDialog(object):
-    def __init__(self):
-        self.active = False
-
-    def create(self, heading):
-        self.heading = heading
-        self.level = 0
-
-    def goto(self, level):
-        if settings["startupnotification"] and not self.active:
-            self.pDialog = xbmcgui.DialogProgressBG()
-            self.pDialog.create(self.heading)
-            self.active = True
-
-        if self.active:
-            self.level = level
-            self.pDialog.update(self.level)
-
-    def close(self):
-        if self.active:
-            self.pDialog.close()
-
-
 class ScanMonitor(xbmc.Monitor):
     def __init__(self):
         xbmc.Monitor.__init__(self)
         self.scanning = False
 
-    def onScanStarted(self, database):
-        self.scanning = True
+    def onScanStarted(self, library):
+        if library == "video":
+            self.scanning = True
 
-    def onScanFinished(self, database):
-        self.scanning = False
+    def onScanFinished(self, library):
+        if library == "video":
+            self.scanning = False
 
     def update_video_library(self):
         while self.scanning:
             xbmc.sleep(100)
-        log.debug("Updating video library")
         self.scanning = True
         xbmc.executebuiltin('UpdateLibrary(video, "", false)')
         while self.scanning:
             xbmc.sleep(100)
-        log.debug("Library update complete")
 
 
 def rpc(method, multifilter=False, **kwargs):
@@ -128,6 +111,8 @@ def rpc(method, multifilter=False, **kwargs):
         req_dict = {"jsonrpc": "2.0", "id": "1", "method": method}
     response = xbmc.executeJSONRPC(json.dumps(req_dict))
     output = json.loads(response)
+    if "error" in output:
+        raise Exception("RPC error: %s,\n with message: %s" % (output, req_dict))
     result = output.get("result")
     return result
 

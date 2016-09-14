@@ -5,8 +5,6 @@ from __future__ import unicode_literals
 import datetime as dt
 import sys
 import os
-from functools import partial
-from collections import OrderedDict
 import unittest
 import xbmc
 import xbmcgui
@@ -14,11 +12,15 @@ import xbmcgui
 from lib import constants as const
 from lib import library
 from lib.utils import (os_join, uni_join)
-from lib.xbmcwrappers import (rpc, log, dialogs)
+from lib.xbmcwrappers import (rpc, log, dialogs, open_settings)
 if const.os == "win":
     import pywin32setup
 from lib import playback
 from lib.remote import Remote
+
+
+def start():
+    open_settings(category=2, action=1)
 
 
 def koalasetup():
@@ -44,20 +46,14 @@ def refresh_settings():
     xbmc.executebuiltin('Addon.OpenSettings(%s)' % const.addonid)
 
 
-def restart_service():
-    rpc("Addons.SetAddonEnabled", addonid=const.addonid, enabled=False)
-    rpc("Addons.SetAddonEnabled", addonid=const.addonid, enabled=True)
-
-
-def deletecookies():
-    cookiefile = os_join(const.userdatafolder, "cookies")
-    if os.path.isfile(cookiefile):
-        os.remove(cookiefile)
-
-
-def testsuite():
+def run_testsuite():
     suite = unittest.TestLoader().discover(start_dir='tests')
     unittest.TextTestRunner().run(suite)
+
+
+def configure_remote():
+    remote = Remote()
+    remote.configure()
 
 
 def test():
@@ -68,7 +64,7 @@ def get_params(argv):
     params = {}
     if argv in (["main.py"], ['']):
         # if addon-icon clicked or addon selected in program addons list
-        params = {"mode": "main_start"}
+        params = {"mode": "main", "action": "start"}
     else:
         # if action triggered from settings/service
         arg_pairs = argv[1:]
@@ -80,24 +76,16 @@ def get_params(argv):
     return params
 
 
-def setup_mode(action):
-    if action == "configureremote":
-        remote = Remote()
-        remote.configure()
-    elif action == "prioritize":
-        library.main(action="prioritize")
-
-
 def watch_mode(action):
     playback.live(action)
 
 
-def update_mode(action):
+def library_mode(action):
     if xbmcgui.Window(10000).getProperty("%s running" % const.addonname) == "true":
         if action in ["startup", "schedule"]:
             return
         run = dialogs.yesno(heading="Running", line1="Koala is running. ",
-                            line2="Running multiple instances cause instablity.", line3="Continue?")
+                            line2="Running multiple instances may cause instablity.", line3="Continue?")
         if not run:
             return
     koalasetup()
@@ -107,107 +95,47 @@ def update_mode(action):
                    line2=uni_join(const.libpath, "%s shows" % const.provider),
                    line3=uni_join(const.libpath, "%s movies" % const.provider))
         return
+
+    starttime = dt.datetime.now()
+    log.info("Starting %s" % action)
+    xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "true")
     try:
-        xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "true")
         library.main(action)
     finally:
         xbmcgui.Window(10000).setProperty("%s running" % const.addonname, "false")
+        log.info("Finished %s in %s" % (action, str(dt.datetime.now() - starttime)))
 
 
-def debug_mode(action):
-    startup_debug = partial(update_mode, action="startup_debug")
-    schedule_debug = partial(update_mode, action="schedule_debug")
-    debugactions = {
-        "refreshsettings": refresh_settings,
-        "deletecookies": deletecookies,
+def main_mode(action):
+    switch = {
+        "start": start,
+        "configure_remote": configure_remote,
+        "refresh_settings": refresh_settings,
         "test": test,
-        "testsuite": testsuite,
-        "open_settings": open_settings,
-        "restart_service": restart_service,
-        "startup_debug": startup_debug,
-        "schedule_debug": schedule_debug,
+        "run_testsuite": run_testsuite,
     }
-    debugactions[action]()
+    switch[action]()
 
 
-def open_settings(mode, action):
-    settings = OrderedDict((
-        ("setup", [
-            "",
-            "",
-            "",
-            "",
-            "",
-            "configureremote",
-            "",
-            "prioritize",
-        ]),
-        ("watch", [
-            "browse",
-            "nrk1",
-            "nrk2",
-            "nrk3",
-            "nrksuper",
-            "fantorangen",
-            "barnetv",
-        ]),
-        ("update", [
-            "watchlist",
-            "update_single",
-            "update_all",
-            "exclude_show",
-            "readd_show",
-            "exclude_movie",
-            "readd_movie",
-            "remove_all",
-        ]),
-        ("startup", []),
-        ("schedule", []),
-        ("debug", [
-            "testsuite",
-            "deletecookies",
-            "refreshsettings",
-            "restart_service",
-            "test",
-            "startup_debug",
-            "schedule_debug",
-        ]),
-    ))
+def main(argv=None):
+    if argv is None:
+        argv = get_params(sys.argv)
+    mode = argv['mode']
+    action = argv.get('action', None)
+    settings_coord = argv.get('reopen_settings', "").split()
 
+    switch = {
+        "main": main_mode,
+        "library": library_mode,
+        "watch": watch_mode,
+    }
+    selected_mode = switch[mode]
     try:
-        mode_loc = settings.keys().index(mode)
-        action_loc = settings[mode].index(action)
-    except ValueError:
-        return
-
-    xbmc.executebuiltin('Addon.OpenSettings(%s)' % const.addonid)
-    xbmc.executebuiltin('SetFocus(%i)' % (mode_loc + 100))
-    xbmc.executebuiltin('SetFocus(%i)' % (action_loc + 200))
-
-
-def main(mode, action):
-    try:
-        starttime = dt.datetime.now()
-        log.info("Starting %s" % const.addonname)
-        if mode == "main_start":
-            mode = "watch"
-            action = "browse"
-            return
-        modes = {
-            "setup": setup_mode,
-            "update": update_mode,
-            "watch": watch_mode,
-            "debug": debug_mode,
-        }
-        selected_mode = modes[mode]
         selected_mode(action)
     finally:
-        log.info("%s finished (in %s)" % (const.addonname, str(dt.datetime.now() - starttime)))
-        open_settings(mode, action)
+        if settings_coord:
+            open_settings(*settings_coord)
 
 
 if __name__ == '__main__':
-    params = get_params(sys.argv)
-    mode = params['mode']
-    action = params.get('action', None)
-    main(mode, action)
+    main()
