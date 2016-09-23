@@ -16,9 +16,9 @@ from pykeyboard import PyKeyboard
 from pymouse import PyMouse
 
 from . import constants as const
-from .utils import (uni_join, os_join)
-from .xbmcwrappers import (log, settings, rpc)
-from .remote import Remote
+from . import utils
+from . import kodi
+from . import remote
 
 
 class Player(object):
@@ -39,7 +39,7 @@ class Player(object):
             self.browser = Chromote(host="localhost", port=9222)
         except requests.exceptions.ConnectionError:
             self.browser = Chromote(host="localhost", port=9222, internet_explorer=True)
-        log.info("connected to %s: %s" % (self.browser.browsertype, self.browser))
+        kodi.log("connected to %s: %s" % (self.browser.browsertype, self.browser))
 
         while not self.stopped:
             try:
@@ -48,12 +48,12 @@ class Player(object):
             except StopIteration:
                 xbmc.sleep(50)
         self.tab.connect_websocket()
-        log.info("websocket connected: %s" % self.tab.url)
+        kodi.log("websocket connected: %s" % self.tab.url)
 
     def cleanup(self):
         if self.browser.browsertype == "ie":
             self.browser.close_ieadapter()
-            log.info("closed ieadapter")
+            kodi.log("closed ieadapter")
         if self.tab:
             self.tab.close_websocket()
 
@@ -119,14 +119,14 @@ class Session(object):
         if not (playingfile["file"].startswith(uni_join(const.libpath, const.provider)) or
                 playingfile["file"].startswith(uni_join(const.addonpath, "resources"))):
             return
-        log.info("start onPlayBackStarted")
+        kodi.log("start onPlayBackStarted")
         self.koala_playing = True
 
         self.player = Player()
 
         self.remote = None
-        if settings["remote"]:
-            self.remote = Remote()
+        if kodi.settings["remote"]:
+            self.remote = remote.Remote()
             self.remote.run(player=self.player)
 
         self.player.connect()
@@ -140,7 +140,7 @@ class Session(object):
             thread = Thread(target=self.monitor_watched, args=[playingfile])
             thread.start()
 
-        log.info("finished onPlayBackStarted")
+        kodi.log("finished onPlayBackStarted")
 
     def end(self):
         if not self.koala_playing:
@@ -155,17 +155,17 @@ class Session(object):
             log.info("finished onPlayBackEnded")
 
     def get_playing_file(self):
-        active_player = rpc("Player.GetActivePlayers")[0]['playerid']
-        playingfile = rpc("Player.GetItem", playerid=active_player,
-                          properties=["season", "episode", "tvshowid", "file", "playcount", "runtime"])
+        active_player = kodi.rpc("Player.GetActivePlayers")[0]['playerid']
+        playingfile = kodi.rpc("Player.GetItem", playerid=active_player,
+                               properties=["season", "episode", "tvshowid", "file", "playcount", "runtime"])
         return playingfile["item"]
 
     def get_episodes(self, playingfile):
         Epinfo = namedtuple("Epinfo", "code kodiid playcount runtime")
         startkodiid = playingfile['id']
         tvshowid = playingfile["tvshowid"]
-        tvshow_dict = rpc("VideoLibrary.GetEpisodes", tvshowid=tvshowid, properties=[
-                          "playcount", "season", "episode", "file", "runtime"])
+        tvshow_dict = kodi.rpc("VideoLibrary.GetEpisodes", tvshowid=tvshowid, properties=[
+                               "playcount", "season", "episode", "file", "runtime"])
         stored_episodes = {}
         for episode in tvshow_dict['episodes']:
             epcode = 'S%02dE%02d' % (episode['season'], episode['episode'])
@@ -211,17 +211,17 @@ class Session(object):
         finished_watching_at = dt.datetime.now()
         watch_duration = finished_watching_at - started_watching_at
         if watch_duration.seconds / episode.runtime.seconds >= 0.9:
-            rpc("VideoLibrary.SetEpisodeDetails", episodeid=episode.kodiid,
-                playcount=episode.playcount + 1, lastplayed=finished_watching_at.strftime("%d-%m-%Y %H:%M:%S"))
-            log.info("%s: Marked as watched" % episode.code)
+            kodi.rpc("VideoLibrary.SetEpisodeDetails", episodeid=episode.kodiid,
+                     playcount=episode.playcount + 1, lastplayed=finished_watching_at.strftime("%d-%m-%Y %H:%M:%S"))
+            kodi.log("%s: Marked as watched" % episode.code)
         else:
-            log.info("%s: Skipped, only partially watched (%s vs. %s)" %
+            kodi.log("%s: Skipped, only partially watched (%s vs. %s)" %
                      (episode.code, episode.runtime.seconds, watch_duration.seconds))
 
 
 class Monitor(xbmc.Player):
     def __init__(self):
-        log.info("launching playback service")
+        kodi.log("launching playback service")
         self.queue = []
         xbmc.Player.__init__(self)
 

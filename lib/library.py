@@ -1,43 +1,43 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+
 import multiprocessing.dummy as threading
 import traceback
-from operator import attrgetter
 import sys
 import xbmcgui
 
-from . import scraper
-from . import databases
-from . xbmcwrappers import (log, settings, dialogs, ScanMonitor)
 from . import constants as const
+from . import kodi
+from . import databases
+from . import scraper
 
 
 # Library tasks
 def remove_movie(movie):
-    log.info("Removing movie: %s" % movie)
+    kodi.log("Removing movie: %s" % movie)
     lib_entry = movie.get_lib_entry()
     if lib_entry:
         lib_entry.save_playcount()
         lib_entry.remove_from_lib()
         lib_entry.delete_htm()
     else:
-        log.info("Couldn't find in library: %s" % (movie))
-    if settings["added_notifications"]:
-        dialogs.notification(heading="%s movie removed:" % const.provider, message=movie.title)
+        kodi.log("Couldn't find in library: %s" % (movie))
+    if kodi.settings["added_notifications"]:
+        kodi.Dialog.notification(heading="%s movie removed:" % const.provider, message=movie.title)
     databases.stored_movies.remove(movie)
-    log.info("Finished removing movie: %s" % movie)
+    kodi.log("Finished removing movie: %s" % movie)
 
 
 def exclude_movie(movie):
-    log.info("Excluding movie: %s" % movie.title)
+    kodi.log("Excluding movie: %s" % movie.title)
     remove_movie(movie)
     databases.excluded_movies.add(movie)
-    log.info("Finished excluding movie: %s" % movie.title)
+    kodi.log("Finished excluding movie: %s" % movie.title)
 
 
 def add_movie(movie):
-    log.info("Adding movie: %s" % movie)
+    kodi.log("Adding movie: %s" % movie)
     movie.write_htm()
     yield
 
@@ -50,55 +50,57 @@ def add_movie(movie):
 
         lib_entry = movie.get_lib_entry()
         if not lib_entry:
-            log.info("Failed to add movie: %s" % movie)
+            kodi.log("Failed to add movie: %s" % movie)
             return
     lib_entry.load_playcount()
-    if settings["added_notifications"]:
-        dialogs.notification(heading="%s movie added:" % const.provider, message=movie.title)
+    if kodi.settings["added_notifications"]:
+        kodi.Dialog.notification(heading="%s movie added:" % const.provider, message=movie.title)
     databases.stored_movies.add(movie)
-    log.info("Finished adding movie: %s" % movie)
+    kodi.log("Finished adding movie: %s" % movie)
 
 
 def readd_movie(movie):
-    log.info("Readding movie: %s" % movie.title)
+    kodi.log("Readding movie: %s" % movie.title)
     for step in add_movie(movie):
         yield step
     databases.excluded_movies.remove(movie)
-    log.info("Finished readding movie: %s" % movie.title)
+    kodi.log("Finished readding movie: %s" % movie.title)
 
 
 def remove_show(show):
-    log.info("Removing show: %s" % show.title)
+    kodi.log("Removing show: %s" % show.title)
     koala_stored_episodes = show.get_koala_stored_eps()
     for lib_entry in koala_stored_episodes:
         lib_entry.save_playcount()
         lib_entry.delete_htm()
         lib_entry.remove_from_lib()
     databases.stored_shows.remove(show)
-    log.info("Removed episodes: %s, %s" % (show.title, sorted(koala_stored_episodes, key=attrgetter('code'))))
-    log.info("Finished removing show: %s" % show.title)
+    kodi.log("Removed episodes: %s, %s" % (show.title, sorted(koala_stored_episodes)))
+    kodi.log("Finished removing show: %s" % show.title)
 
 
 def exclude_show(show):
-    log.info("Excluding show: %s" % show.title)
+    kodi.log("Excluding show: %s" % show.title)
     remove_show(show)
     databases.excluded_shows.add(show)
-    log.info("Finished excluding show: %s" % show.title)
+    kodi.log("Finished excluding show: %s" % show.title)
 
 
 def update_add_show(show):
-    log.info("Updating show: %s" % show)
+    kodi.log("Updating show: %s" % show.title)
     show_metadata, available_episodes = scraper.get_showdata_episodes(show)
     unav_episodes, new_episodes = show.get_episode_availability(available_episodes)
-    for lib_entry in unav_episodes:
-        lib_entry.save_playcount()
-        lib_entry.delete_htm()
-        lib_entry.remove_from_lib()
+    if unav_episodes:
+        for lib_entry in unav_episodes:
+            lib_entry.save_playcount()
+            lib_entry.delete_htm()
+            lib_entry.remove_from_lib()
+        kodi.log("Removed episodes: %s, %s" % (show, sorted(unav_episodes)))
     if new_episodes:
         for episode in new_episodes:
             episode.write_htm()
-        log.info("htms created, waiting for lib update: %s %s" %
-                 (show, sorted(new_episodes, key=attrgetter('code'))))
+        kodi.log("htms created, waiting for lib update: %s %s" %
+                 (show, sorted(new_episodes)))
         yield
 
         koala_stored_episodes = show.get_koala_stored_eps()
@@ -109,40 +111,38 @@ def update_add_show(show):
             for episode in nonadded_episodes:
                 episode.write_nfo()
                 episode.write_htm()
-            log.info("NFOs created, waiting for second lib update: %s, %s" %
-                     (show, sorted(nonadded_episodes, key=attrgetter('code'))))
+            kodi.log("NFOs created, waiting for second lib update: %s, %s" %
+                     (show, sorted(nonadded_episodes)))
             yield
 
             koala_stored_episodes = show.get_koala_stored_eps()
             nonadded_episodes = new_episodes - koala_stored_episodes
             if nonadded_episodes:
-                log.info("Failed to add episodes: %s, %s" % (show, sorted(nonadded_episodes, key=attrgetter('code'))))
+                kodi.log("Failed to add episodes: %s, %s" % (show, sorted(nonadded_episodes)))
 
         added_episodes = koala_stored_episodes - nonadded_episodes
         for lib_entry in added_episodes:
             lib_entry.load_playcount()
 
-        if settings["added_notifications"]:
+        if kodi.settings["added_notifications"]:
             if len(new_episodes) == 1:
                 message = "Added episode: %s" % list(new_episodes)[0].code
             elif len(new_episodes) <= 3:
                 message = "Added episodes: %s" % ", ".join(sorted([ep.code for ep in new_episodes]))
             else:
                 message = "Added %s episodes" % len(new_episodes)
-            dialogs.notification(heading=show.title, message=message)
-        log.info("Added episodes: %s, %s" % (show, sorted(added_episodes, key=attrgetter('code'))))
-    if unav_episodes:
-        log.info("Removed episodes: %s, %s" % (show, sorted(unav_episodes, key=attrgetter('code'))))
+            kodi.Dialog.notification(heading=show.title, message=message)
+        kodi.log("Added episodes: %s, %s" % (show, sorted(added_episodes)))
     databases.stored_shows.upsert(show)
-    log.info("Finished updating show: %s" % show)
+    kodi.log("Finished updating show: %s" % show)
 
 
 def readd_show(show):
-    log.info("Readding show: %s" % show.title)
+    kodi.log("Readding show: %s" % show.title)
     for step in update_add_show(show):
         yield step
     databases.excluded_shows.remove(show)
-    log.info("Finished readding show: %s" % show.title)
+    kodi.log("Finished readding show: %s" % show.title)
 
 
 ############################
@@ -165,7 +165,7 @@ class Task(object):
         except StopIteration:
             task.finished = True
         except Exception as exc:
-            log.info("Error adding/updating %s:\n%s" % (task.obj, traceback.format_exc().decode(sys.getfilesystemencoding())))
+            kodi.log("Error adding/updating %s:\n%s" % (task.obj, traceback.format_exc().decode(sys.getfilesystemencoding())))
             task.exception = exc
             task.finished = True
 
@@ -175,7 +175,7 @@ class Task(object):
         try:
             task.func(task.obj)
         except Exception as exc:
-            log.info("Error removing %s:\n%s" % (task.obj, traceback.format_exc().decode(sys.getfilesystemencoding())))
+            kodi.log("Error removing %s:\n%s" % (task.obj, traceback.format_exc().decode(sys.getfilesystemencoding())))
             task.exception = exc
 
 
@@ -183,11 +183,11 @@ class Task(object):
 # helper functions
 def select_mediaitem(database):
     if not database:
-        dialogs.ok(heading="No media", line1="No relevant media seems to be in library")
+        kodi.Dialog.ok(heading="No media", line1="No relevant media seems to be in library")
         return None
-    objects = sorted(database, key=attrgetter("title"))
+    objects = sorted(database)
     titles = [media.title for media in objects]
-    selected = dialogs.select(list=titles, heading='Select %s' % database.mediatype)
+    selected = kodi.Dialog.select(list=titles, heading='Select %s' % database.mediatype)
     return objects[selected] if selected != -1 else None
 
 
@@ -195,12 +195,12 @@ def edit_prioritized_shows():
     databases.stored_shows.load()
     databases.prioritized_shows.load()
     if not databases.stored_shows:
-        dialogs.ok(heading="No media", line1="No TV shows seems to be in library")
+        kodi.Dialog.ok(heading="No media", line1="No TV shows seems to be in library")
         return None
-    objects = sorted(databases.stored_shows, key=attrgetter("title"))
+    objects = sorted(databases.stored_shows)
     titles = ["[Prioritized] %s" % show.title if show in databases.prioritized_shows else show.title for show in objects]
     while True:
-        selected = dialogs.select('Select shows to prioritize', titles)
+        selected = kodi.Dialog.select('Select shows to prioritize', titles)
         if selected == -1:
             break
         show = objects[selected]
@@ -216,19 +216,19 @@ def get_watchlist_changes(session, tasks):
     available_movies, available_shows = session.get_watchlist()
 
     unav_movies = databases.stored_movies - available_movies
-    log.info("unavailable_movies:\n %s" % unav_movies)
+    kodi.log("unavailable_movies:\n %s" % unav_movies)
     tasks["removals"].extend([Task(movie, remove_movie) for movie in unav_movies])
 
     unav_shows = databases.stored_shows - available_shows
-    log.info("unavailable_shows:\n %s" % unav_shows)
+    kodi.log("unavailable_shows:\n %s" % unav_shows)
     tasks["removals"].extend([Task(show, remove_show) for show in unav_shows])
 
     new_movies = available_movies - (databases.stored_movies | databases.excluded_movies)
-    log.info("new_movies:\n %s" % new_movies)
+    kodi.log("new_movies:\n %s" % new_movies)
     tasks["updates"].extend([Task(movie, add_movie) for movie in new_movies])
 
     new_shows = available_shows - (databases.stored_shows | databases.excluded_shows)
-    log.info("new_shows:\n %s" % new_shows)
+    kodi.log("new_shows:\n %s" % new_shows)
     tasks["updates"].extend([Task(show, update_add_show) for show in new_shows])
 
 
@@ -246,7 +246,7 @@ def remove_all_fetch():
     databases.stored_movies.load()
     databases.stored_shows.load()
     if not (databases.stored_movies or databases.stored_shows):
-        dialogs.ok(heading="No media", line1="No movies or TV shows seems to be in library")
+        kodi.Dialog.ok(heading="No media", line1="No movies or TV shows seems to be in library")
         return
     tasks = {"removals": [Task(movie, remove_movie) for movie in databases.stored_movies] +
                          [Task(show, remove_show) for show in databases.stored_shows]}
@@ -256,7 +256,7 @@ def remove_all_fetch():
 def update_all_fetch():
     databases.stored_shows.load()
     if not databases.stored_shows:
-        dialogs.ok(heading="No media", line1="No TV shows seems to be in library")
+        kodi.Dialog.ok(heading="No media", line1="No TV shows seems to be in library")
         return
     tasks = {"updates": [Task(show, update_add_show) for show in databases.stored_shows]}
     return tasks
@@ -316,8 +316,8 @@ def startup_fetch():
                databases.excluded_shows, databases.prioritized_shows):
         db.load()
     tasks = {"updates": [], "removals": []}
-    if settings["shows on startup"]:
-        get_n_shows(tasks, all_shows=settings["all shows on startup"], n_shows=settings["n shows on startup"])
+    if kodi.settings["shows on startup"]:
+        get_n_shows(tasks, all_shows=kodi.settings["all shows on startup"], n_shows=kodi.settings["n shows on startup"])
     # wathclist tasks fetched after login
     return tasks
 
@@ -327,8 +327,8 @@ def schedule_fetch():
                databases.excluded_shows, databases.prioritized_shows):
         db.load()
     tasks = {"updates": [], "removals": []}
-    if settings["shows on schedule"]:
-        get_n_shows(tasks, all_shows=settings["all shows on schedule"], n_shows=settings["n shows on schedule"])
+    if kodi.settings["shows on schedule"]:
+        get_n_shows(tasks, all_shows=kodi.settings["all shows on schedule"], n_shows=kodi.settings["n shows on schedule"])
     # wathclist tasks fetched after login
     return tasks
 
@@ -372,7 +372,7 @@ def main(action):
         progressbar = xbmcgui.DialogProgressBG()
         progressbar.create(heading="Updating %s" % const.provider)
 
-        if action == "watchlist" or (action in ["startup", "schedule"] and settings["watchlist on %s" % action]):
+        if action == "watchlist" or (action in ["startup", "schedule"] and kodi.settings["watchlist on %s" % action]):
             progressbar.update(10)
             session = scraper.RequestsSession()
             session.setup()
@@ -396,7 +396,7 @@ def main(action):
             for task in updates:
                 task.coroutine = task.func(task.obj)
 
-            if settings['multithreading'] and len(updates) > 1:
+            if kodi.settings['multithreading'] and len(updates) > 1:
                 pool = threading.Pool(5)
                 map_ = pool.map
             else:
@@ -408,7 +408,7 @@ def main(action):
             step3 = [task for task in updates if not task.finished]
             if step3:
                 progressbar.update(50)
-                monitor = ScanMonitor()
+                monitor = kodi.ScanMonitor()
                 monitor.update_video_library()
 
                 # step3

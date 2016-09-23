@@ -1,13 +1,14 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-import collections
+
+from collections import MutableSet
 import multiprocessing.dummy as threading
 import json
 
-from . utils import os_join
 from . import constants as const
-from . mediatypes import (ScrapedMovie, ScrapedShow)
+from . import utils
+from . import mediatypes
 
 
 class MediaDatabase(object):
@@ -17,7 +18,7 @@ class MediaDatabase(object):
         self.mediaclass = mediaclass
         self.mediatype = mediaclass.mediatype
         self.name = name
-        self.filepath = os_join(const.userdatafolder, "%s.json" % self.name)
+        self.filepath = utils.os_join(const.userdatafolder, "%s.json" % self.name)
         self.edited = False
         self.loaded = False
 
@@ -28,7 +29,7 @@ class MediaDatabase(object):
         except IOError:
             stored = []
         for urlid, title in stored:
-            media_obj = self.mediaclass(urlid, title)
+            media_obj = self.mediaclass(urlid=urlid, title=title)
             self.backend.add(media_obj)
         self.loaded = True
 
@@ -85,7 +86,7 @@ class MediaDatabase(object):
 
 
 # https://code.activestate.com/recipes/576694/
-class OrderedSet(collections.MutableSet):
+class OrderedSet(MutableSet):
 
     def __init__(self, iterable=None):
         self.end = end = []
@@ -144,8 +145,8 @@ class OrderedSet(collections.MutableSet):
         return set(self) == set(other)
 
 
-stored_movies = MediaDatabase(mediaclass=ScrapedMovie, name='movies')
-excluded_movies = MediaDatabase(mediaclass=ScrapedMovie, name='excluded movies')
-stored_shows = MediaDatabase(mediaclass=ScrapedShow, name='shows', retain_order=True)
-excluded_shows = MediaDatabase(mediaclass=ScrapedShow, name='excluded shows')
-prioritized_shows = MediaDatabase(mediaclass=ScrapedShow, name='prioritized shows')
+stored_movies = MediaDatabase(mediaclass=mediatypes.ScrapedMovie, name='movies')
+excluded_movies = MediaDatabase(mediaclass=mediatypes.ScrapedMovie, name='excluded movies')
+stored_shows = MediaDatabase(mediaclass=mediatypes.ScrapedShow, name='shows', retain_order=True)
+excluded_shows = MediaDatabase(mediaclass=mediatypes.ScrapedShow, name='excluded shows')
+prioritized_shows = MediaDatabase(mediaclass=mediatypes.ScrapedShow, name='prioritized shows')

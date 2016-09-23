@@ -1,12 +1,13 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+
 import json
 import xbmc
 import xbmcgui
 
-from .utils import (wrap_unicode, byteify, os_join)
 from . import constants as const
+from . import utils
 
 
 def open_settings(category, action):
@@ -16,7 +17,7 @@ def open_settings(category, action):
 
 
 class SettingsAsDict(dict):
-    @wrap_unicode
+    @utils.wrap_unicode
     def getsetting(self, key):
         val = const.addon.getSetting(key)
         if val in ["true", "false"]:
@@ -25,7 +26,7 @@ class SettingsAsDict(dict):
             val = int(val)
         return val
 
-    @wrap_unicode
+    @utils.wrap_unicode
     def setsetting(self, key, val):
         if isinstance(val, (bool, int)):
             val = str(val).lower()
@@ -41,40 +42,45 @@ class SettingsAsDict(dict):
 settings = SettingsAsDict()
 
 
-class Dialogs(object):
+class Dialog(object):
     def __init__(self):
         self.dialog = xbmcgui.Dialog()
 
-    @wrap_unicode
-    def browse(self, type, heading, shares, mask=None, useThumbs=None,
-               treatAsFolder=None, default=None, enableMultiple=None):
-        return self.dialog.browse(type, heading, shares, mask, useThumbs,
-                                  treatAsFolder, default, enableMultiple)
+    @classmethod
+    @utils.wrap_unicode
+    def browse(cls, *args, **kwargs):
+        return cls().dialog.browse(*args, **kwargs)
 
-    @wrap_unicode
-    def input(self, heading, default=None, type=None, option=None, autoclose=None):
-        return self.dialog.input(heading, default, type, option, autoclose)
+    @classmethod
+    @utils.wrap_unicode
+    def input(cls, *args, **kwargs):
+        return cls().dialog.input(*args, **kwargs)
 
-    @wrap_unicode
-    def notification(self, heading, message, icon=os_join(const.addonpath, "resources", "notification.png"), time=None, sound=None):
-        return self.dialog.notification(heading, message, icon)
+    @classmethod
+    @utils.wrap_unicode
+    def notification(cls, *args, **kwargs):
+        kwargs["icon"] = utils.os_join(const.addonpath, "resources", "notification.png")
+        return cls().dialog.notification(*args, **kwargs)
 
-    @wrap_unicode
-    def numeric(self, type, heading, default=None):
-        return self.dialog.numeric(type, heading, default)
+    @classmethod
+    @utils.wrap_unicode
+    def numeric(cls, *args, **kwargs):
+        return cls().dialog.numeric(*args, **kwargs)
 
-    @wrap_unicode
-    def ok(self, heading, line1, line2=None, line3=None):
-        return self.dialog.ok(heading, line1, line2, line3)
+    @classmethod
+    @utils.wrap_unicode
+    def ok(cls, *args, **kwargs):
+        return cls().dialog.ok(*args, **kwargs)
 
-    @wrap_unicode
-    def select(self, heading, list):
-        return self.dialog.select(heading, list)
+    @classmethod
+    @utils.wrap_unicode
+    def select(cls, *args, **kwargs):
+        return cls().dialog.select(*args, **kwargs)
 
-    @wrap_unicode
-    def yesno(self, heading, line1, line2=None, line3=None):
-        return self.dialog.yesno(heading, line1, line2, line3)
-dialogs = Dialogs()
+    @classmethod
+    @utils.wrap_unicode
+    def yesno(cls, *args, **kwargs):
+        return cls().dialog.yesno(*args, **kwargs)
 
 
 class ScanMonitor(xbmc.Monitor):
@@ -117,10 +123,5 @@ def rpc(method, multifilter=False, **kwargs):
     return result
 
 
-class Log(object):
-    def info(self, input):
-        xbmc.log(byteify("[%s] %s" % (const.addonname, input)), xbmc.LOGNOTICE)
-
-    def debug(self, input):
-        xbmc.log(byteify("[%s] %s" % (const.addonname, input)), xbmc.LOGDEBUG)
-log = Log()
+def log(input, debug=False):
+    xbmc.log(utils.byteify("[%s] %s" % (const.addonname, input)), level=xbmc.LOGNOTICE if debug is False else xbmc.LOGDEBUG)

@@ -1,15 +1,16 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+
 import abc
 import os
 import json
 import xml.etree.ElementTree as ET
 import xml.dom.minidom
 
-from . utils import (os_join, uni_join, stringtofile)
 from . import constants as const
-from .xbmcwrappers import rpc
+from . import utils
+from . import kodi
 
 
 class BaseLibEntry(object):
@@ -22,31 +23,31 @@ class BaseLibEntry(object):
 
     @abc.abstractmethod
     def load_playcount(self):
-        jsonfilepath = os_join(self.path, self.jsonfilename)
+        jsonfilepath = utils.os_join(self.path, self.jsonfilename)
         if os.path.exists(jsonfilepath):
             with open(jsonfilepath, "r") as f:
                 playcount = json.load(f)
-            rpc("VideoLibrary.Set%sDetails" % self.mediatype.capitalize(), playcount=playcount,
-                **{self.mediatype + "id": self.kodiid})
+            kodi.rpc("VideoLibrary.Set%sDetails" % self.mediatype.capitalize(), playcount=playcount,
+                     **{self.mediatype + "id": self.kodiid})
             os.remove(jsonfilepath)
 
     @abc.abstractmethod
     def save_playcount(self):
         if self.playcount > 0:
-            jsonfilepath = os_join(self.path, self.jsonfilename)
+            jsonfilepath = utils.os_join(self.path, self.jsonfilename)
             with open(jsonfilepath, "w") as f:
                 json.dump(self.playcount, f)
 
     @abc.abstractmethod
     def remove_from_lib(self):
-        rpc("VideoLibrary.Remove%s" % self.mediatype.capitalize(),
-            **{self.mediatype + "id": self.kodiid})
+        kodi.rpc("VideoLibrary.Remove%s" % self.mediatype.capitalize(),
+                 **{self.mediatype + "id": self.kodiid})
 
     @abc.abstractmethod
     def delete_htm(self):
-        os.remove(os_join(self.path, self.htmfilename))
+        os.remove(utils.os_join(self.path, self.htmfilename))
         try:
-            os.removedirs(os_join(self.path))
+            os.removedirs(utils.os_join(self.path))
         except OSError:
             pass
 ###########################
@@ -57,10 +58,10 @@ class BaseMovie(object):
 
     def __init__(self, title):
         self.title = title
-        self.path = uni_join(const.libpath, "%s movies" % const.provider)
-        self.htmfilename = "%s.htm" % stringtofile(self.title)
-        self.nfofilename = "%s.nfo" % stringtofile(self.title)
-        self.jsonfilename = "%s.json" % stringtofile(self.title)
+        self.path = utils.uni_join(const.libpath, "%s movies" % const.provider)
+        self.htmfilename = "%s.htm" % utils.stringtofile(self.title)
+        self.nfofilename = "%s.nfo" % utils.stringtofile(self.title)
+        self.jsonfilename = "%s.json" % utils.stringtofile(self.title)
 
     def __repr__(self):
         return repr(self.title)
@@ -74,6 +75,9 @@ class BaseMovie(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def __lt__(self, other):
+        return self.title < other.title
+
 
 class ScrapedMovie(BaseMovie):
     def __init__(self, urlid, title):
@@ -82,7 +86,7 @@ class ScrapedMovie(BaseMovie):
         self.url = "http://tv.nrk.no%s?autostart=true" % self.urlid
 
     def write_htm(self):
-        with open(os_join(self.path, self.htmfilename), "w") as txt:
+        with open(utils.os_join(self.path, self.htmfilename), "w") as txt:
             txt.write('<meta http-equiv="REFRESH" content="0;'
                       'url=%s"> <body bgcolor="#ffffff">' % self.url)
 
@@ -101,11 +105,11 @@ class ScrapedMovie(BaseMovie):
             nfo.write(pretty_xml_as_string.encode("utf-8"))
 
     def get_lib_entry(self):
-        moviesdict = rpc("VideoLibrary.GetMovies",
-                         properties=["file", 'playcount'],
-                         multifilter={"and":
-                                      [("filename", "is", self.htmfilename),
-                                       ("path", "startswith", self.path)]})
+        moviesdict = kodi.rpc("VideoLibrary.GetMovies",
+                              properties=["file", 'playcount'],
+                              multifilter={"and":
+                                           [("filename", "is", self.htmfilename),
+                                            ("path", "startswith", self.path)]})
         try:
             movie_dict = moviesdict['movies'][0]
         except KeyError:
@@ -138,7 +142,7 @@ class ScrapedShow(object):
     def __init__(self, urlid, title):
         self.urlid = urlid
         self.title = title
-        self.path = uni_join(const.libpath, "%s shows" % const.provider, stringtofile(self.title))
+        self.path = utils.uni_join(const.libpath, "%s shows" % const.provider, utils.stringtofile(self.title))
         self.nfofilename = "tvshow.nfo"
 
     def __repr__(self):
@@ -152,6 +156,9 @@ class ScrapedShow(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __lt__(self, other):
+        return self.title < other.title
 
     def get_episode_availability(self, available_episodes):
         koala_stored_episodes, all_stored_episodes = self.get_stored_episodes()
@@ -175,7 +182,7 @@ class ScrapedShow(object):
 
     def get_koala_stored_eps(self):
         # get any stored koala episodes
-        episodes = rpc("VideoLibrary.GetEpisodes", properties=["season", "episode", "playcount"],
+        episodes = kodi.rpc("VideoLibrary.GetEpisodes", properties=["season", "episode", "playcount"],
                        filter={"field": "path", "operator": "startswith", "value": self.path})
         koala_stored_episodes = set()
         for epdict in episodes.get('episodes', []):
@@ -191,19 +198,19 @@ class ScrapedShow(object):
             any_ep_kodiid = next(iter(koala_stored_episodes)).kodiid
         else:
             # no stored koala episode, get any stored episode
-            episodes = rpc("VideoLibrary.GetEpisodes", limits={"start": 0, "end": 1},
-                           filter={"field": "filename", "operator": "startswith", "value": "%s S" % stringtofile(self.title)},
-                           ).get('episodes', [])
+            episodes = kodi.rpc("VideoLibrary.GetEpisodes", limits={"start": 0, "end": 1},
+                                filter={"field": "filename", "operator": "startswith", "value": "%s S" % utils.stringtofile(self.title)},
+                                ).get('episodes', [])
             if not episodes:
                 # no stored episodes detectable
                 return set(), set()
             any_ep_kodiid = episodes[0]['episodeid']
-        any_episode = rpc("VideoLibrary.GetEpisodeDetails", episodeid=any_ep_kodiid, properties=["showtitle"])
+        any_episode = kodi.rpc("VideoLibrary.GetEpisodeDetails", episodeid=any_ep_kodiid, properties=["showtitle"])
         scraped_title = any_episode['episodedetails']['showtitle']
 
-        all_stored_episodes_dict = rpc("VideoLibrary.GetEpisodes",
-                                       properties=["season", "episode"],
-                                       filter={"field": "tvshow", "operator": "is", "value": scraped_title})
+        all_stored_episodes_dict = kodi.rpc("VideoLibrary.GetEpisodes",
+                                            properties=["season", "episode"],
+                                            filter={"field": "tvshow", "operator": "is", "value": scraped_title})
         all_stored_episodes_set = set(BaseEpisode(show=self, seasonnr=epdict['season'], episodenr=epdict['episode'])
                                       for epdict in all_stored_episodes_dict.get('episodes', []))
         return koala_stored_episodes, all_stored_episodes_set
@@ -218,11 +225,11 @@ class BaseEpisode(object):
         self.seasonnr = int(seasonnr)
         self.episodenr = int(episodenr)
         self.code = "S%02dE%02d" % (seasonnr, episodenr)
-        self.path = uni_join(const.libpath, "%s shows" % const.provider,
-                             stringtofile(self.showtitle), "Season %s" % self.seasonnr)
-        self.htmfilename = "%s %s.htm" % (stringtofile(self.showtitle), self.code)
-        self.nfofilename = "%s %s.nfo" % (stringtofile(self.showtitle), self.code)
-        self.jsonfilename = "%s %s.json" % (stringtofile(self.showtitle), self.code)
+        self.path = utils.uni_join(const.libpath, "%s shows" % const.provider,
+                                   utils.stringtofile(self.showtitle), "Season %s" % self.seasonnr)
+        self.htmfilename = "%s %s.htm" % (utils.stringtofile(self.showtitle), self.code)
+        self.nfofilename = "%s %s.nfo" % (utils.stringtofile(self.showtitle), self.code)
+        self.jsonfilename = "%s %s.json" % (utils.stringtofile(self.showtitle), self.code)
 
     def __repr__(self):
         return self.code
@@ -236,6 +243,9 @@ class BaseEpisode(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def __lt__(self, other):
+        return self.code < other.code
+
 
 class ScrapedEpisode(BaseEpisode):
     def __init__(self, show, seasonnr, episodenr, urlid, plot, runtime, thumb, title):
@@ -248,9 +258,9 @@ class ScrapedEpisode(BaseEpisode):
         self.thumb = "http://gfx.nrk.no/%s" % thumb
 
     def write_htm(self):
-        if not os.path.exists(os_join(self.path)):
-            os.makedirs(os_join(self.path))
-        with open(os_join(self.path, self.htmfilename), "w") as txt:
+        if not os.path.exists(utils.os_join(self.path)):
+            os.makedirs(utils.os_join(self.path))
+        with open(utils.os_join(self.path, self.htmfilename), "w") as txt:
             txt.write('<meta http-equiv="REFRESH" content="0;'
                       'url=%s"> <body bgcolor="#ffffff">' % self.url)
 

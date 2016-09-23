@@ -1,6 +1,7 @@
 # #! /usr/bin/env python
 # # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+
 import json
 from multiprocessing.dummy import Process as Thread
 from collections import namedtuple
@@ -10,8 +11,8 @@ import xbmcgui
 from pykeyboard import PyKeyboardEvent
 
 from . import constants as const
-from .utils import os_join
-from .xbmcwrappers import (log, dialogs)
+from . import utils
+from . import kodi
 
 
 class ConfigurationDialog(xbmcgui.WindowXMLDialog):
@@ -52,13 +53,13 @@ class ConfigurationListener(PyKeyboardEvent):
         if press_bool:
             self.keycode = keycode
             self.character = character
-            log.info(keycode)
-            log.info(character)
+            kodi.log(keycode)
+            kodi.log(character)
             self.stop()
 
     def stop(self):
         PyKeyboardEvent.stop(self)
-        log.info("keygetter stopped")
+        kodi.log("keygetter stopped")
 
 
 class PlaybackListener(PyKeyboardEvent):
@@ -89,7 +90,7 @@ class Remote(object):
 
     def load_mapping(self):
         try:
-            with open(os_join(const.userdatafolder, "remotemapping.json")) as j:
+            with open(utils.os_join(const.userdatafolder, "remotemapping.json")) as j:
                 stored = json.load(j)
         except IOError:
             stored = {}
@@ -108,13 +109,13 @@ class Remote(object):
     def store_mapping(self, mapping):
         dict_for_storage = {button.name: {'code': button.code, 'char': button.char}
                             for button in mapping if any([button.code, button.char])}
-        with open(os_join(const.userdatafolder, "remotemapping.json"), "w") as j:
+        with open(utils.os_join(const.userdatafolder, "remotemapping.json"), "w") as j:
             json.dump(dict_for_storage, j)
 
     def configure(self):
         while True:
             optionlist = ["%s: %s" % (button.name, button.char) for button in self.mapping] + ["[Clear]"]
-            call = dialogs.select('Select function to edit', optionlist)
+            call = kodi.Dialog.select('Select function to edit', optionlist)
             if call == -1:
                 break
             elif optionlist[call] == "[Clear]":
@@ -133,28 +134,28 @@ class Remote(object):
         self.listener.run()
         missing_keys = [button.name for button in self.mapping if button.code not in funcmap]
         if missing_keys:
-            log.info("Note, following actions are not mapped to remote: %s" % missing_keys)
+            kodi.log("Note, following actions are not mapped to remote: %s" % missing_keys)
 
     def close(self):
         self.listener.stop()
-        log.info("Remote keylistener closed")
+        kodi.log("Remote keylistener closed")
 
     def playpause(self):
-        log.info("Remote: playpause triggered")
+        kodi.log("Remote: playpause triggered")
         self.player.playpause()
 
     def forward(self):
-        log.info("Remote: forward triggered")
+        kodi.log("Remote: forward triggered")
         self.player.forward()
 
     def rewind(self):
-        log.info("Remote: rewind triggered")
+        kodi.log("Remote: rewind triggered")
         self.player.rewind()
 
     def toggle_fullscreen(self):
-        log.info("Remote: toggle fullscreen triggered")
+        kodi.log("Remote: toggle fullscreen triggered")
         self.player.toggle_fullscreen()
 
     def stop(self):
-        log.info("Remote: stop triggered")
+        kodi.log("Remote: stop triggered")
         self.player.stop()

@@ -9,8 +9,8 @@ import requests
 from types import MethodType
 import datetime as dt
 
-from . xbmcwrappers import log
-from . mediatypes import (ScrapedMovie, ScrapedShow, ScrapedEpisode)
+from . import kodi
+from . import mediatypes
 
 
 class RequestsSession(object):
@@ -30,15 +30,15 @@ class RequestsSession(object):
         return BeautifulSoup(resp.text)
 
     def get(self, url, **kwargs):
-        log.info("LOADING: %s" % url)
+        kodi.log("LOADING: %s" % url)
         req = self.session.get(url, timeout=30, **kwargs)
         req.soup = MethodType(self.soup, req)
         return req
 
     def post(self, url, hidden=False, **kwargs):
-        log.info("LOADING: %s" % url)
+        kodi.log("LOADING: %s" % url)
         if kwargs and not hidden:
-            log.info("Payload: %s" % kwargs)
+            kodi.log("Payload: %s" % kwargs)
         req = self.session.post(url, timeout=30, **kwargs)
         req.soup = MethodType(self.soup, req)
         return req
@@ -66,11 +66,11 @@ class RequestsSession(object):
                     continue
                 urlid = "/program/%s/%s" % (media["program"]["myContentId"], media["program"]["programUrlMetadata"])
                 title = media["program"]["mainTitle"]
-                available_movies.add(ScrapedMovie(urlid, title))
+                available_movies.add(mediatypes.ScrapedMovie(urlid, title))
             elif mediatype == "show":
                 urlid = media["program"]["seriesId"]
                 title = media["program"]["seriesTitle"]
-                available_shows.add(ScrapedShow(urlid, title))
+                available_shows.add(mediatypes.ScrapedShow(urlid, title))
 
         if not (available_movies or available_shows):
             raise Exception("No media found in watchlist")
@@ -97,9 +97,9 @@ def get_showdata_episodes(show):
             seasonnr = seasons[episode["seasonId"]]
             urlid = episode["programId"]
             runtime = dt.timedelta(milliseconds=episode["duration"])
-            episodes.add(ScrapedEpisode(show=show, seasonnr=seasonnr, episodenr=episodenr,
-                                        urlid=urlid, plot=episode["description"],
-                                        runtime=runtime, thumb=episode["imageId"], title=episode["title"]))
+            episodes.add(mediatypes.ScrapedEpisode(show=show, seasonnr=seasonnr, episodenr=episodenr,
+                                                   urlid=urlid, plot=episode["description"],
+                                                   runtime=runtime, thumb=episode["imageId"], title=episode["title"]))
 
     else:
         seasons = {season["id"]: i for i, season in enumerate(reversed(showdata["seasonIds"]), start=1)}
@@ -114,9 +114,9 @@ def get_showdata_episodes(show):
 
             urlid = episode["programId"]
             runtime = dt.timedelta(milliseconds=episode["duration"])
-            episodes.add(ScrapedEpisode(show=show, seasonnr=seasonnr, episodenr=episodenr,
-                                        urlid=urlid, plot=episode["description"],
-                                        runtime=runtime, thumb=episode["imageId"], title=episode["title"]))
+            episodes.add(mediatypes.ScrapedEpisode(show=show, seasonnr=seasonnr, episodenr=episodenr,
+                                                   urlid=urlid, plot=episode["description"],
+                                                   runtime=runtime, thumb=episode["imageId"], title=episode["title"]))
     return metadata, episodes
 
 
