@@ -50,7 +50,7 @@
 
   <category label="Debug">
     <setting label="Remove all shows and movies from library" action="RunScript(script.service.koalanrk, mode=library, action=remove_all, reopen_settings=6 1)" type="action"  option="close"/>
-    <setting label="Run test suite" action="RunScript(script.service.koalanrk, mode=main, action=testsuite, reopen_settings=6 2)" type="action"  option="close"/>
+    <setting label="Run test suite" action="RunScript(script.service.koalanrk, mode=main, action=run_testsuite, reopen_settings=6 2)" type="action"  option="close"/>
     <setting label="Refresh Settings" action="RunScript(script.service.koalanrk, mode=main, action=refresh_settings, reopen_settings=6 3)" type="action"  option="close" />
     <setting label="Test action" action="RunScript(script.service.koalanrk, mode=main, action=test, reopen_settings=6 4)" type="action" option="close"/>
     <setting label="Test startup process" action="RunScript(script.service.koalanrk, mode=library, action=startup, reopen_settings=6 5)" type="action"  option="close"/>

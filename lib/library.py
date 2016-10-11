@@ -46,6 +46,7 @@ def add_movie(movie):
         metadata = scraper.get_movie_metadata(movie)
         movie.write_nfo(metadata)
         movie.write_htm()
+        kodi.log("NFO created, waiting for second lib update: %s" % movie.title)
         yield
 
         lib_entry = movie.get_lib_entry()
@@ -62,7 +63,7 @@ def add_movie(movie):
 def readd_movie(movie):
     kodi.log("Readding movie: %s" % movie.title)
     for step in add_movie(movie):
-        yield step
+        yield
     databases.excluded_movies.remove(movie)
     kodi.log("Finished readding movie: %s" % movie.title)
 
@@ -140,7 +141,7 @@ def update_add_show(show):
 def readd_show(show):
     kodi.log("Readding show: %s" % show.title)
     for step in update_add_show(show):
-        yield step
+        yield
     databases.excluded_shows.remove(show)
     kodi.log("Finished readding show: %s" % show.title)
 
@@ -384,7 +385,8 @@ def main(action):
                 return
 
         removals = tasks.get("removals", [])
-        updates = tasks.get("updates", [])
+        removal_objs = {task.obj for task in removals}
+        updates = [task for task in tasks.get("updates", []) if task.obj not in removal_objs]
 
         # step1
         if removals:

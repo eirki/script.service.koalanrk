@@ -42,7 +42,7 @@ class ConfigurationListener(PyKeyboardEvent):
         dialog = ConfigurationDialog()
         dialog.set_args(buttonname)
         dialog.show()
-        xbmc.sleep(1) # why?
+        xbmc.sleep(1)  # why?
         PyKeyboardEvent.run(self)
         dialog.close()
 

@@ -112,7 +112,7 @@ class ScrapedMovie(BaseMovie):
                                             ("path", "startswith", self.path)]})
         try:
             movie_dict = moviesdict['movies'][0]
-        except KeyError:
+        except (KeyError, IndexError):
             return None
         return MovieLibEntry(self.title, movie_dict["movieid"], movie_dict["playcount"])
 
@@ -183,7 +183,7 @@ class ScrapedShow(object):
     def get_koala_stored_eps(self):
         # get any stored koala episodes
         episodes = kodi.rpc("VideoLibrary.GetEpisodes", properties=["season", "episode", "playcount"],
-                       filter={"field": "path", "operator": "startswith", "value": self.path})
+                            filter={"field": "path", "operator": "startswith", "value": self.path})
         koala_stored_episodes = set()
         for epdict in episodes.get('episodes', []):
             episode = EpisodeLibEntry(self, epdict["season"], epdict["episode"],
