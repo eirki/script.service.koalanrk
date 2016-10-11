@@ -1,347 +1,227 @@
+# coding: utf-8
 from __future__ import unicode_literals
 import unittest
-from urllib import unquote_plus
+import os
+from os.path import isfile
+import shutil
 
-from lib import library
-from lib.xbmcwrappers import rpc
-from lib.utils import (uni_join, stringtofile)
 from lib import constants as const
+from lib import utils
+from lib import library
+from tests import mock_constants
+from tests import mock_kodi
+from tests import mock_scraper
+import main
 
-real_getepisodes = library.scraper.getepisodes
-real_getinfodict = library.scraper.getinfodict
-real_getshowinfo = library.scraper.getshowinfo
-real_getwatchlist = library.scraper.getwatchlist
+# fra netflix:
+# Kill Bill: Vol. 2: Thank you for smoking
+# Bones: I Mummidalen
+# Starsky & Hutch: Beatles
+# Archer: Sangfoni - musikkvideo
+# Arrested Development: Folkeopplysningen
+# Master of None: Fantorangen
+# Blood Diamond: Wolf Children
+
+
+# ## in mock watchlist:
+# Beatles - to be added
+# Sangfoni - musikkvideo S01E01, S01E02 - to be added
+# Folkeopplysningen S01E02, S01E03  - already added
+# Fantorangen - to remain excluded
+# Wolf Children - to remain excluded
+
+# ##  in mock shows:
+# I Mummidalen, S02E01, S02E02 - to be removed
+# Folkeopplysningen S01E01, S01E02 - to be updated
+
+# ## in mock movies:
+# Thank you for smoking - to be removed
+
+# ## in mock excluded shows:
+# Fantorangen - to remain excluded
+
+# ## in mock excluded movies:
+# Wolf Children - to remain excluded
+
+
+# Testing get_watchlist with mutiple results:
+# Remove movie: "Thank you for smoking", playcount 1
+# Remove show: "I Mummidalen", remove S02E01 and S02E02 (playcount 2),
+# Add movie: "Beatles"
+# Add show: "Sangfoni - musikkvideo", add 2 episodes, S01E01 (needs nfo), S01E02 (with json)
+# Update show: "Folkeopplysningen", remove 1 episode, add 1 episode, 1 episode remains
+
+real_kodi = library.kodi
+real_scraper = library.scraper
+real_constants = const
 
 
 def setUpModule():
-    library.Movie.init_databases()
-    library.Show.init_databases()
+    library.databases.stored_movies.filepath = utils.os_join(mock_constants.userdatafolder, "%s.json" %
+                                                             library.databases.stored_movies.name)
+    library.databases.excluded_movies.filepath = utils.os_join(mock_constants.userdatafolder, "%s.json" %
+                                                               library.databases.excluded_movies.name)
+    library.databases.stored_shows.filepath = utils.os_join(mock_constants.userdatafolder, "%s.json" %
+                                                            library.databases.stored_shows.name)
+    library.databases.excluded_shows.filepath = utils.os_join(mock_constants.userdatafolder, "%s.json" %
+                                                              library.databases.excluded_shows.name)
+    library.databases.prioritized_shows.filepath = utils.os_join(mock_constants.userdatafolder, "%s.json" %
+                                                                 library.databases.prioritized_shows.name)
+    library.databases.mediatypes.const = mock_constants
+    library.databases.mediatypes.kodi = mock_kodi
+    library.kodi = mock_kodi
+    library.scraper = mock_scraper
 
+    if os.path.exists(mock_constants.userdatafolder):
+        # delete mock userdata folder
+        shutil.rmtree(mock_constants.userdatafolder)
+    # copy mock userdata folder to userdata so it can be modified
+    shutil.copytree(utils.os_join(const.addonpath, "tests", "mock userdata"), mock_constants.userdatafolder)
+    main.main(argv={"mode": "library", "action": "startup"})
 
 # def tearDownModule():
+#     library.databases.const = real_constants
+#     library.databases.mediatypes.const = real_constants
+#     library.kodi = real_kodi
+#     library.scraper = real_scraper
 
 
-def fake_getmovieinfo(urlid):
-    return fake_movie_data
+def check_movie(name, ext, season=None, episode=None):
+    path = utils.os_join(mock_constants.libpath, "%s movies" % const.provider, "%s.%s" % (utils.stringtofile(name), ext))
+    return path
 
 
-def fake_getshowinfo(urlid):
-    return fake_show_data
+def check_episode(name, ext, season=None, episode=None):
+    path = utils.os_join(mock_constants.libpath, "%s shows" % const.provider, utils.stringtofile(name), "Season %s" % season,
+                         "%s S%02dE%02d.%s" % (utils.stringtofile(name), season, episode, ext))
+    return path
 
 
-def fake_getepinfo(urlid):
-    return fake_episode_data
+class AddMovie(unittest.TestCase):
+    def test_add_movie_htm(self):
+        """Was movie (Beatles) added, with HTM created?"""
+        path = check_movie(name="Beatles", ext="htm")
+        self.assertTrue(isfile(path), msg="File not created:\n%s" % path)
+
+    def test_add_movie_nfo(self):
+        """Was movie (Beatles) added, with NFO created?"""
+        path = check_movie(name="Beatles", ext="nfo")
+        self.assertTrue(isfile(path), msg="File not created:\n%s" % path)
+
+    def test_add_movie_json(self):
+        """Was movie (Beatles) added, with JSON deleted?"""
+        path = check_movie(name="Beatles", ext="json")
+        self.assertFalse(isfile(path), msg="File not removed:\n%s" % path)
 
 
-fake_movie_data = {
-            "title": "The Fake Koala %s Movie" % const.provider,
-            "year": "1337",
-            "plot": "Plot of fake movie goes here",
-            "genre": "Drama",
-            "art": "http://cdn0.nflximg.net/images/8654/9238654.jpg",
-            "in_superuniverse": False,
-            "runtime": "123"}
+class RemoveMovie(unittest.TestCase):
+    def test_remove_movie_htm(self):
+        """Was movie (Thank you for smoking) removed, with HTM deleted?"""
+        path = check_movie(name="Thank you for smoking", ext="htm")
+        self.assertFalse(isfile(path), msg="File not removed:\n%s" % path)
 
-fake_show_data = {
-            "title": "The Fake Koala %s Show" % const.provider,
-            "year": "2000",
-            "plot": "Plot of fake show goes here",
-            "genre": "Drama",
-            "art": "http:/ /cdn1.nflximg.net/images/3089/22243089.jpg",
-            "in_superuniverse": False,
-            }
-
-fake_episode_data = {
-            "title": "The Fake Koala %s Episode" % const.provider,
-            "showtitle": "The Fake Koala %s Show" % const.provider,
-            "season": "1",
-            "episode": "1",
-            "plot": "Plot of fake episode goes here",
-            "runtime": "20",
-            "art": "http://so0.akam.nflximg.com/soa3/189/1425268189.jpg",
-            "in_superuniverse": False,
-}
+    def test_remove_movie_json(self):
+        """Was movie (Thank you for smoking) removed, with JSON created?"""
+        path = check_movie(name="Thank you for smoking", ext="json")
+        self.assertTrue(isfile(path), msg="File not created:\n%s" % path)
 
 
-def fake_getwatchlist():
-    available_movies = {movie.urlid: movie.title for movie in library.Movie.db.all+library.Movie.excluded.all}
-    available_shows = {show.urlid: show.title for show in library.Show.db.all+library.Show.excluded.all}
-    return available_movies, available_shows
+class RemoveShow(unittest.TestCase):
+    def test_remove_show_S02E01_htm(self):
+        """Was show (I Mummidalen) removed, with S02E01 htm deleted?"""
+        path = check_episode(name="I Mummidalen", ext="htm", season=2, episode=1)
+        self.assertFalse(isfile(path), msg="File not removed:\n%s" % path)
+
+    def test_remove_show_S02E01_json(self):
+        """Was show (I Mummidalen) removed, with S02E01 json not created?"""
+        path = check_episode(name="I Mummidalen", ext="json", season=2, episode=1)
+        self.assertFalse(isfile(path), msg="File created:\n%s" % path)
+
+    def test_remove_show_S02E02_htm(self):
+        """Was show (I Mummidalen) removed, with S02E02 htm deleted?"""
+        path = check_episode(name="I Mummidalen", ext="htm", season=2, episode=2)
+        self.assertFalse(isfile(path), msg="File not removed:\n%s" % path)
+
+    def test_remove_show_S02E02_json(self):
+        """Was show (I Mummidalen) removed, with S02E02 json created?"""
+        path = check_episode(name="I Mummidalen", ext="json", season=2, episode=2)
+        self.assertTrue(isfile(path), msg="File not created:\n%s" % path)
 
 
-def fake_getepisodes_return_A_B(urlid):
-    return {
-        "S01E01": {'seasonnr': 1, 'episodenr': 1, 'urlid': "/serie/the-fake-show/KOID25007910/sesong-1/episode-1", "in_superuniverse": False},
-        "S01E02": {'seasonnr': 1, 'episodenr': 2, 'urlid': "/serie/the-fake-show/KOID25007910/sesong-1/episode-2", "in_superuniverse": False}
-        }
+class AddShow(unittest.TestCase):
+    def test_add_show_S01E01_htm(self):
+        """Was show (Sangfoni - musikkvideo) added, with S01E01 htm created?"""
+        path = check_episode(name="Sangfoni - musikkvideo", ext="htm", season=1, episode=1)
+        self.assertTrue(isfile(path), msg="File not created:\n%s" % path)
+
+    def test_add_show_S01E01_nfo(self):
+        """Was show (Sangfoni - musikkvideo) added, with S01E01 nfo created?"""
+        path = check_episode(name="Sangfoni - musikkvideo", ext="nfo", season=1, episode=1)
+        self.assertTrue(isfile(path), msg="File not created:\n%s" % path)
+
+    def test_add_show_S01E01_json(self):
+        """Was show (Sangfoni - musikkvideo) added, with S01E02 json deleted?"""
+        path = check_episode(name="Sangfoni - musikkvideo", ext="json", season=1, episode=2)
+        self.assertFalse(isfile(path), msg="File not removed:\n%s" % path)
+
+    def test_add_show_S01E02_htm(self):
+        """Was show (Sangfoni - musikkvideo) added, with S01E02 htm created?"""
+        path = check_episode(name="Sangfoni - musikkvideo", ext="htm", season=1, episode=2)
+        self.assertTrue(isfile(path), msg="File not created:\n%s" % path)
 
 
-def fake_getepisodes_return_A(urlid):
-    return {
-        "S01E01": {'seasonnr': 1, 'episodenr': 1, 'urlid': "/serie/the-fake-show/KOID25007910/sesong-1/episode-1", "in_superuniverse": False},
-        }
+class UpdateShow(unittest.TestCase):
+    def test_update_show_S01E01_htm(self):
+        """Was show (Folkeopplysningen) updated, with S01E01 htm deleted?"""
+        path = check_episode(name="Folkeopplysningen", ext="htm", season=1, episode=1)
+        self.assertFalse(isfile(path), msg="File not removed:\n%s" % path)
+
+    def test_update_show_S01E01_json(self):
+        """Was show (Folkeopplysningen) updated, with S01E01 json created?"""
+        path = check_episode(name="Folkeopplysningen", ext="json", season=1, episode=1)
+        self.assertTrue(isfile(path), msg="File not created:\n%s" % path)
+
+    def test_update_show_S01E02_htm(self):
+        """Was show (Folkeopplysningen) updated, with S01E02 htm retained?"""
+        path = check_episode(name="Folkeopplysningen", ext="htm", season=1, episode=2)
+        self.assertTrue(isfile(path), msg="File not retained:\n%s" % path)
+
+    def test_update_show_S01E03_htm(self):
+        """Was show (Folkeopplysningen) updated, with S01E03 htm created?"""
+        path = check_episode(name="Folkeopplysningen", ext="htm", season=1, episode=3)
+        self.assertTrue(isfile(path), msg="File not created:\n%s" % path)
+
+    def test_update_show_S01E03_json(self):
+        """Was show (Folkeopplysningen) updated, with S01E03 json deleted?"""
+        path = check_episode(name="Folkeopplysningen", ext="json", season=1, episode=3)
+        self.assertFalse(isfile(path), msg="File not removed:\n%s" % path)
 
 
-def fake_getepisodes_return_A_B_C(urlid):
-    return {
-        "S01E01": {'seasonnr': 1, 'episodenr': 1, 'urlid': "/serie/the-fake-show/KOID25007910/sesong-1/episode-1", "in_superuniverse": False},
-        "S01E02": {'seasonnr': 1, 'episodenr': 2, 'urlid': "/serie/the-fake-show/KOID25007910/sesong-1/episode-2", "in_superuniverse": False},
-        "S02E01": {'seasonnr': 2, 'episodenr': 1, 'urlid': "/serie/the-fake-show/KOID25007910/sesong-2/episode-1", "in_superuniverse": False}
-        }
+class MovieExcluded(unittest.TestCase):
+    def test_movie_excluded(self):
+        """Was movie (Wolf Children) still excluded?"""
+        path = utils.os_join(mock_constants.libpath, "%s movies" % const.provider,
+                             "Wolf Children.htm")
+        self.assertFalse(isfile(path), msg="File created:\n%s" % path)
 
 
-def fake_getepisodes_return_A_C(urlid):
-    return {
-        "S01E01": {'seasonnr': 1, 'episodenr': 1, 'urlid': "/serie/the-fake-show/KOID25007910/sesong-1/episode-1", "in_superuniverse": False},
-        "S02E01": {'seasonnr': 2, 'episodenr': 1, 'urlid': "/serie/the-fake-show/KOID25007910/sesong-2/episode-1", "in_superuniverse": False}
-        }
+class ShowExcluded(unittest.TestCase):
+    def test_show_excluded(self):
+        """Was show (Fantorangen) still excluded?"""
+        path = utils.os_join(mock_constants.libpath, "%s shows" % const.provider, "Fantorangen")
+        self.assertFalse(isfile(path), msg="File created:\n%s" % path)
 
 
-def fake_getepisodes_return_C_D(urlid):
-    return {
-        "S02E01": {'seasonnr': 2, 'episodenr': 1, 'urlid': "/serie/the-fake-show/KOID25007910/sesong-2/episode-1", "in_superuniverse": False},
-        "S02E02": {'seasonnr': 2, 'episodenr': 2, 'urlid': "/serie/the-fake-show/KOID25007910/sesong-2/episode-2", "in_superuniverse": False},
-        }
 
+# def read_settings_xml(player):
+#     playerfilername = "chrome" if player == "Chrome" else "iexplore"
+#     soup = BeautifulSoup(os_join(const.masterprofilefolder, "playercorefactory.xml")).getroot()
+#     soup = BeautifulSoup(xml)
+#     print type(soup)
+#     for action in soup.find_all("setting", type="action"):
+#         script, mode, action = re.match(r"RunScript\(([\w\.]*), mode=(\w*), action=(\w*).*", action["action"]).groups()
+#         print script
+#         print mode
+#         print action
+#     raise Exception("Could not found player file for %s" % player)
 
-class MovieAdd(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.movie = library.Movie(urlid="/program/KOIF10009214/we-dont-live-here-anymore", title="We Don't Live Here Anymore")
-        library.execute(to_update_add=[cls.movie])
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.movie.remove()
-
-    def test_add_movie_to_kodi_lib(self):
-        """Does movie.add_update() cause the movie to be added to kodi library?"""
-        libfiles = [movie["file"] for movie in rpc("VideoLibrary.GetMovies", properties=["file"])['movies']]
-        self.assertIn(uni_join(self.movie.path, self.movie.htmfilename), libfiles)
-
-    def test_add_movie_to_database(self):
-        """Does movie.add_update() cause the movie to be added to Movie.database?"""
-        self.assertIn(self.movie.urlid, library.Movie.db.ids)
-
-
-class MovieRemove(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.movie = library.Movie(urlid="/program/KOIF47000608/der-untergang", title="Der Untergang")
-        library.execute(to_update_add=[cls.movie])
-        libfiles = [movie["file"] for movie in rpc("VideoLibrary.GetMovies", properties=["file"])['movies']]
-        assert uni_join(cls.movie.path, cls.movie.htmfilename) in libfiles
-        library.execute(to_remove=[cls.movie])
-
-    def test_remove_movie_from_kodi_lib(self):
-        """Does movie.remove() cause the movie be removed from kodi library?"""
-        libfiles = [movie["file"] for movie in rpc("VideoLibrary.GetMovies", properties=["file"])['movies']]
-        self.assertNotIn(self.movie.htmfilename, libfiles)
-
-    def test_remove_movie_to_database(self):
-        """Does movie.remove() cause the movie to be removed from Movie.database?"""
-        self.assertNotIn(self.movie.urlid, library.Movie.db.ids)
-
-
-class MovieNFO(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        library.scraper.getinfodict = fake_getmovieinfo
-        cls.movie = library.Movie(urlid="/program/fakemovieurlid/the-fake-movie", title="The Fake Koala %s Movie" % const.provider)
-        library.execute(to_update_add=[cls.movie])
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.movie.remove()
-        library.scraper.getinfodict = real_getinfodict
-
-    def test_movie_with_NFO_added_to_kodi_lib(self):
-        """Does movie.add_update() cause the movie to be added to kodi library when .nfo created?"""
-        libfiles = [movie["file"] for movie in rpc("VideoLibrary.GetMovies", properties=["file"])['movies']]
-        self.assertIn(uni_join(self.movie.path, self.movie.htmfilename), libfiles)
-
-    def test_movie_NFO_data_correctly_added(self):
-        """Does data stored with fake movie in Kodi library correpond with inputed NFO data?"""
-        returned_infodict = rpc("VideoLibrary.GetMovies",
-                                properties=["title", "year", "plot", "art", "runtime"],
-                                multifilter={"and": [
-                                     ("filename", "is", self.movie.htmfilename),
-                                     ("path", "startswith", self.movie.path)]})
-        returned_infodict = returned_infodict["movies"][0]
-        excpected_returned_infodict = {
-            "title": returned_infodict["label"],
-            "year": str(returned_infodict["year"]),
-            "runtime": str(returned_infodict["runtime"]/60),
-            "plot": returned_infodict["plot"],
-            "art": unquote_plus(returned_infodict["art"]["poster"].replace("image://", "").lower().rstrip("/")),
-            "in_superuniverse": False,
-        }
-        self.assertEqual(excpected_returned_infodict, fake_movie_data, msg="\n%s\n%s" % (excpected_returned_infodict, fake_movie_data))
-
-
-class ShowAdd(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        library.scraper.getepisodes = fake_getepisodes_return_A_B
-        cls.show = library.Show(urlid="mr-selfridge", title="Mr. Selfridge")
-        library.execute(to_update_add=[cls.show])
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.show.remove()
-        library.scraper.getepisodes = real_getepisodes
-        library.scraper.getinfodict = real_getinfodict
-
-    def test_add_show_to_kodi_lib(self):
-        """Does show.add_update() cause the show to be added to kodi library?"""
-        episodepath = uni_join(const.libpath, "%s shows" % const.provider, "%s\\" % stringtofile(self.show.title))
-        libfiles = [show["file"] for show in rpc("VideoLibrary.GetTVShows", properties=["file"])['tvshows']]
-        self.assertIn(episodepath, libfiles)
-
-    def test_add_show_to_database(self):
-        """Does show.add_update() cause the show to be added to show.database?"""
-        self.assertIn(self.show.urlid, library.Show.db.ids)
-
-
-class ShowUpdate(unittest.TestCase):
-    def setUp(self):
-        library.scraper.getepisodes = fake_getepisodes_return_A_B
-        self.show = library.Show(urlid="fader-brown", title="Father Brown")
-        library.execute(to_update_add=[self.show])
-        stored_episodes = rpc("VideoLibrary.GetEpisodes",
-                              filter={"field": "path", "operator": "startswith", "value": self.show.path}).get('episodes', [])
-        assert len(stored_episodes) == 2
-
-    def tearDown(self):
-        self.show.remove()
-        library.scraper.getepisodes = real_getepisodes
-
-    def test_add_one_episode(self):
-        """Does making getepisodes() return 3 episodes cause one episode to be added to the kodi library?"""
-        library.scraper.getepisodes = fake_getepisodes_return_A_B_C
-        library.execute(to_update_add=[self.show])
-        stored_episodes = rpc("VideoLibrary.GetEpisodes",
-                              filter={"field": "path", "operator": "startswith", "value": self.show.path}).get('episodes', [])
-        self.assertEqual(len(stored_episodes), 3, msg="stored_episodes:\n%s" % stored_episodes)
-
-    def test_remove_one_episode(self):
-        """Does making getepisodes() return 1 episode cause one episode to be removed from the kodi library?"""
-        library.scraper.getepisodes = fake_getepisodes_return_A
-        library.execute(to_update_add=[self.show])
-        stored_episodes = rpc("VideoLibrary.GetEpisodes",
-                              filter={"field": "path", "operator": "startswith", "value": self.show.path}).get('episodes', [])
-        self.assertEqual(len(stored_episodes), 1, msg="stored_episodes:\n%s" % stored_episodes)
-
-    def test_replace_both_added_episodes(self):
-        """Does making getepisodes() return 2 episodes different from the ones in the kodi library cause
-         the episodes in the library to be replaced?"""
-        stored_episodes_A_B = rpc("VideoLibrary.GetEpisodes",
-                                  filter={"field": "path", "operator": "startswith", "value": self.show.path}).get('episodes', [])
-        stored_episodes_A_B.sort()
-        library.scraper.getepisodes = fake_getepisodes_return_C_D
-        library.execute(to_update_add=[self.show])
-        stored_episodes_C_D = rpc("VideoLibrary.GetEpisodes",
-                                  filter={"field": "path", "operator": "startswith", "value": self.show.path}).get('episodes', [])
-        stored_episodes_C_D.sort()
-        # better assertion: there should be no overlap
-        self.assertNotEqual(stored_episodes_A_B, stored_episodes_C_D)
-
-    def test_add_one_episode_remove_one_episode(self):
-        """Does making getepisodes() return one different from one in the kodi library cause
-        one episode to be added to the library and one removed?"""
-        stored_episodes_A_B = rpc("VideoLibrary.GetEpisodes",
-                                  filter={"field": "path", "operator": "startswith", "value": self.show.path}).get('episodes', [])
-        stored_episodes_A_B.sort()
-        library.scraper.getepisodes = fake_getepisodes_return_A_C
-        library.execute(to_update_add=[self.show])
-        stored_episodes_A_C = rpc("VideoLibrary.GetEpisodes",
-                                  filter={"field": "path", "operator": "startswith", "value": self.show.path}).get('episodes', [])
-        stored_episodes_A_C.sort()
-        self.assertEqual(stored_episodes_A_B[0], stored_episodes_A_C[0])
-        self.assertNotEqual(stored_episodes_A_B[1], stored_episodes_A_C[1])
-
-
-class ShowRemove(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        library.scraper.getepisodes = fake_getepisodes_return_A_B
-        cls.show = library.Show(urlid="broadchurch", title="Broadchurch")
-        library.execute(to_update_add=[cls.show])
-        cls.episodepath = uni_join(const.libpath, "%s shows" % const.provider, "%s\\" % stringtofile(cls.show.title))
-        libfiles = [show["file"] for show in rpc("VideoLibrary.GetTVShows", properties=["file"])['tvshows']]
-        assert cls.episodepath in libfiles
-        library.execute(to_remove=[cls.show])
-
-    @classmethod
-    def tearDownClass(cls):
-        library.scraper.getepisodes = real_getepisodes
-
-    def test_remove_show_from_kodi_lib(self):
-        """Does show.remove() cause the show be removed from kodi library?"""
-        libfiles = [show["file"] for show in rpc("VideoLibrary.GetTVShows", properties=["file"])['tvshows']]
-        self.assertNotIn(self.episodepath, libfiles)
-
-    def test_remove_show_to_database(self):
-        """Does show.remove() cause the show to be removed from Show.database?"""
-        self.assertNotIn(self.show.urlid, library.Show.db.ids)
-
-
-class ShowNFOEpisodeNFO(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        library.scraper.getshowinfo = fake_getshowinfo
-        library.scraper.getinfodict = fake_getepinfo
-        library.scraper.getepisodes = fake_getepisodes_return_A
-        cls.show = library.Show(urlid="faketvshowurlid", title="The Fake Koala %s Show" % const.provider)
-        cls.episodepath = uni_join(const.libpath, "%s shows" % const.provider, "%s\\" % stringtofile(cls.show.title))
-        library.execute(to_update_add=[cls.show])
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.show.remove()
-        library.scraper.getepisodes = real_getepisodes
-        library.scraper.getshowinfo = real_getshowinfo
-
-    def test_show_with_NFO_added_to_kodi_lib(self):
-        """Does show.add_update() cause the show to be added to kodi library when .nfo created?"""
-        libfiles = [show["file"] for show in rpc("VideoLibrary.GetTVShows", properties=["file"])['tvshows']]
-        self.assertIn(self.episodepath, libfiles)
-
-    def test_show_NFO_data_correctly_added(self):
-        """Does data stored with fake show in Kodi library correpond with inputed NFO data?"""
-        returned_infodict = rpc("VideoLibrary.GetTVShows",
-                                properties=["year", "plot", "art"],
-                                filter={"field": "title", "operator": "is", "value": "The Fake Koala %s Show" % const.provider})
-        returned_infodict = returned_infodict["tvshows"][0]
-        excpected_returned_infodict = {
-            "title": returned_infodict["label"],
-            "year": unicode(returned_infodict["year"]),
-            "plot": returned_infodict["plot"],
-            "art": unquote_plus(returned_infodict["art"]["poster"].replace("image://", "").lower().rstrip("/")),
-            "in_superuniverse": False,
-        }
-        self.assertEqual(excpected_returned_infodict, fake_show_data, msg="\n%s\n%s" % (excpected_returned_infodict, fake_show_data))
-
-    def test_episode_with_NFO_added_to_kodi_lib(self):
-        """Is episode added to kodi library when .nfo created?"""
-        stored_episodes = rpc("VideoLibrary.GetEpisodes",
-                              filter={"field": "tvshow", "operator": "is", "value": "The Fake Koala %s Show" % const.provider}).get('episodes', [])
-        self.assertEqual(len(stored_episodes), 1, msg="stored_episodes:\n%s" % stored_episodes)
-
-    def test_episode_NFO_data_correctly_added(self):
-        """Does data stored with fake episde in Kodi library correpond with inputed NFO data?"""
-        returned_infodict = rpc("VideoLibrary.GetEpisodes",
-                                properties=["showtitle", "season", "episode", "plot", "runtime", "art"],
-                                filter={"field": "tvshow", "operator": "is", "value": "The Fake Koala %s Show" % const.provider})
-        returned_infodict = returned_infodict['episodes'][0]
-        excpected_returned_infodict = {
-            "title": returned_infodict["label"].replace("%dx%02d. " % (returned_infodict["season"], returned_infodict["episode"]), ""),
-            "showtitle": returned_infodict["showtitle"],
-            "season": unicode(returned_infodict["season"]),
-            "episode": unicode(returned_infodict["episode"]),
-            "plot": returned_infodict["plot"],
-            "runtime": unicode(returned_infodict["runtime"]/60),
-            "art": unquote_plus(returned_infodict["art"]["thumb"].replace("image://", "").lower().rstrip("/")),
-            "in_superuniverse": False,
-        }
-        self.assertEqual(excpected_returned_infodict, fake_episode_data, msg="\n%s\n%s" % (excpected_returned_infodict, fake_episode_data))

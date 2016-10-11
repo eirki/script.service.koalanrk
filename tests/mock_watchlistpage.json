@@ -1,0 +1,641 @@
+{
+  "notifications": [],
+  "recentlyWatched": [],
+  "favorites": [
+
+{
+      "isAvailable": true,
+      "program": {
+        "seriesId": "sangfoni-musikkvideo",
+        "hasOnDemandRightsEpisodes": true,
+        "totalEpisodesInSeason": "11",
+        "image": {
+          "isDefaultImage": false,
+          "webImages": [
+            {
+              "imageUrl": "https://gfx.nrk.no/JEB1NRY5fiV6mp9ADA5vRwnCgA5jeL9Q5PZGEbw6wK4g",
+              "pixelWidth": 300
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/JEB1NRY5fiV6mp9ADA5vRw7SL5H-a120NPZGEbw6wK4g",
+              "pixelWidth": 600
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/JEB1NRY5fiV6mp9ADA5vRw0aKRFj0OYxJPZGEbw6wK4g",
+              "pixelWidth": 960
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/JEB1NRY5fiV6mp9ADA5vRwwiWExWsH7aZPZGEbw6wK4g",
+              "pixelWidth": 1920
+            }
+          ],
+          "imageWidthCropInfo": "JEB1NRY5fiV6mp9ADA5vRw?x=0.00000000000000000&y=0.00000000000000000&w=1.00000000000000000&h=1.00000000000000000",
+          "imageInfo": {
+            "cropInfo": {
+              "y": 0.0,
+              "x": 0.0,
+              "width": 0.0,
+              "height": 0.0
+            },
+            "id": "JEB1NRY5fiV6mp9ADA5vRw"
+          }
+        },
+        "usageRights": {
+          "availableFrom": "2016-09-14T14:00:00+02:00",
+          "availableTo": "9999-12-31T00:00:00+01:00",
+          "hasRightsNow": true,
+          "isGeoBlocked": false
+        },
+        "episodeNumberOrDate": "8:11",
+        "id": "MSUS49001915",
+        "category": {
+          "displayValue": "Barn",
+          "isRadioCategory": false,
+          "id": "barn",
+          "isTvCategory": false
+        },
+        "episodeNumber": "8",
+        "seasonDisplayType": 1,
+        "title": "Sangfoni - musikkvideo",
+        "programUrlMetadata": "sesong-1/episode-8",
+        "belongsToList": "UserData",
+        "plugTitle": null,
+        "seriesTitle": "Sangfoni - musikkvideo",
+        "seasonNumber": "1",
+        "description": "Musikkvideo til sangen \"Det sn\u00f8r, det sn\u00f8r\".",
+        "viewCount": 0,
+        "sourceMedium": 1,
+        "mainTitle": "\"Det sn\u00f8r, det sn\u00f8r\" - Sangfoni",
+        "showNewEpisodeAlert": false,
+        "programType": "Episode",
+        "categories": [
+          {
+            "displayValue": "Barn",
+            "isRadioCategory": false,
+            "id": "barn",
+            "isTvCategory": false
+          }
+        ],
+        "myContentId": "sangfoni-musikkvideo",
+        "showRightsMessage": false,
+        "rightsMessage": "Ikke tilgjengelig",
+        "promoLabels": [],
+        "productionYear": 2015,
+        "fullTitle": "\"Det sn\u00f8r, det sn\u00f8r\" - Sangfoni 8:11"
+      },
+      "favorite": {
+        "notifications": [],
+        "added": "2016-09-21T12:54:51+02:00",
+        "type": 1
+      },
+      "lastSeen": null
+    },
+    {
+      "isAvailable": true,
+      "program": {
+        "seriesId": "",
+        "hasOnDemandRightsEpisodes": true,
+        "totalEpisodesInSeason": null,
+        "image": {
+          "isDefaultImage": false,
+          "webImages": [
+            {
+              "imageUrl": "https://gfx.nrk.no/5I6j2RF65G4hwoq9HZpK9gYsgEzZtog3zdLR01ZpoH0g",
+              "pixelWidth": 300
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/5I6j2RF65G4hwoq9HZpK9gnVZ0zb0eMVfdLR01ZpoH0g",
+              "pixelWidth": 600
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/5I6j2RF65G4hwoq9HZpK9grxfDGkfPgRTdLR01ZpoH0g",
+              "pixelWidth": 960
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/5I6j2RF65G4hwoq9HZpK9gTWeGYVCwFbPdLR01ZpoH0g",
+              "pixelWidth": 1920
+            }
+          ],
+          "imageWidthCropInfo": "5I6j2RF65G4hwoq9HZpK9g?x=0.00000000000000000&y=0.00007678132678137&w=1.00000000000000000&h=0.99992321867321870",
+          "imageInfo": {
+            "cropInfo": {
+              "y": 0.0,
+              "x": 0.0,
+              "width": 0.0,
+              "height": 0.0
+            },
+            "id": "5I6j2RF65G4hwoq9HZpK9g"
+          }
+        },
+        "usageRights": {
+          "availableFrom": "2015-10-18T13:04:31+02:00",
+          "availableTo": "2017-11-30T23:59:00+01:00",
+          "hasRightsNow": true,
+          "isGeoBlocked": true
+        },
+        "episodeNumberOrDate": null,
+        "id": "KOIF41004813",
+        "category": {
+          "displayValue": "Film",
+          "isRadioCategory": false,
+          "id": "film",
+          "isTvCategory": false
+        },
+        "episodeNumber": null,
+        "seasonDisplayType": 0,
+        "title": "Wolf Children",
+        "programUrlMetadata": "wolf-children",
+        "belongsToList": "UserData",
+        "plugTitle": null,
+        "seriesTitle": null,
+        "seasonNumber": null,
+        "description": "Japansk fantasidrama, 2012. Den unge kvinnen Hana forelsker seg i en varulv. Sammen f\u00e5r de to barn, som begge er halvt menneske og halvt ulv. Etter en tragisk familieulykke s\u00f8ker Hana tilflukt i en by p\u00e5 landet. Her fors\u00f8ker hun \u00e5 bygge et liv for seg selv og sine barn. Det byr p\u00e5 uventede utfordringer. Med: Kumiko As\u00f4, Megumi Hayashibara, Takuma Hiraoka mfl. Regi: Mamoru Hosoda. (Wolf Children) (12 \u00e5r)",
+        "viewCount": 0,
+        "sourceMedium": 1,
+        "mainTitle": "Wolf Children",
+        "showNewEpisodeAlert": false,
+        "programType": "Program",
+        "categories": [
+          {
+            "displayValue": "Film",
+            "isRadioCategory": false,
+            "id": "film",
+            "isTvCategory": false
+          },
+          {
+            "displayValue": "Drama/serier",
+            "isRadioCategory": false,
+            "id": "drama-serier",
+            "isTvCategory": false
+          }
+        ],
+        "myContentId": "KOIF41004813",
+        "showRightsMessage": false,
+        "rightsMessage": "Ikke tilgjengelig",
+        "promoLabels": [],
+        "productionYear": 2012,
+        "fullTitle": "Wolf Children"
+      },
+      "favorite": {
+        "notifications": [],
+        "added": "2016-09-14T05:46:05+02:00",
+        "type": 0
+      },
+      "lastSeen": null
+    }    ,
+{
+      "isAvailable": true,
+      "program": {
+        "seriesId": "",
+        "hasOnDemandRightsEpisodes": true,
+        "totalEpisodesInSeason": null,
+        "image": {
+          "isDefaultImage": false,
+          "webImages": [
+            {
+              "imageUrl": "https://gfx.nrk.no/YbEGcR0qSjHSricSivisGAKYNw0x1oB-IWFSmBqHVJGA",
+              "pixelWidth": 300
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/YbEGcR0qSjHSricSivisGAWwMN50mA2hIWFSmBqHVJGA",
+              "pixelWidth": 600
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/YbEGcR0qSjHSricSivisGAtEOqFbqcmdMWFSmBqHVJGA",
+              "pixelWidth": 960
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/YbEGcR0qSjHSricSivisGAZnBXaq4eR_kWFSmBqHVJGA",
+              "pixelWidth": 1920
+            }
+          ],
+          "imageWidthCropInfo": "YbEGcR0qSjHSricSivisGA?x=0.00000000000000000&y=0.00000000000000000&w=1.00000000000000000&h=1.00000000000000000",
+          "imageInfo": {
+            "cropInfo": {
+              "y": 0.0,
+              "x": 0.0,
+              "width": 0.0,
+              "height": 0.0
+            },
+            "id": "YbEGcR0qSjHSricSivisGA"
+          }
+        },
+        "usageRights": {
+          "availableFrom": "2016-09-11T21:07:52+02:00",
+          "availableTo": "2016-10-13T01:50:51+02:00",
+          "hasRightsNow": true,
+          "isGeoBlocked": true
+        },
+        "episodeNumberOrDate": null,
+        "id": "KOIF43009111",
+        "category": {
+          "displayValue": "Film",
+          "isRadioCategory": false,
+          "id": "film",
+          "isTvCategory": false
+        },
+        "episodeNumber": null,
+        "seasonDisplayType": 0,
+        "title": "Beatles",
+        "programUrlMetadata": "beatles",
+        "belongsToList": "UserData",
+        "plugTitle": null,
+        "seriesTitle": null,
+        "seasonNumber": null,
+        "description": "No. drama, 2014. Kim har alltid dr\u00f8mt om \u00e5 v\u00e6re Paul McCartney. Han og vennene Seb, Gunnar og Ola vokser opp i Oslo p\u00e5 slutten av 1960-tallet. De er Beatles-frelste, er i opposisjon til foreldrene, lar h\u00e5ret gro og famler seg fram i det nye politiske landskapet. Etter hvert som de blir eldre, endrer vennskapet deres seg. Uskylden g\u00e5r tapt, og kan ikke vinnes tilbake. En munter, varm og til tider r\u00e5 historie om oppvekst, basert p\u00e5 Lars Saabye Christensens roman. Med: Louis Williams, Ole Nicolai J\u00f8rgensen, Halvor Tangen Schultz mfl. Regi: Peter Flinth",
+        "viewCount": 0,
+        "sourceMedium": 1,
+        "mainTitle": "Beatles",
+        "showNewEpisodeAlert": false,
+        "programType": "Program",
+        "categories": [
+          {
+            "displayValue": "Film",
+            "isRadioCategory": false,
+            "id": "film",
+            "isTvCategory": false
+          },
+          {
+            "displayValue": "Drama/serier",
+            "isRadioCategory": false,
+            "id": "drama-serier",
+            "isTvCategory": false
+          }
+        ],
+        "myContentId": "KOIF43009111",
+        "showRightsMessage": false,
+        "rightsMessage": "Ikke tilgjengelig",
+        "promoLabels": [],
+        "productionYear": 2012,
+        "fullTitle": "Beatles"
+      },
+      "favorite": {
+        "notifications": [],
+        "added": "2016-09-13T17:08:20+02:00",
+        "type": 0
+      },
+      "lastSeen": null
+    },
+    {
+      "isAvailable": true,
+      "program": {
+        "seriesId": "folkeopplysningen",
+        "hasOnDemandRightsEpisodes": true,
+        "totalEpisodesInSeason": "6",
+        "image": {
+          "isDefaultImage": false,
+          "webImages": [
+            {
+              "imageUrl": "https://gfx.nrk.no/Ea2zE-CTF1yDsm_9ZQyhBwHGPn-omhneWguwrKzC1uPg",
+              "pixelWidth": 300
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/Ea2zE-CTF1yDsm_9ZQyhBwgFUhueZYc36guwrKzC1uPg",
+              "pixelWidth": 600
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/Ea2zE-CTF1yDsm_9ZQyhBwQBcGpv7bFkGguwrKzC1uPg",
+              "pixelWidth": 960
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/Ea2zE-CTF1yDsm_9ZQyhBwYTYB5uePIViguwrKzC1uPg",
+              "pixelWidth": 1920
+            }
+          ],
+          "imageWidthCropInfo": "Ea2zE-CTF1yDsm_9ZQyhBw?x=0.11337502111128530&y=0.03791479616559397&w=0.81252773246834480&h=0.65408482463701740",
+          "imageInfo": {
+            "cropInfo": {
+              "y": 0.0,
+              "x": 0.0,
+              "width": 0.0,
+              "height": 0.0
+            },
+            "id": "Ea2zE-CTF1yDsm_9ZQyhBw"
+          }
+        },
+        "usageRights": {
+          "availableFrom": "2014-09-28T20:47:08+02:00",
+          "availableTo": "2021-05-31T23:59:00+02:00",
+          "hasRightsNow": true,
+          "isGeoBlocked": true
+        },
+        "episodeNumberOrDate": "4:6",
+        "id": "KMTE50007412",
+        "category": {
+          "displayValue": "Vitenskap",
+          "isRadioCategory": false,
+          "id": "vitenskap",
+          "isTvCategory": false
+        },
+        "episodeNumber": "4",
+        "seasonDisplayType": 1,
+        "title": "Folkeopplysningen",
+        "programUrlMetadata": "sesong-2/episode-4",
+        "belongsToList": "UserData",
+        "plugTitle": null,
+        "seriesTitle": "Folkeopplysningen",
+        "seasonNumber": "2",
+        "description": "Norsk dokumentarserie. Folkeopplysningen ser p\u00e5 fenomenet matallergi og intoleranse. En million nordmenn oppgir at de har matallergi eller er intolerante, men hvorfor t\u00e5ler vi ikke lenger melk og br\u00f8d? Programleder Andreas Wahl blir kurert for egne br\u00f8dtraumer hos en kinesiolog og sender kjernesunne Eva til allergitesting p\u00e5 alternativmarkedet. Sesong 2 (4:6)",
+        "viewCount": 0,
+        "sourceMedium": 1,
+        "mainTitle": "Folkeopplysningen",
+        "showNewEpisodeAlert": false,
+        "programType": "Episode",
+        "categories": [
+          {
+            "displayValue": "Vitenskap",
+            "isRadioCategory": false,
+            "id": "vitenskap",
+            "isTvCategory": false
+          }
+        ],
+        "myContentId": "folkeopplysningen",
+        "showRightsMessage": false,
+        "rightsMessage": "Ikke tilgjengelig",
+        "promoLabels": [],
+        "productionYear": 2013,
+        "fullTitle": "Folkeopplysningen 4:6"
+      },
+      "favorite": {
+        "notifications": [],
+        "added": "2016-09-09T02:57:09+02:00",
+        "type": 1
+      },
+      "lastSeen": {
+        "at": "2016-09-18T19:29:29+02:00",
+        "position": 1680,
+        "percentageWatched": 94.0,
+        "percentageAssumedFinished": 95.0,
+        "excludedFromResume": false
+      }
+    },
+   {
+      "isAvailable": false,
+      "program": {
+        "seriesId": "",
+        "hasOnDemandRightsEpisodes": true,
+        "totalEpisodesInSeason": null,
+        "image": {
+          "isDefaultImage": false,
+          "webImages": [
+            {
+              "imageUrl": "https://gfx.nrk.no/Tk7pJvok8dUeLT4f185gCg2r-5Ns55b98fC6heUj4bWw",
+              "pixelWidth": 300
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/Tk7pJvok8dUeLT4f185gCgwYDCIUTTsYQfC6heUj4bWw",
+              "pixelWidth": 600
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/Tk7pJvok8dUeLT4f185gCgH-JSZHtVIeEfC6heUj4bWw",
+              "pixelWidth": 960
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/Tk7pJvok8dUeLT4f185gCgEwDSpBdsqWEfC6heUj4bWw",
+              "pixelWidth": 1920
+            }
+          ],
+          "imageWidthCropInfo": "Tk7pJvok8dUeLT4f185gCg?x=0.17292432964005690&y=0.00000000000000000&w=0.74264919355725420&h=0.63055120207691400",
+          "imageInfo": {
+            "cropInfo": {
+              "y": 0.0,
+              "x": 0.0,
+              "width": 0.0,
+              "height": 0.0
+            },
+            "id": "Tk7pJvok8dUeLT4f185gCg"
+          }
+        },
+        "usageRights": {
+          "availableFrom": "2014-04-26T10:00:00+02:00",
+          "availableTo": "2016-08-18T14:02:50+02:00",
+          "hasRightsNow": false,
+          "isGeoBlocked": true
+        },
+        "episodeNumberOrDate": null,
+        "id": "KOIF41008105",
+        "category": {
+          "displayValue": "Film",
+          "isRadioCategory": false,
+          "id": "film",
+          "isTvCategory": false
+        },
+        "episodeNumber": null,
+        "seasonDisplayType": 0,
+        "title": "Thank you for smoking",
+        "programUrlMetadata": "thank-you-for-smoking",
+        "belongsToList": "UserData",
+        "plugTitle": null,
+        "seriesTitle": null,
+        "seasonNumber": null,
+        "description": "Amerikansk komedie fra 2006.\r\nNick Naylor er Big Tobaccos fremste talsmann og forkjemper for r\u00f8ykernes og sigarettprodusentenes rettigheter i USAs nypuritanske samfunn. Han er utstyrt med talegaver som kan \"omvende\" selv den mest ihuga antir\u00f8yker til en storr\u00f8yker av dimensjoner. \r\nMed bl.a. Aaron Eckhart, Maria Bello, Cameron Bright, Adam Brody, Sam Elliott, Katie Holmes, David Koechner, Rob Lowe, William H. Macy,  J.K. Simmons, Robert Duvall. Regi: Jason Reitman. (7 \u00e5r)",
+        "viewCount": 0,
+        "sourceMedium": 1,
+        "mainTitle": "Thank you for smoking",
+        "showNewEpisodeAlert": false,
+        "programType": "Program",
+        "categories": [
+          {
+            "displayValue": "Film",
+            "isRadioCategory": false,
+            "id": "film",
+            "isTvCategory": false
+          },
+          {
+            "displayValue": "Drama/serier",
+            "isRadioCategory": false,
+            "id": "drama-serier",
+            "isTvCategory": false
+          }
+        ],
+        "myContentId": "KOIF41008105",
+        "showRightsMessage": false,
+        "rightsMessage": "Ikke tilgjengelig",
+        "promoLabels": [],
+        "productionYear": 2005,
+        "fullTitle": "Thank you for smoking"
+      },
+      "favorite": {
+        "notifications": [],
+        "added": "2015-12-04T12:31:12+01:00",
+        "type": 0
+      },
+      "lastSeen": null
+    },
+{
+      "isAvailable": false,
+      "program": {
+        "seriesId": "",
+        "hasOnDemandRightsEpisodes": true,
+        "totalEpisodesInSeason": null,
+        "image": {
+          "isDefaultImage": true,
+          "webImages": [
+            {
+              "imageUrl": "https://gfx.nrk.no/bRo_qvzYs5fpNETMMk69pg4a5os1oZqOiiUx_GflP6Gw",
+              "pixelWidth": 300
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/bRo_qvzYs5fpNETMMk69pgwDHjn9ZhPbmiUx_GflP6Gw",
+              "pixelWidth": 600
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/bRo_qvzYs5fpNETMMk69pgFKYwPlHKWumiUx_GflP6Gw",
+              "pixelWidth": 960
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/bRo_qvzYs5fpNETMMk69pgDRFy13HGYY-iUx_GflP6Gw",
+              "pixelWidth": 1920
+            }
+          ],
+          "imageWidthCropInfo": "bRo_qvzYs5fpNETMMk69pg",
+          "imageInfo": {
+            "cropInfo": {
+              "y": 0.0,
+              "x": 0.0,
+              "width": 0.0,
+              "height": 0.0
+            },
+            "id": "bRo_qvzYs5fpNETMMk69pg"
+          }
+        },
+        "usageRights": {
+          "availableFrom": null,
+          "availableTo": null,
+          "hasRightsNow": false,
+          "isGeoBlocked": true
+        },
+        "episodeNumberOrDate": null,
+        "id": "OBUI51007101",
+        "category": {
+          "displayValue": "Barn",
+          "isRadioCategory": false,
+          "id": "barn",
+          "isTvCategory": false
+        },
+        "episodeNumber": null,
+        "seasonDisplayType": 0,
+        "title": "I Mummidalen",
+        "programUrlMetadata": "i-mummidalen",
+        "belongsToList": "UserData",
+        "plugTitle": null,
+        "seriesTitle": null,
+        "seasonNumber": null,
+        "description": "Finsk animasjonsserie etter Tove Janssons historier.",
+        "viewCount": 0,
+        "sourceMedium": 1,
+        "mainTitle": "I Mummidalen",
+        "showNewEpisodeAlert": false,
+        "programType": "Program",
+        "categories": [
+          {
+            "displayValue": "Barn",
+            "isRadioCategory": false,
+            "id": "barn",
+            "isTvCategory": false
+          }
+        ],
+        "myContentId": "OBUI51007101",
+        "showRightsMessage": false,
+        "rightsMessage": "Ikke tilgjengelig",
+        "promoLabels": [],
+        "productionYear": 1996,
+        "fullTitle": "I Mummidalen"
+      },
+      "favorite": {
+        "notifications": [],
+        "added": "2015-12-04T06:38:48+01:00",
+        "type": 1
+      },
+      "lastSeen": null
+    },
+{
+      "isAvailable": true,
+      "program": {
+        "seriesId": "fantorangen",
+        "hasOnDemandRightsEpisodes": true,
+        "totalEpisodesInSeason": "65",
+        "image": {
+          "isDefaultImage": false,
+          "webImages": [
+            {
+              "imageUrl": "https://gfx.nrk.no/yY-W8H1q6u7tpjTzN3FIuA2ShFlDsUi947NdrgW37Kbw",
+              "pixelWidth": 300
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/yY-W8H1q6u7tpjTzN3FIuAWUVpkJHOtio7NdrgW37Kbw",
+              "pixelWidth": 600
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/yY-W8H1q6u7tpjTzN3FIuAX2U25Q1Lk847NdrgW37Kbw",
+              "pixelWidth": 960
+            },
+            {
+              "imageUrl": "https://gfx.nrk.no/yY-W8H1q6u7tpjTzN3FIuAqmC8AezR2gk7NdrgW37Kbw",
+              "pixelWidth": 1920
+            }
+          ],
+          "imageWidthCropInfo": "yY-W8H1q6u7tpjTzN3FIuA?x=0.00000000000000000&y=0.00000000000000000&w=1.00000000000000000&h=1.00000000000000000",
+          "imageInfo": {
+            "cropInfo": {
+              "y": 0.0,
+              "x": 0.0,
+              "width": 0.0,
+              "height": 0.0
+            },
+            "id": "yY-W8H1q6u7tpjTzN3FIuA"
+          }
+        },
+        "usageRights": {
+          "availableFrom": "2015-07-12T06:45:27+02:00",
+          "availableTo": "2016-08-31T00:00:00+02:00",
+          "hasRightsNow": false,
+          "isGeoBlocked": false
+        },
+        "episodeNumberOrDate": "21:65",
+        "id": "MSUS21230215",
+        "category": {
+          "displayValue": "Barn",
+          "isRadioCategory": false,
+          "id": "barn",
+          "isTvCategory": false
+        },
+        "episodeNumber": "21",
+        "seasonDisplayType": 1,
+        "title": "Fantorangen",
+        "programUrlMetadata": "sesong-2/episode-21",
+        "belongsToList": "UserData",
+        "plugTitle": null,
+        "seriesTitle": "Fantorangen",
+        "seasonNumber": "2",
+        "description": "Eddie f\u00e5r en stor spr\u00f8yte og etterp\u00e5 f\u00e5r de et premieplaster.",
+        "viewCount": 0,
+        "sourceMedium": 1,
+        "mainTitle": "Fantorangen",
+        "showNewEpisodeAlert": false,
+        "programType": "Episode",
+        "categories": [
+          {
+            "displayValue": "Barn",
+            "isRadioCategory": false,
+            "id": "barn",
+            "isTvCategory": false
+          }
+        ],
+        "myContentId": "fantorangen",
+        "showRightsMessage": false,
+        "rightsMessage": "Ikke tilgjengelig",
+        "promoLabels": [],
+        "productionYear": 2015,
+        "fullTitle": "Fantorangen 21:65"
+      },
+      "favorite": {
+        "notifications": [],
+        "added": "2015-12-04T06:38:05+01:00",
+        "type": 1
+      },
+      "lastSeen": null
+    }
+
+  ]
+}
