@@ -93,8 +93,8 @@ class ScrapedMovie(BaseMovie):
     def write_nfo(self, metadata):
         root = ET.Element("movie")
         ET.SubElement(root, "title").text = self.title
-        ET.SubElement(root, "runtime").text = unicode(metadata["runtime"].seconds/60)
         ET.SubElement(root, "plot").text = metadata["plot"]
+        ET.SubElement(root, "runtime").text = unicode(metadata["runtime"].seconds/60)
         ET.SubElement(root, "thumb", aspect="poster").text = metadata["art"]
         fanart = ET.SubElement(root, "fanart")
         ET.SubElement(fanart, "thumb").text = metadata["art"]
@@ -248,14 +248,11 @@ class BaseEpisode(object):
 
 
 class ScrapedEpisode(BaseEpisode):
-    def __init__(self, show, seasonnr, episodenr, urlid, plot, runtime, thumb, title):
+    def __init__(self, show, seasonnr, episodenr, urlid, metadata):
         BaseEpisode.__init__(self, show=show, seasonnr=seasonnr, episodenr=episodenr)
         self.urlid = urlid
         self.url = "http://tv.nrk.no/serie/%s/%s?autostart=true" % (show.urlid, urlid)
-        self.title = title
-        self.plot = plot
-        self.runtime = runtime
-        self.thumb = "http://gfx.nrk.no/%s" % thumb
+        self.metadata = metadata
 
     def write_htm(self):
         if not os.path.exists(utils.os_join(self.path)):
@@ -266,13 +263,13 @@ class ScrapedEpisode(BaseEpisode):
 
     def write_nfo(self):
         root = ET.Element("episodedetails")
-        ET.SubElement(root, "title").text = self.title
+        ET.SubElement(root, "title").text = self.metadata["title"]
         ET.SubElement(root, "showtitle").text = self.showtitle
         ET.SubElement(root, "season").text = unicode(self.seasonnr)
         ET.SubElement(root, "episode").text = unicode(self.episodenr)
-        ET.SubElement(root, "plot").text = self.plot
-        ET.SubElement(root, "runtime").text = unicode(self.runtime.seconds/60)
-        ET.SubElement(root, "thumb").text = self.thumb
+        ET.SubElement(root, "plot").text = self.metadata["plot"]
+        ET.SubElement(root, "runtime").text = unicode(self.metadata["runtime"].seconds/60)
+        ET.SubElement(root, "thumb").text = self.metadata['thumb']
 
         as_string = ET.tostring(root, method='xml')
         pretty_xml_as_string = xml.dom.minidom.parseString(as_string).toprettyxml()

@@ -82,41 +82,35 @@ def get_showdata_episodes(show):
     episodes = set()
     reqs = RequestsSession()
     showdata = reqs.get("http://tvapi.nrk.no/v1/series/%s/" % show.urlid).json()
-    metadata = {
-        "genre": showdata["category"]["displayValue"],
-        "plot": showdata["description"],
-        "art": "http://gfx.nrk.no/%s" % showdata["imageId"],
-    }
+    metadata = get_show_metadata(showdata)
     date_for_episodenr = ":" not in showdata["programs"][0]["episodeNumberOrDate"]
     if not date_for_episodenr:
         seasons = {season["id"]: int(season["name"].split()[-1]) for season in showdata["seasonIds"]}
-        for episode in showdata["programs"]:
-            if not episode["isAvailable"]:
+        for epinfo in showdata["programs"]:
+            if not epinfo["isAvailable"]:
                 continue
-            episodenr = int(episode["episodeNumberOrDate"].split(":")[0])
-            seasonnr = seasons[episode["seasonId"]]
-            urlid = episode["programId"]
-            runtime = dt.timedelta(milliseconds=episode["duration"])
-            episodes.add(mediatypes.ScrapedEpisode(show=show, seasonnr=seasonnr, episodenr=episodenr,
-                                                   urlid=urlid, plot=episode["description"],
-                                                   runtime=runtime, thumb=episode["imageId"], title=episode["title"]))
+            episodenr = int(epinfo["episodeNumberOrDate"].split(":")[0])
+            seasonnr = seasons[epinfo["seasonId"]]
+            urlid = epinfo["programId"]
+            metadata = get_episode_metadata(epinfo)
+            episode = mediatypes.ScrapedEpisode(show=show, seasonnr=seasonnr, episodenr=episodenr, urlid=urlid, metadata=metadata)
+            episodes.add(episode)
 
     else:
         seasons = {season["id"]: i for i, season in enumerate(reversed(showdata["seasonIds"]), start=1)}
         prevseasonid = None
-        for i, episode in enumerate(reversed(showdata["programs"]), start=1):
-            if not episode["isAvailable"]:
+        for i, epinfo in enumerate(reversed(showdata["programs"]), start=1):
+            if not epinfo["isAvailable"]:
                 continue
-            seasonid = episode["seasonId"]
+            seasonid = epinfo["seasonId"]
             seasonnr = seasons[seasonid]
             episodenr = episodenr + 1 if seasonid == prevseasonid else 1
             prevseasonid = seasonid
 
-            urlid = episode["programId"]
-            runtime = dt.timedelta(milliseconds=episode["duration"])
-            episodes.add(mediatypes.ScrapedEpisode(show=show, seasonnr=seasonnr, episodenr=episodenr,
-                                                   urlid=urlid, plot=episode["description"],
-                                                   runtime=runtime, thumb=episode["imageId"], title=episode["title"]))
+            urlid = epinfo["programId"]
+            metadata = get_episode_metadata(epinfo)
+            episode = mediatypes.ScrapedEpisode(show=show, seasonnr=seasonnr, episodenr=episodenr, urlid=urlid, metadata=metadata)
+            episodes.add(episode)
     return metadata, episodes
 
 
@@ -131,9 +125,27 @@ def get_movie_metadata(movie):
         seconds=int(seconds[:-1]) if seconds is not None else 0,
     )
     infodict = {
-        "title": raw_infodict["fullTitle"],
         "plot": raw_infodict["description"],
         "art": raw_infodict['images']["webImages"][-1]["imageUrl"],
         "runtime": runtime,
         }
     return infodict
+
+
+def get_show_metadata(showdata):
+    metadata = {
+        "genre": showdata["category"]["displayValue"],
+        "plot": showdata["description"],
+        "art": "http://gfx.nrk.no/%s" % showdata["imageId"],
+    }
+    return metadata
+
+
+def get_episode_metadata(epinfo):
+    metadata = {
+        "plot": epinfo["description"],
+        "runtime": dt.timedelta(milliseconds=epinfo["duration"]),
+        "thumb": epinfo["imageId"],
+        "title": epinfo["title"]
+    }
+    return metadata
