@@ -1,6 +1,6 @@
-# #! /usr/bin/env python
+# #! /usr/bin/env python2
 # # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
+from __future__ import (unicode_literals, absolute_import, division)
 
 import json
 from multiprocessing.dummy import Process as Thread
@@ -10,9 +10,9 @@ import xbmcgui
 
 from pykeyboard import PyKeyboardEvent
 
-from . import constants as const
-from . import utils
-from . import kodi
+from lib import constants as const
+from lib import utils
+from lib import kodi
 
 
 class ConfigurationDialog(xbmcgui.WindowXMLDialog):

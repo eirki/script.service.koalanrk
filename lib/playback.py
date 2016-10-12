@@ -1,6 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 # -*- coding: utf-8 -*-
-from __future__ import (unicode_literals, division)
+from __future__ import (unicode_literals, absolute_import, division)
 
 import datetime as dt
 from collections import namedtuple
@@ -15,10 +15,10 @@ from chromote import Chromote
 from pykeyboard import PyKeyboard
 from pymouse import PyMouse
 
-from . import constants as const
-from . import utils
-from . import kodi
-from . import remote
+from lib import constants as const
+from lib import utils
+from lib import kodi
+from lib import remote
 
 
 class Player(object):

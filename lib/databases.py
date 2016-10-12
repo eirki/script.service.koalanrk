@@ -1,14 +1,14 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
+from __future__ import (unicode_literals, absolute_import, division)
 
 from collections import MutableSet
 import multiprocessing.dummy as threading
 import json
 
-from . import constants as const
-from . import utils
-from . import mediatypes
+from lib import constants as const
+from lib import utils
+from lib import mediatypes
 
 
 class MediaDatabase(object):

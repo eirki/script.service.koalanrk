@@ -1,6 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
+from __future__ import (unicode_literals, absolute_import, division)
 
 import abc
 import os
@@ -8,9 +8,9 @@ import json
 import xml.etree.ElementTree as ET
 import xml.dom.minidom
 
-from . import constants as const
-from . import utils
-from . import kodi
+from lib import constants as const
+from lib import utils
+from lib import kodi
 
 
 class BaseLibEntry(object):

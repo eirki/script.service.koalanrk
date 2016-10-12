@@ -1,6 +1,7 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
+from __future__ import (unicode_literals, absolute_import, division)
+
 import re
 import json
 from bs4 import BeautifulSoup
@@ -9,8 +10,8 @@ import requests
 from types import MethodType
 import datetime as dt
 
-from . import kodi
-from . import mediatypes
+from lib import kodi
+from lib import mediatypes
 
 
 class RequestsSession(object):
