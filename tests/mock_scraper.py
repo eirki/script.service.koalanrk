@@ -45,19 +45,24 @@ class RequestsSession(object):
 
         return available_movies, available_shows
 
+
 def get_showdata_episodes(show):
     show_metadata = get_show_metadata(show)
 
     if show.title == "Sangfoni - musikkvideo":
         episodes = set([
-            mediatypes.ScrapedEpisode(show=show, seasonnr=1, episodenr=1, urlid="1234", metadata=get_episode_metadata(epinfo=None)),
-            mediatypes.ScrapedEpisode(show=show, seasonnr=1, episodenr=2, urlid="2345", metadata=get_episode_metadata(epinfo=None)),
+            mediatypes.ScrapedEpisode(show=show, seasonnr=1, episodenr=1, urlid="1234",
+                                      metadata=get_episode_metadata(epinfo=None)),
+            mediatypes.ScrapedEpisode(show=show, seasonnr=1, episodenr=2, urlid="2345",
+                                      metadata=get_episode_metadata(epinfo=None)),
         ])
 
     elif show.title == "Folkeopplysningen":
         episodes = set([
-            mediatypes.ScrapedEpisode(show=show, seasonnr=1, episodenr=2, urlid="2345", metadata=get_episode_metadata(epinfo=None)),
-            mediatypes.ScrapedEpisode(show=show, seasonnr=1, episodenr=3, urlid="1234", metadata=get_episode_metadata(epinfo=None)),
+            mediatypes.ScrapedEpisode(show=show, seasonnr=1, episodenr=2, urlid="2345",
+                                      metadata=get_episode_metadata(epinfo=None)),
+            mediatypes.ScrapedEpisode(show=show, seasonnr=1, episodenr=3, urlid="1234",
+                                      metadata=get_episode_metadata(epinfo=None)),
         ])
     return show_metadata, episodes
 
