@@ -15,16 +15,6 @@ from tests import mock_kodi
 from tests import mock_scraper
 import main
 
-# fra netflix:
-# Kill Bill: Vol. 2: Thank you for smoking
-# Bones: I Mummidalen
-# Starsky & Hutch: Beatles
-# Archer: Sangfoni - musikkvideo
-# Arrested Development: Folkeopplysningen
-# Master of None: Fantorangen
-# Blood Diamond: Wolf Children
-
-
 # ## in mock watchlist:
 # Beatles - to be added
 # Sangfoni - musikkvideo S01E01, S01E02 - to be added
@@ -53,10 +43,6 @@ import main
 # Add show: "Sangfoni - musikkvideo", add 2 episodes, S01E01 (needs nfo), S01E02 (with json)
 # Update show: "Folkeopplysningen", remove 1 episode, add 1 episode, 1 episode remains
 
-real_kodi = library.kodi
-real_scraper = library.scraper
-real_constants = const
-
 
 def setUpModule():
     library.databases.stored_movies.filepath = utils.os_join(mock_constants.userdatafolder, "%s.json" %
@@ -80,12 +66,6 @@ def setUpModule():
     # copy mock userdata folder to userdata so it can be modified
     shutil.copytree(utils.os_join(const.addonpath, "tests", "mock userdata"), mock_constants.userdatafolder)
     main.main(argv={"mode": "library", "action": "startup"})
-
-# def tearDownModule():
-#     library.databases.const = real_constants
-#     library.databases.mediatypes.const = real_constants
-#     library.kodi = real_kodi
-#     library.scraper = real_scraper
 
 
 def check_movie(name, ext, season=None, episode=None):
@@ -212,18 +192,4 @@ class ShowExcluded(unittest.TestCase):
         """Was show (Fantorangen) still excluded?"""
         path = utils.os_join(mock_constants.libpath, "%s shows" % const.provider, "Fantorangen")
         self.assertFalse(isfile(path), msg="File created:\n%s" % path)
-
-
-
-# def read_settings_xml(player):
-#     playerfilername = "chrome" if player == "Chrome" else "iexplore"
-#     soup = BeautifulSoup(os_join(const.masterprofilefolder, "playercorefactory.xml")).getroot()
-#     soup = BeautifulSoup(xml)
-#     print type(soup)
-#     for action in soup.find_all("setting", type="action"):
-#         script, mode, action = re.match(r"RunScript\(([\w\.]*), mode=(\w*), action=(\w*).*", action["action"]).groups()
-#         print script
-#         print mode
-#         print action
-#     raise Exception("Could not found player file for %s" % player)
 
