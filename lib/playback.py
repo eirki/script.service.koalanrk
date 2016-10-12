@@ -6,7 +6,7 @@ import datetime as dt
 from collections import namedtuple
 import requests
 import re
-from multiprocessing.dummy import Process as Thread
+from threading import (Thread, Event)
 import socket
 import xbmc
 
@@ -21,12 +21,16 @@ from lib import kodi
 from lib import remote
 
 
+MediaItem = namedtuple("MediaItem", "name kodiid playcount runtime")
+
+
 class Player(object):
-    def __init__(self):
+    def __init__(self, stop_event):
         self.exceptions = (requests.exceptions.ConnectionError, socket.error,
-                           websocket.WebSocketBadStatusException)
+                           websocket.WebSocketBadStatusException, websocket.WebSocketConnectionClosedException)
+        self.stop_event = stop_event
+        self.browser = None
         self.tab = None
-        self.stopped = False
         self.k = PyKeyboard()
         self.m = PyMouse()
         self.player_coord = None
@@ -41,25 +45,32 @@ class Player(object):
             self.browser = Chromote(host="localhost", port=9222, internet_explorer=True)
         kodi.log("connected to %s: %s" % (self.browser.browsertype, self.browser))
 
-        while not self.stopped:
+        while not self.stop_event.is_set():
             try:
+                kodi.log(self.stop_event.is_set())
+                kodi.log(id(self.stop_event.is_set()))
                 self.tab = next(tab for tab, title, url in self.browser.tabs if url != "about:blank" and "file://" not in url)
                 break
             except StopIteration:
-                xbmc.sleep(50)
+                xbmc.sleep(200)
         self.tab.connect_websocket()
         kodi.log("websocket connected: %s" % self.tab.url)
 
-    def cleanup(self):
-        if self.browser.browsertype == "ie":
+    def disconnect(self):
+        if self.browser and self.browser.browsertype == "ie":
             self.browser.close_ieadapter()
             kodi.log("closed ieadapter")
         if self.tab:
             self.tab.close_websocket()
 
+    def start(self):
+        self.get_player_coord()
+        self.wait_player_start()
+        self.toggle_fullscreen()
+
     def get_player_coord(self):
         playerelement = self.tab.get_element_by_id("playerelement")
-        while not playerelement.present:
+        while not (playerelement.present or self.stop_event.is_set()):
             xbmc.sleep(100)
         rect = playerelement.rect
         self.player_coord = {"x": int((rect["left"] + rect["right"]) / 2),
@@ -67,25 +78,35 @@ class Player(object):
 
     def wait_player_start(self):
         for _ in range(120):
-            if "ProgressTracker" in self.tab.get_element_by_tag_name("script")["src"]:
+            src = self.tab.get_element_by_tag_name("script")["src"]
+            if (src is not None and "ProgressTracker" in src) or self.stop_event.is_set():
                 break
             xbmc.sleep(500)
 
-    def wait_for_url_change(self, stored_url=None):
-        stored_url = self.tab.url
-        while True:
+    def wait_for_new_episode(self, starting_urlid):
+        starting_url = self.tab.url
+        while not self.stop_event.is_set():
             try:
+                xbmc.sleep(1000)
                 current_url = self.tab.url
-                if current_url != stored_url:
-                    return current_url
+                if current_url == starting_url:
+                    # no url change
+                    continue
+                is_episode_page = re.match(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', current_url)
+                if not is_episode_page:
+                    continue
+                new_urlid = is_episode_page.group(1).lower()
+                if new_urlid != starting_urlid:
+                    # new episode started
+                    self.wait_player_start()
+                    self.toggle_fullscreen()
+                    return new_urlid
             except KeyError:
                 # loading new page
                 continue
-            except (requests.exceptions.ConnectionError, socket.error,
-                    websocket.WebSocketBadStatusException):
+            except self.exceptions:
                 # browser closed
                 return None
-            xbmc.sleep(1000)
 
     def playpause(self):
         self.k.tap_key(self.k.up_key)
@@ -103,56 +124,61 @@ class Player(object):
         xbmc.sleep(200)
         self.m.click(n=2, **coord)
         self.m.move(**self.corner_coord)
-        log.info("fullscreen toggled")
 
     def stop(self):
         xbmc.Player().stop()
-        self.stopped = True
+        self.stop_event.set()
 
 
 class Session(object):
     def __init__(self):
-        self.koala_playing = False
-
-    def start(self):
-        playingfile = self.get_playing_file()
-        if not (playingfile["file"].startswith(uni_join(const.libpath, const.provider)) or
-                playingfile["file"].startswith(uni_join(const.addonpath, "resources"))):
-            return
-        kodi.log("start onPlayBackStarted")
-        self.koala_playing = True
-
-        self.player = Player()
-
+        self.stop_event = Event()
         self.remote = None
-        if kodi.settings["remote"]:
-            self.remote = remote.Remote()
-            self.remote.run(player=self.player)
+        self.player = None
 
-        self.player.connect()
-
-        if "NRK nett-TV.htm" not in playingfile["file"]:
-            self.player.get_player_coord()
-            self.player.wait_player_start()
-            self.player.toggle_fullscreen()
-
-        if playingfile["type"] == "episode":
-            thread = Thread(target=self.monitor_watched, args=[playingfile])
-            thread.start()
-
-        kodi.log("finished onPlayBackStarted")
-
-    def end(self):
-        if not self.koala_playing:
+    def setup(self):
+        playingfile = self.get_playing_file()
+        if not playingfile["file"].startswith((utils.uni_join(const.libpath, const.provider),
+                                               utils.uni_join(const.addonpath, "resources"))):
             return
-        log.info("start onPlayBackEnded")
+
         try:
+            kodi.log("Start playback setup")
+
+            self.player = Player(stop_event=self.stop_event)
+
+            if kodi.settings["remote"]:
+                self.remote = remote.Remote()
+                self.remote.run(player=self.player)
+
+            self.player.connect()
+
+            if not playingfile["file"].endswith(("NRK nett-TV.htm", "NRK Super.htm")):
+                self.player.start()
+
+            if playingfile["type"] == "episode":
+                Thread(target=self.monitor_episodes_progress, args=[playingfile]).start()
+            elif playingfile["type"] == "movie":
+                Thread(target=self.monitor_movie_progress, args=[playingfile]).start()
+
+            kodi.log("Finished playback setup")
+
+        except Exception as exc:
+            kodi.log("Exception occured during playback: %s" % exc)
+            raise
+
+        finally:
+            while not self.stop_event.is_set():
+                xbmc.sleep(500)  # self.stop_event.wait() blocks xbmc.Player threading, xbmc.sleep doesn't
+            kodi.log("Start playback cleanup")
             if self.remote:
                 self.remote.close()
-            self.player.cleanup()
-        finally:
-            self.koala_playing = False
-            log.info("finished onPlayBackEnded")
+            if self.player:
+                self.player.disconnect()
+            kodi.log("Finish playback cleanup")
+
+    def signal_stop(self):
+        self.stop_event.set()
 
     def get_playing_file(self):
         active_player = kodi.rpc("Player.GetActivePlayers")[0]['playerid']
@@ -161,7 +187,6 @@ class Session(object):
         return playingfile["item"]
 
     def get_episodes(self, playingfile):
-        Epinfo = namedtuple("Epinfo", "code kodiid playcount runtime")
         startkodiid = playingfile['id']
         tvshowid = playingfile["tvshowid"]
         tvshow_dict = kodi.rpc("VideoLibrary.GetEpisodes", tvshowid=tvshowid, properties=[
@@ -173,73 +198,82 @@ class Session(object):
             playcount = episode['playcount']
             runtime = dt.timedelta(seconds=episode['runtime'])
             with open(episode['file'], 'r') as txt:
-                urlid = re.sub(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", txt.read())
-            stored_episodes[urlid] = Epinfo(epcode, kodiid, playcount, runtime)
+                urlid = re.match(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)\?autostart=true.*', txt.read()).group(1).lower()
+            stored_episodes[urlid] = MediaItem(epcode, kodiid, playcount, runtime)
             if kodiid == startkodiid:
                 starturlid = urlid
         return starturlid, stored_episodes
 
-    def monitor_watched(self, playingfile):
-        log.info("starting monitoring")
-        starturlid, stored_episodes = self.get_episodes(playingfile)
-        log.info(stored_episodes)
-
-        url = None
-        current_urlid = starturlid
-        episode_watching = stored_episodes[current_urlid]
-        started_watching_at = dt.datetime.now()
-        while self.koala_playing:
-            url = self.player.wait_for_url_change(stored_url=url)
-            if url is None:
-                # browser closed
-                break
-            log.info("new url: %s" % url)
-            new_urlid, is_episode = re.subn(r'.*tv.nrk(?:super)?.no/serie/.*?/(.*?)/.*', r"\1", url)
-            if is_episode and new_urlid != current_urlid:
-                self.mark_watched(episode_watching, started_watching_at)
-
-                current_urlid = new_urlid
-                episode_watching = stored_episodes[current_urlid]
-                started_watching_at = dt.datetime.now()
-                self.player.wait_player_start()
-                self.player.toggle_fullscreen()
-
-        self.mark_watched(episode_watching, started_watching_at)
-        log.info("finished monitoring")
-
-    def mark_watched(self, episode, started_watching_at):
+    def mark_watched(self, mediaitem, started_watching_at):
         finished_watching_at = dt.datetime.now()
         watch_duration = finished_watching_at - started_watching_at
-        if watch_duration.seconds / episode.runtime.seconds >= 0.9:
-            kodi.rpc("VideoLibrary.SetEpisodeDetails", episodeid=episode.kodiid,
-                     playcount=episode.playcount + 1, lastplayed=finished_watching_at.strftime("%d-%m-%Y %H:%M:%S"))
-            kodi.log("%s: Marked as watched" % episode.code)
+        if watch_duration.seconds / mediaitem.runtime.seconds >= 0.9:
+            kodi.rpc("VideoLibrary.SetEpisodeDetails", episodeid=mediaitem.kodiid,
+                     playcount=mediaitem.playcount + 1, lastplayed=finished_watching_at.strftime("%d-%m-%Y %H:%M:%S"))
+            kodi.log("%s: Marked as watched" % mediaitem.name)
         else:
             kodi.log("%s: Skipped, only partially watched (%s vs. %s)" %
-                     (episode.code, episode.runtime.seconds, watch_duration.seconds))
+                     (mediaitem.name, mediaitem.runtime.seconds, watch_duration.seconds))
+
+    def monitor_episodes_progress(self, playingfile):
+        kodi.log("Starting episode progress monitoring")
+        first_urlid, stored_episodes = self.get_episodes(playingfile)
+
+        current_urlid = first_urlid
+        episode_watching = stored_episodes[current_urlid]
+        started_watching_at = dt.datetime.now()
+        while not self.stop_event.is_set():
+            new_urlid = self.player.wait_for_new_episode(starting_urlid=current_urlid)
+            if new_urlid is None:
+                break  # browser closed
+            if episode_watching:
+                self.mark_watched(episode_watching, started_watching_at)
+
+            kodi.log("new urlid: %s" % new_urlid)
+            current_urlid = new_urlid
+            episode_watching = stored_episodes.get(current_urlid)
+            started_watching_at = dt.datetime.now()
+
+        self.mark_watched(episode_watching, started_watching_at)
+        kodi.log("finished monitoring")
+
+    def monitor_movie_progress(self, playingfile):
+        kodi.log("starting monitoring")
+        movie = MediaItem(name=playingfile["label"], kodiid=playingfile["id"], playcount=playingfile["playcount"],
+                          runtime=dt.timedelta(seconds=playingfile["runtime"]))
+        started_watching_at = dt.datetime.now()
+        self.stop_event.wait()
+        self.mark_watched(movie, started_watching_at)
+        kodi.log("finished monitoring")
 
 
 class Monitor(xbmc.Player):
     def __init__(self):
-        kodi.log("launching playback service")
+        kodi.log("Launching playback service")
         self.queue = []
         xbmc.Player.__init__(self)
 
-    def add_to_queue(self, func):
-        self.queue.append(func)
-        if self.queue[0] is func:
-            while self.queue:
-                try:
-                    self.queue[0]()
-                finally:
-                    self.queue.pop(0)
-
     def onPlayBackStarted(self):
         self.session = Session()
-        self.add_to_queue(self.session.start)
+        kodi.log("monitor: onPlayBackStarted %s" % self.session)
+        self.queue.append(self.session.setup)
+        if len(self.queue) > 1:
+            # setup func for other session already running
+            kodi.log("Monitor: entering queue: %s" % self.session.setup)
+            return
+        while self.queue:
+            try:
+                kodi.log("Monitor starting: %s" % self.queue[0])
+                self.queue[0]()
+            finally:
+                kodi.log("Monitor finished: %s" % self.queue[0])
+                self.queue.pop(0)
+        kodi.log("monitor: finished onPlayBackStarted")
 
     def onPlayBackEnded(self):
-        self.add_to_queue(self.session.end)
+        kodi.log("monitor: onPlayBackEnded %s" % self.session)
+        self.session.signal_stop()
+        kodi.log("monitor: finished onPlayBackEnded")
 
 
 def live(channel):
@@ -252,4 +286,4 @@ def live(channel):
         "fantorangen": "Fantorangen BarneTV.htm",
         "barnetv": "BarneTV.htm",
     }
-    xbmc.Player().play(os_join(const.addonpath, "resources", filenames[channel]))
+    xbmc.Player().play(utils.os_join(const.addonpath, "resources", filenames[channel]))
