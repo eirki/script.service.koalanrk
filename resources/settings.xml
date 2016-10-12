@@ -30,7 +30,7 @@
   </category>
 
   <category label="Startup">
-    <setting label="Enable library updates on startup" id="enable startup" type="bool" default="true"/>
+    <setting label="Enable library updates on startup" id="enable startup" type="bool" default="false"/>
     <setting label="Check for added/removed movies, TV shows and episodes" id="watchlist on startup" type="bool" default="true" enable="eq(-1,true)"/>
     <setting label="Check stored TV shows for added/removed episodes" id="shows on startup" type="bool" default="false" enable="eq(-2,true)"/>
     <setting label="Check all shows TV shows" id="all shows on startup" type="bool" default="false" subsetting="true" visible="eq(-3,true)" enable="eq(-1,true)"/>
@@ -39,7 +39,7 @@
   </category>
 
   <category label="Schedule">
-    <setting label="Enable scheduled library updates" id="enable schedule" type="bool" default="true"/>
+    <setting label="Enable scheduled library updates" id="enable schedule" type="bool" default="false"/>
     <setting label="Update frequency" id="schedule frequency"   type="labelenum" values="15 min|30 min|1 hour|2 hours" default="1 hour" enable="eq(-1,true)"/>
     <setting label="Check for added/removed movies, TV shows and episodes" id="watchlist on schedule" type="bool" default="true" enable="eq(-2,true)"/>
     <setting label="Check stored TV shows for added/removed episodes" id="shows on schedule" type="bool" default="false" enable="eq(-3,true)"/>
