@@ -83,7 +83,7 @@ def get_showdata_episodes(show):
     episodes = set()
     reqs = RequestsSession()
     showdata = reqs.get("http://tvapi.nrk.no/v1/series/%s/" % show.urlid).json()
-    metadata = get_show_metadata(showdata)
+    show_metadata = get_show_metadata(showdata)
     date_for_episodenr = ":" not in showdata["programs"][0]["episodeNumberOrDate"]
     if not date_for_episodenr:
         seasons = {season["id"]: int(season["name"].split()[-1]) for season in showdata["seasonIds"]}
@@ -112,7 +112,7 @@ def get_showdata_episodes(show):
             metadata = get_episode_metadata(epinfo)
             episode = mediatypes.ScrapedEpisode(show=show, seasonnr=seasonnr, episodenr=episodenr, urlid=urlid, metadata=metadata)
             episodes.add(episode)
-    return metadata, episodes
+    return show_metadata, episodes
 
 
 def get_movie_metadata(movie):
@@ -146,7 +146,7 @@ def get_episode_metadata(epinfo):
     metadata = {
         "plot": epinfo["description"],
         "runtime": dt.timedelta(milliseconds=epinfo["duration"]),
-        "thumb": epinfo["imageId"],
+        "thumb": "http://gfx.nrk.no/" + epinfo["imageId"],
         "title": epinfo["title"]
     }
     return metadata
