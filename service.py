@@ -57,7 +57,7 @@ def run_schedule():
 
 
 if __name__ == '__main__':
-    monitor = playback.Monitor()
+    manager = playback.PlaybackManager()
     if kodi.settings["enable startup"]:
         xbmc.executebuiltin("RunScript(%s, mode=library, action=startup)" % const.addonid)
     run_schedule()

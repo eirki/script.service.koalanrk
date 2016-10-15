@@ -6,8 +6,10 @@ import datetime as dt
 from collections import namedtuple
 import requests
 import re
-from threading import (Thread, Event)
+from threading import Thread
+import traceback
 import socket
+import sys
 import xbmc
 
 import websocket
@@ -24,9 +26,29 @@ from lib import remote
 MediaItem = namedtuple("MediaItem", "name kodiid playcount runtime")
 
 
+class StoppedException(Exception):
+    pass
+
+
+class StopEvent(object):
+    def __init__(self):
+        self.is_set = False
+
+    def wait(self):
+        while not self.is_set:
+            xbmc.sleep(500)
+
+    def check(self):
+        if self.is_set:
+            raise StoppedException
+
+    def set(self):
+        self.is_set = True
+
+
 class Player(object):
     def __init__(self, stop_event):
-        self.exceptions = (requests.exceptions.ConnectionError, socket.error,
+        self.exceptions = (StoppedException, requests.exceptions.ConnectionError, socket.error,
                            websocket.WebSocketBadStatusException, websocket.WebSocketConnectionClosedException)
         self.stop_event = stop_event
         self.browser = None
@@ -45,10 +67,8 @@ class Player(object):
             self.browser = Chromote(host="localhost", port=9222, internet_explorer=True)
         kodi.log("connected to %s: %s" % (self.browser.browsertype, self.browser))
 
-        while not self.stop_event.is_set():
+        while not self.stop_event.check():
             try:
-                kodi.log(self.stop_event.is_set())
-                kodi.log(id(self.stop_event.is_set()))
                 self.tab = next(tab for tab, title, url in self.browser.tabs if url != "about:blank" and "file://" not in url)
                 break
             except StopIteration:
@@ -70,7 +90,7 @@ class Player(object):
 
     def get_player_coord(self):
         playerelement = self.tab.get_element_by_id("playerelement")
-        while not (playerelement.present or self.stop_event.is_set()):
+        while not (self.stop_event.check() or playerelement.present):
             xbmc.sleep(100)
         rect = playerelement.rect
         self.player_coord = {"x": int((rect["left"] + rect["right"]) / 2),
@@ -79,13 +99,13 @@ class Player(object):
     def wait_player_start(self):
         for _ in range(120):
             src = self.tab.get_element_by_tag_name("script")["src"]
-            if (src is not None and "ProgressTracker" in src) or self.stop_event.is_set():
+            if self.stop_event.check() or (src is not None and "ProgressTracker" in src):
                 break
             xbmc.sleep(500)
 
     def wait_for_new_episode(self, starting_urlid):
         starting_url = self.tab.url
-        while not self.stop_event.is_set():
+        while not self.stop_event.is_set:
             try:
                 xbmc.sleep(1000)
                 current_url = self.tab.url
@@ -132,7 +152,7 @@ class Player(object):
 
 class Session(object):
     def __init__(self):
-        self.stop_event = Event()
+        self.stop_event = StopEvent()
         self.remote = None
         self.player = None
 
@@ -163,22 +183,21 @@ class Session(object):
 
             kodi.log("Finished playback setup")
 
-        except Exception as exc:
-            kodi.log("Exception occured during playback: %s" % exc)
-            raise
+        except self.player.exceptions:
+            pass
+
+        except:
+            kodi.log("Exception occured during playback\n%s" % traceback.format_exc().decode(sys.getfilesystemencoding()))
 
         finally:
-            while not self.stop_event.is_set():
-                xbmc.sleep(500)  # self.stop_event.wait() blocks xbmc.Player threading, xbmc.sleep doesn't
+            self.stop_event.wait()
+
             kodi.log("Start playback cleanup")
             if self.remote:
                 self.remote.close()
             if self.player:
                 self.player.disconnect()
             kodi.log("Finish playback cleanup")
-
-    def signal_stop(self):
-        self.stop_event.set()
 
     def get_playing_file(self):
         active_player = kodi.rpc("Player.GetActivePlayers")[0]['playerid']
@@ -222,7 +241,7 @@ class Session(object):
         current_urlid = first_urlid
         episode_watching = stored_episodes[current_urlid]
         started_watching_at = dt.datetime.now()
-        while not self.stop_event.is_set():
+        while not self.stop_event.is_set:
             new_urlid = self.player.wait_for_new_episode(starting_urlid=current_urlid)
             if new_urlid is None:
                 break  # browser closed
@@ -247,7 +266,7 @@ class Session(object):
         kodi.log("finished monitoring")
 
 
-class Monitor(xbmc.Player):
+class PlaybackManager(xbmc.Player):
     def __init__(self):
         kodi.log("Launching playback service")
         self.queue = []
@@ -255,25 +274,27 @@ class Monitor(xbmc.Player):
 
     def onPlayBackStarted(self):
         self.session = Session()
-        kodi.log("monitor: onPlayBackStarted %s" % self.session)
+        # kodi.log("Manager: onPlayBackStarted %s" % self.session)
         self.queue.append(self.session.setup)
         if len(self.queue) > 1:
-            # setup func for other session already running
-            kodi.log("Monitor: entering queue: %s" % self.session.setup)
+            # setup func for other session is already running
+            # kodi.log("Manager: waiting %s\nQueue: %s" % (self.session.setup, self.queue))
             return
         while self.queue:
             try:
-                kodi.log("Monitor starting: %s" % self.queue[0])
+                # kodi.log("Manager: starting %s\nQueue: %s" % (self.queue[0], self.queue))
                 self.queue[0]()
+            except:
+                pass
             finally:
-                kodi.log("Monitor finished: %s" % self.queue[0])
+                # kodi.log("Manager: finished %s\nQueue: %s" % (self.queue[0], self.queue))
                 self.queue.pop(0)
-        kodi.log("monitor: finished onPlayBackStarted")
+        # kodi.log("Manager: finished onPlayBackStarted")
 
     def onPlayBackEnded(self):
-        kodi.log("monitor: onPlayBackEnded %s" % self.session)
-        self.session.signal_stop()
-        kodi.log("monitor: finished onPlayBackEnded")
+        # kodi.log("Manager: onPlayBackEnded %s\nQueue: %s" % (self.session, self.queue))
+        self.session.stop_event.set()
+        # kodi.log("Manager: finished onPlayBackEnded")
 
 
 def live(channel):
