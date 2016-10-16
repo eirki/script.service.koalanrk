@@ -161,7 +161,6 @@ class Session(object):
         if not playingfile["file"].startswith((utils.uni_join(const.libpath, const.provider),
                                                utils.uni_join(const.addonpath, "resources"))):
             return
-
         try:
             kodi.log("Start playback setup")
 
@@ -226,6 +225,8 @@ class Session(object):
     def mark_watched(self, mediaitem, started_watching_at):
         finished_watching_at = dt.datetime.now()
         watch_duration = finished_watching_at - started_watching_at
+        if 0 in (mediaitem.runtime.seconds, watch_duration.seconds):
+            return
         if watch_duration.seconds / mediaitem.runtime.seconds >= 0.9:
             kodi.rpc("VideoLibrary.SetEpisodeDetails", episodeid=mediaitem.kodiid,
                      playcount=mediaitem.playcount + 1, lastplayed=finished_watching_at.strftime("%d-%m-%Y %H:%M:%S"))
