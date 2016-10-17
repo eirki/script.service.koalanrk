@@ -94,14 +94,14 @@ class ScrapedMovie(BaseMovie):
         root = ET.Element("movie")
         ET.SubElement(root, "title").text = self.title
         ET.SubElement(root, "plot").text = metadata["plot"]
-        ET.SubElement(root, "runtime").text = unicode(metadata["runtime"].seconds/60)
+        ET.SubElement(root, "runtime").text = unicode(int(metadata["runtime"].seconds/60))
         ET.SubElement(root, "thumb", aspect="poster").text = metadata["art"]
         fanart = ET.SubElement(root, "fanart")
         ET.SubElement(fanart, "thumb").text = metadata["art"]
 
         as_string = ET.tostring(root, method='xml')
         pretty_xml_as_string = xml.dom.minidom.parseString(as_string).toprettyxml()
-        with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
+        with open(utils.os_join(self.path, self.nfofilename), "w") as nfo:
             nfo.write(pretty_xml_as_string.encode("utf-8"))
 
     def get_lib_entry(self):
@@ -177,7 +177,7 @@ class ScrapedShow(object):
 
         as_string = ET.tostring(root, method='xml')
         pretty_xml_as_string = xml.dom.minidom.parseString(as_string).toprettyxml()
-        with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
+        with open(utils.os_join(self.path, self.nfofilename), "w") as nfo:
             nfo.write(pretty_xml_as_string.encode("utf-8"))
 
     def get_koala_stored_eps(self):
@@ -268,12 +268,12 @@ class ScrapedEpisode(BaseEpisode):
         ET.SubElement(root, "season").text = unicode(self.seasonnr)
         ET.SubElement(root, "episode").text = unicode(self.episodenr)
         ET.SubElement(root, "plot").text = self.metadata["plot"]
-        ET.SubElement(root, "runtime").text = unicode(self.metadata["runtime"].seconds/60)
+        ET.SubElement(root, "runtime").text = unicode(int(self.metadata["runtime"].seconds/60))
         ET.SubElement(root, "thumb").text = self.metadata['thumb']
 
         as_string = ET.tostring(root, method='xml')
         pretty_xml_as_string = xml.dom.minidom.parseString(as_string).toprettyxml()
-        with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
+        with open(utils.os_join(self.path, self.nfofilename), "w") as nfo:
             nfo.write(pretty_xml_as_string.encode("utf-8"))
 
 
