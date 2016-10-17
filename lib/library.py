@@ -430,7 +430,7 @@ def main(action):
         errors = [task for task in removals + updates if task.exception is not None]
         if errors:
             raise Exception("\nAttempted %d updates and %d library removals, with %d error(s):\n"
-                            "%s." % (len(removals), len(updates), len(errors),
+                            "%s." % (len(updates), len(removals), len(errors),
                                      "\n".join(["%s: %s" % (task.obj, unicode(task.exception)) for task in errors])))
 
     finally:
