@@ -5,6 +5,7 @@ from __future__ import (unicode_literals, absolute_import, division)
 import datetime as dt
 import xbmc
 import xbmcgui
+from threading import Thread
 
 from lib import constants as const
 from lib import kodi
@@ -57,7 +58,8 @@ def run_schedule():
 
 
 if __name__ == '__main__':
-    manager = playback.PlaybackManager()
+    Thread(target=playback.PlaybackManager).start()
+
     if kodi.settings["enable startup"]:
         xbmc.executebuiltin("RunScript(%s, mode=library, action=startup)" % const.addonid)
     run_schedule()

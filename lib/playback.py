@@ -272,6 +272,7 @@ class PlaybackManager(xbmc.Player):
         kodi.log("Launching playback service")
         self.queue = []
         xbmc.Player.__init__(self)
+        xbmc.Monitor().waitForAbort()
 
     def onPlayBackStarted(self):
         self.session = Session()
