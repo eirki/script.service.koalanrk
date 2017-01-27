@@ -100,9 +100,9 @@ class ScrapedMovie(BaseMovie):
         ET.SubElement(fanart, "thumb").text = metadata["art"]
 
         as_string = ET.tostring(root, method='xml')
-        as_pretty_string = xml.dom.minidom.parseString(as_string).toprettyxml()
-        with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
-            nfo.write(as_pretty_string.encode("utf-8"))
+        pretty_xml_as_string = xml.dom.minidom.parseString(as_string).toprettyxml()
+        with open(utils.os_join(self.path, self.nfofilename), "w") as nfo:
+            nfo.write(pretty_xml_as_string.encode("utf-8"))
 
     def get_lib_entry(self):
         moviesdict = kodi.rpc("VideoLibrary.GetMovies",
@@ -177,7 +177,7 @@ class ScrapedShow(object):
 
         as_string = ET.tostring(root, method='xml')
         pretty_xml_as_string = xml.dom.minidom.parseString(as_string).toprettyxml()
-        with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
+        with open(utils.os_join(self.path, self.nfofilename), "w") as nfo:
             nfo.write(pretty_xml_as_string.encode("utf-8"))
 
     def get_koala_stored_eps(self):
@@ -273,7 +273,7 @@ class ScrapedEpisode(BaseEpisode):
 
         as_string = ET.tostring(root, method='xml')
         pretty_xml_as_string = xml.dom.minidom.parseString(as_string).toprettyxml()
-        with open(os.path.join(self.path, self.nfofilename), "w") as nfo:
+        with open(utils.os_join(self.path, self.nfofilename), "w") as nfo:
             nfo.write(pretty_xml_as_string.encode("utf-8"))
 
 
