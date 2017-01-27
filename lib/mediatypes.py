@@ -94,7 +94,7 @@ class ScrapedMovie(BaseMovie):
         root = ET.Element("movie")
         ET.SubElement(root, "title").text = self.title
         ET.SubElement(root, "plot").text = metadata["plot"]
-        ET.SubElement(root, "runtime").text = unicode(metadata["runtime"].seconds//60)
+        ET.SubElement(root, "runtime").text = unicode(int(metadata["runtime"].seconds/60))
         ET.SubElement(root, "thumb", aspect="poster").text = metadata["art"]
         fanart = ET.SubElement(root, "fanart")
         ET.SubElement(fanart, "thumb").text = metadata["art"]
@@ -268,7 +268,7 @@ class ScrapedEpisode(BaseEpisode):
         ET.SubElement(root, "season").text = unicode(self.seasonnr)
         ET.SubElement(root, "episode").text = unicode(self.episodenr)
         ET.SubElement(root, "plot").text = self.metadata["plot"]
-        ET.SubElement(root, "runtime").text = unicode(self.metadata["runtime"].seconds//60)
+        ET.SubElement(root, "runtime").text = unicode(int(self.metadata["runtime"].seconds/60))
         ET.SubElement(root, "thumb").text = self.metadata['thumb']
 
         as_string = ET.tostring(root, method='xml')
