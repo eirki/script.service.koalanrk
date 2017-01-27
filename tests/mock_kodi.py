@@ -45,7 +45,7 @@ def rpc(method, multifilter=False, **kwargs):
         # get_koala_stored_eps
         if kwargs["filter"]["field"] == "path":
             showpath = kwargs["filter"]["value"]
-            files = glob.glob(utils.os_join(showpath, "*", "*.htm"))
+            files = glob.glob(utils.os_join(showpath + "*", "*.htm"))
 
         # no stored koala episode, get any stored episode
         elif kwargs["filter"]["field"] == "filename":
