@@ -83,7 +83,7 @@ class PlaybackListener(PyKeyboardEvent):
 
 
 class Remote(object):
-    Button = namedtuple("Button", "name func code char")
+    Button = namedtuple('Button', ['name', 'func', 'code', 'char'])
 
     def __init__(self):
         self.mapping = self.load_mapping()
