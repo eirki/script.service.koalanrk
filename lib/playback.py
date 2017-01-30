@@ -23,7 +23,7 @@ from lib import kodi
 from lib import remote
 
 
-MediaItem = namedtuple("MediaItem", "name kodiid playcount runtime")
+MediaItem = namedtuple('MediaItem', ['name', 'kodiid', 'playcount', 'runtime'])
 
 
 class StoppedException(Exception):
