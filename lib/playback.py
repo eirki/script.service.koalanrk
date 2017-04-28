@@ -57,7 +57,7 @@ class Player(object):
         self.m = PyMouse()
         self.player_coord = None
         x, y = self.m.screen_size()
-        self.corner_coord = {'x': x, 'y': y}
+        self.top_right_coord = {'x': x, 'y': 0}
         self.middle_coord = {"x": x // 2, "y": y // 2}
 
     def connect(self):
@@ -83,26 +83,6 @@ class Player(object):
         if self.tab:
             self.tab.close_websocket()
 
-    def start(self):
-        self.get_player_coord()
-        self.wait_player_start()
-        self.toggle_fullscreen()
-
-    def get_player_coord(self):
-        playerelement = self.tab.get_element_by_id("playerelement")
-        while not (self.stop_event.check() or playerelement.present):
-            xbmc.sleep(100)
-        rect = playerelement.rect
-        self.player_coord = {"x": int((rect["left"] + rect["right"]) / 2),
-                             "y": int((rect["top"] + rect["bottom"]) / 2)}
-
-    def wait_player_start(self):
-        for _ in range(120):
-            src = self.tab.get_element_by_tag_name("script")["src"]
-            if self.stop_event.check() or (src is not None and "ProgressTracker" in src):
-                break
-            xbmc.sleep(500)
-
     def wait_for_new_episode(self, starting_urlid):
         starting_url = self.tab.url
         while not self.stop_event.is_set:
@@ -118,8 +98,7 @@ class Player(object):
                 new_urlid = is_episode_page.group(1).lower()
                 if new_urlid != starting_urlid:
                     # new episode started
-                    self.wait_player_start()
-                    self.toggle_fullscreen()
+                    self.enter_fullscreen()
                     return new_urlid
             except KeyError:
                 # loading new page
@@ -129,7 +108,6 @@ class Player(object):
                 return None
 
     def playpause(self):
-        self.k.tap_key(self.k.up_key)
         self.k.tap_key(self.k.space_key)
 
     def forward(self):
@@ -138,12 +116,16 @@ class Player(object):
     def rewind(self):
         self.k.tap_key(self.k.left_key)
 
-    def toggle_fullscreen(self):
-        coord = self.player_coord if self.player_coord else self.middle_coord
-        self.m.move(**coord)
-        xbmc.sleep(200)
-        self.m.click(n=2, **coord)
-        self.m.move(**self.corner_coord)
+    def enter_fullscreen(self):
+        playerelement = self.tab.get_element_by_id("playerelement")
+        while not (self.stop_event.check() or playerelement.present):
+            print(playerelement.present)
+            xbmc.sleep(100)
+        self.m.click(**self.middle_coord)
+        self.m.move(**self.top_right_coord)
+        self.k.tap_key('f')
+        xbmc.sleep(100)
+        self.tab.get_element_by_class_name("ludo-bar__button--play").click()
 
     def stop(self):
         xbmc.Player().stop()
@@ -173,7 +155,7 @@ class Session(object):
             self.player.connect()
 
             if not playingfile["file"].endswith(("NRK nett-TV.htm", "NRK Super.htm")):
-                self.player.start()
+                self.player.enter_fullscreen()
 
             if playingfile["type"] == "episode":
                 Thread(target=self.monitor_episodes_progress, args=[playingfile]).start()
