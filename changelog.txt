@@ -1,3 +1,6 @@
+0.5.4
+Playback improvements
+
 0.5.3
 Code refactor, bugfixes
 
