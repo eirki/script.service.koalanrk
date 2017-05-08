@@ -119,9 +119,12 @@ class Player(object):
     def enter_fullscreen(self):
         playerelement = self.tab.get_element_by_id("playerelement")
         while not (self.stop_event.check() or playerelement.present):
-            print(playerelement.present)
+            xbmc.sleep(100)
+        spinner = self.tab.get_element_by_class_name("ludo-spinner__icon--active")
+        while spinner.present and not self.stop_event.check():
             xbmc.sleep(100)
         self.m.click(**self.middle_coord)
+        xbmc.sleep(100)
         self.m.move(**self.top_right_coord)
         self.k.tap_key('f')
         xbmc.sleep(100)
